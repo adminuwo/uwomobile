@@ -1,131 +1,135 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, Switch, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
 import { Header } from '../../src/components/Header';
 import { Text } from '../../src/components/Text';
 import { Card } from '../../src/components/Card';
-import { Avatar } from '../../src/components/Avatar';
-import { Button } from '../../src/components/Button';
-import { useSessionStore } from '../../src/stores/sessionStore';
-import { useBrandStore } from '../../src/stores/brandStore';
 import { useTheme } from '../../src/theme';
-import { env } from '../../src/config/env';
-import { Moon, Sun, LogOut, Shield, Globe, Server, Bell, ChevronRight } from 'lucide-react-native';
+import { 
+  Package, 
+  FileText, 
+  Receipt, 
+  Wallet, 
+  Users, 
+  Link, 
+  Bell, 
+  Settings, 
+  LogOut,
+  ChevronRight
+} from 'lucide-react-native';
+import { useSessionStore } from '../../src/stores/sessionStore';
+
+interface MenuItemProps {
+  icon: React.ReactNode;
+  title: string;
+  subtitle?: string;
+  onPress: () => void;
+  destructive?: boolean;
+}
+
+function MenuItem({ icon, title, subtitle, onPress, destructive }: MenuItemProps) {
+  const { colors } = useTheme();
+  return (
+    <TouchableOpacity style={styles.menuItem} onPress={onPress}>
+      <View style={[styles.iconBox, { backgroundColor: destructive ? colors.error + '20' : colors.surface }]}>
+        {icon}
+      </View>
+      <View style={styles.menuItemContent}>
+        <Text variant="body" weight="medium" color={destructive ? colors.error : colors.textPrimary}>
+          {title}
+        </Text>
+        {subtitle && (
+          <Text variant="caption" color={colors.textMuted} style={styles.subtitle}>
+            {subtitle}
+          </Text>
+        )}
+      </View>
+      <ChevronRight size={20} color={colors.border} />
+    </TouchableOpacity>
+  );
+}
 
 export default function MoreScreen() {
+  const { colors } = useTheme();
   const router = useRouter();
-  const { colors, mode, toggleTheme, spacing, radius } = useTheme();
-  const { user, logout } = useSessionStore();
-  const brand = useBrandStore((state) => state.brand);
+  const logout = useSessionStore((state) => state.logout);
 
-  const userName = user?.name || user?.email?.split('@')[0] || 'Account User';
-  const userEmail = user?.email || 'user@uwoconnect.com';
-
-  const handleLogout = async () => {
-    await logout();
-    router.replace('/(auth)/login');
+  const handleLogout = () => {
+    logout();
   };
 
   return (
     <Screen safeAreaEdges={['top', 'left', 'right']}>
-      <Header title="Settings & Profile" />
-
+      <Header title="Menu" />
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* User Card */}
-        <Card style={styles.userCard}>
-          <View style={styles.userRow}>
-            <Avatar name={userName} size="lg" isOnline />
-            <View style={styles.userInfo}>
-              <Text variant="h3" weight="bold">
-                {userName}
-              </Text>
-              <Text variant="caption" color={colors.textMuted}>
-                {userEmail}
-              </Text>
-              <View style={[styles.roleBadge, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <Shield size={12} color={colors.primary} style={styles.roleIcon} />
-                <Text variant="caption" color={colors.primary} weight="bold">
-                  Role: {user?.role || 'CLIENT'}
-                </Text>
-              </View>
-            </View>
-          </View>
+        
+        <Text variant="label" style={styles.sectionLabel}>Sales & Finance</Text>
+        <Card style={styles.sectionCard}>
+          <MenuItem 
+            icon={<Package size={20} color={colors.primary} />} 
+            title="Products & Services" 
+            onPress={() => router.push('/sales/products' as any)} 
+          />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <MenuItem 
+            icon={<FileText size={20} color={colors.primary} />} 
+            title="Quotations" 
+            onPress={() => router.push('/sales/quotations' as any)} 
+          />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <MenuItem 
+            icon={<Receipt size={20} color={colors.primary} />} 
+            title="GST Invoices" 
+            onPress={() => router.push('/sales/invoices' as any)} 
+          />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <MenuItem 
+            icon={<Wallet size={20} color={colors.primary} />} 
+            title="Wallet & Payments" 
+            subtitle="Manage your usage wallet"
+            onPress={() => router.push('/sales/wallet' as any)} 
+          />
         </Card>
 
-        {/* Preferences Section */}
-        <Text variant="label" style={styles.sectionLabel}>
-          Preferences
-        </Text>
-
-        <Card style={styles.optionCard}>
-          <View style={styles.optionRow}>
-            <View style={styles.optionLeft}>
-              {mode === 'dark' ? (
-                <Moon size={20} color={colors.primary} />
-              ) : (
-                <Sun size={20} color={colors.warning} />
-              )}
-              <View style={styles.optionTextGroup}>
-                <Text variant="body" weight="medium">
-                  Appearance
-                </Text>
-                <Text variant="caption" color={colors.textMuted}>
-                  {mode === 'dark' ? 'Dark Emerald Mode' : 'Light Clean Mode'}
-                </Text>
-              </View>
-            </View>
-            <Switch
-              value={mode === 'dark'}
-              onValueChange={toggleTheme}
-              trackColor={{ false: colors.borderMuted, true: colors.primary }}
-              thumbColor="#ffffff"
-            />
-          </View>
+        <Text variant="label" style={styles.sectionLabel}>Workspace</Text>
+        <Card style={styles.sectionCard}>
+          <MenuItem 
+            icon={<Users size={20} color={colors.secondary} />} 
+            title="Team Management" 
+            onPress={() => router.push('/workspace/team' as any)} 
+          />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <MenuItem 
+            icon={<Link size={20} color={colors.secondary} />} 
+            title="Connectors" 
+            subtitle="WhatsApp, Instagram, APIs"
+            onPress={() => router.push('/workspace/connectors' as any)} 
+          />
         </Card>
 
-        {/* System & Brand Information */}
-        <Text variant="label" style={styles.sectionLabel}>
-          System Connection
-        </Text>
-
-        <Card style={styles.systemCard}>
-          <View style={styles.infoRow}>
-            <View style={styles.infoLeft}>
-              <Globe size={18} color={colors.textMuted} />
-              <Text variant="body" style={styles.infoText}>
-                Brand Domain
-              </Text>
-            </View>
-            <Text variant="caption" color={colors.primary} weight="bold">
-              {brand.brand_name || 'UwoConnect'}
-            </Text>
-          </View>
-
-          <View style={[styles.divider, { backgroundColor: colors.divider }]} />
-
-          <View style={styles.infoRow}>
-            <View style={styles.infoLeft}>
-              <Server size={18} color={colors.textMuted} />
-              <Text variant="body" style={styles.infoText}>
-                API Endpoint
-              </Text>
-            </View>
-            <Text variant="caption" color={colors.textMuted} numberOfLines={1} style={styles.endpointText}>
-              {env.API_BASE_URL}
-            </Text>
-          </View>
+        <Text variant="label" style={styles.sectionLabel}>Account</Text>
+        <Card style={styles.sectionCard}>
+          <MenuItem 
+            icon={<Bell size={20} color={colors.textPrimary} />} 
+            title="Notifications" 
+            onPress={() => {}} 
+          />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <MenuItem 
+            icon={<Settings size={20} color={colors.textPrimary} />} 
+            title="Settings" 
+            onPress={() => {}} 
+          />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <MenuItem 
+            icon={<LogOut size={20} color={colors.error} />} 
+            title="Logout" 
+            destructive
+            onPress={handleLogout} 
+          />
         </Card>
 
-        {/* Logout Action */}
-        <Button
-          title="Sign Out of Mobile App"
-          onPress={handleLogout}
-          variant="danger"
-          fullWidth
-          leftIcon={<LogOut size={18} color={colors.textInverse} />}
-          style={styles.logoutBtn}
-        />
       </ScrollView>
     </Screen>
   );
@@ -136,76 +140,37 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 40,
   },
-  userCard: {
-    marginBottom: 20,
-  },
-  userRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  userInfo: {
-    marginLeft: 14,
-    flex: 1,
-  },
-  roleBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-    borderWidth: 1,
-    alignSelf: 'flex-start',
-    marginTop: 6,
-  },
-  roleIcon: {
-    marginRight: 4,
-  },
   sectionLabel: {
-    marginBottom: 10,
-    marginTop: 6,
+    marginBottom: 8,
+    marginTop: 16,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  optionCard: {
-    marginBottom: 16,
-    paddingVertical: 12,
+  sectionCard: {
+    padding: 0,
+    overflow: 'hidden',
   },
-  optionRow: {
+  menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    padding: 16,
   },
-  optionLeft: {
-    flexDirection: 'row',
+  iconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
-  optionTextGroup: {
-    marginLeft: 12,
+  menuItemContent: {
+    flex: 1,
   },
-  systemCard: {
-    marginBottom: 24,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 4,
-  },
-  infoLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  infoText: {
-    marginLeft: 10,
-  },
-  endpointText: {
-    maxWidth: 180,
+  subtitle: {
+    marginTop: 2,
   },
   divider: {
     height: 1,
-    marginVertical: 12,
-  },
-  logoutBtn: {
-    marginTop: 8,
-  },
+    marginLeft: 64, // Align with text
+  }
 });
