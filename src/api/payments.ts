@@ -21,7 +21,8 @@ export interface WalletDashboard {
 
 export const paymentsApi = {
   async getPaymentHistory(): Promise<PaymentTransaction[]> {
-    return apiClient.get<PaymentTransaction[]>('/api/payments/history/');
+    const res = await apiClient.get<any>('/api/payments/history/');
+    return res.orders || (Array.isArray(res) ? res : []);
   },
 
   async getWalletDashboard(): Promise<WalletDashboard> {

@@ -15,7 +15,7 @@ export default function InvoicesScreen() {
 
   const { data: invoices, isLoading, error, refetch } = useQuery({
     queryKey: ['invoices'],
-    queryFn: invoicesApi.getInvoices
+    queryFn: () => invoicesApi.getInvoices()
   });
 
   const getStatusColor = (status: string) => {
@@ -40,7 +40,7 @@ export default function InvoicesScreen() {
         <View style={styles.center}>
           <Text color={colors.error}>Failed to load invoices.</Text>
         </View>
-      ) : invoices?.length === 0 ? (
+      ) : invoices?.results?.length === 0 ? (
         <View style={styles.emptyState}>
           <Receipt size={48} color={colors.textMuted} style={{ marginBottom: 16 }} />
           <Text variant="h3" color={colors.textPrimary}>No Invoices Found</Text>
@@ -50,7 +50,7 @@ export default function InvoicesScreen() {
         </View>
       ) : (
         <FlatList
-          data={invoices}
+          data={invoices?.results}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           refreshing={isLoading}
@@ -59,7 +59,7 @@ export default function InvoicesScreen() {
             <Card style={styles.card}>
               <View style={styles.row}>
                 <View style={styles.content}>
-                  <Text variant="h3" weight="bold">{item.invoice_number}</Text>
+                  <Text variant="h3" weight="bold">{item.document_number}</Text>
                   <Text variant="body" style={{ marginTop: 4 }}>
                     {item.customer_name}
                   </Text>

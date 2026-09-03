@@ -16,7 +16,9 @@ import {
   Bell, 
   Settings, 
   LogOut,
-  ChevronRight
+  ChevronRight,
+  Moon,
+  Sun
 } from 'lucide-react-native';
 import { useSessionStore } from '../../src/stores/sessionStore';
 
@@ -51,7 +53,7 @@ function MenuItem({ icon, title, subtitle, onPress, destructive }: MenuItemProps
 }
 
 export default function MoreScreen() {
-  const { colors } = useTheme();
+  const { colors, mode, toggleTheme } = useTheme();
   const router = useRouter();
   const logout = useSessionStore((state) => state.logout);
 
@@ -120,6 +122,12 @@ export default function MoreScreen() {
             icon={<Settings size={20} color={colors.textPrimary} />} 
             title="Settings" 
             onPress={() => {}} 
+          />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <MenuItem 
+            icon={mode === 'dark' ? <Sun size={20} color={colors.textPrimary} /> : <Moon size={20} color={colors.textPrimary} />} 
+            title={mode === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"} 
+            onPress={toggleTheme} 
           />
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <MenuItem 

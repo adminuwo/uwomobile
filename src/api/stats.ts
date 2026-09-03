@@ -30,7 +30,7 @@ export const statsApi = {
    * Fetch global client stats (counts of contacts, workflows, etc.)
    */
   async getClientStats(): Promise<ClientStats> {
-    return apiClient.get<ClientStats>('/api/client/stats');
+    return apiClient.get<ClientStats>('/api/client/stats/');
   },
 
   /**

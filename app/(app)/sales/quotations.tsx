@@ -15,7 +15,7 @@ export default function QuotationsScreen() {
 
   const { data: quotations, isLoading, error, refetch } = useQuery({
     queryKey: ['quotations'],
-    queryFn: quotationsApi.getQuotations
+    queryFn: () => quotationsApi.getQuotations()
   });
 
   const getStatusColor = (status: string) => {
@@ -39,7 +39,7 @@ export default function QuotationsScreen() {
         <View style={styles.center}>
           <Text color={colors.error}>Failed to load quotations.</Text>
         </View>
-      ) : quotations?.length === 0 ? (
+      ) : quotations?.results?.length === 0 ? (
         <View style={styles.emptyState}>
           <FileText size={48} color={colors.textMuted} style={{ marginBottom: 16 }} />
           <Text variant="h3" color={colors.textPrimary}>No Quotations Found</Text>
@@ -49,7 +49,7 @@ export default function QuotationsScreen() {
         </View>
       ) : (
         <FlatList
-          data={quotations}
+          data={quotations?.results}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           refreshing={isLoading}
@@ -58,7 +58,7 @@ export default function QuotationsScreen() {
             <Card style={styles.card}>
               <View style={styles.row}>
                 <View style={styles.content}>
-                  <Text variant="h3" weight="bold">{item.title}</Text>
+                  <Text variant="h3" weight="bold">{item.document_number}</Text>
                   <Text variant="body" style={{ marginTop: 4 }}>
                     {item.customer_name}
                   </Text>

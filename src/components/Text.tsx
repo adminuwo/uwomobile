@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text as RNText, TextProps as RNTextProps, StyleSheet, TextStyle } from 'react-native';
+import { Text as RNText, TextProps as RNTextProps, StyleSheet, TextStyle, Platform } from 'react-native';
 import { useTheme } from '../theme';
 
 export type TextVariant = 'h1' | 'h2' | 'h3' | 'subtitle' | 'body' | 'caption' | 'label' | 'emerald';
@@ -88,6 +88,7 @@ export const Text: React.FC<TextProps> = ({
   return (
     <RNText
       style={[
+        { fontFamily: Platform.OS === 'android' ? 'serif' : 'Times New Roman' },
         getVariantStyle(),
         align !== 'auto' && { textAlign: align },
         style,

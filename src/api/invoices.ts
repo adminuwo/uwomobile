@@ -1,25 +1,13 @@
-import { apiClient } from './client';
-
-export interface Invoice {
-  id: string;
-  token: string;
-  invoice_number: string;
-  status: 'DRAFT' | 'SENT' | 'PAID' | 'OVERDUE' | 'CANCELLED';
-  customer_name: string;
-  customer_email?: string;
-  total_amount: number;
-  balance_due: number;
-  currency: string;
-  issue_date: string;
-  due_date: string;
-}
+import { salesDocumentsApi, SalesDocumentsResponse, SalesDocument } from './salesDocuments';
 
 export const invoicesApi = {
-  async getInvoices(): Promise<Invoice[]> {
-    return apiClient.get<Invoice[]>('/api/invoices/');
+  getInvoices: (params?: { limit?: number; offset?: number; search?: string }): Promise<SalesDocumentsResponse> => {
+    return salesDocumentsApi.getDocuments({ ...params, document_type: 'INVOICE' });
   },
-
-  async getInvoice(id: string): Promise<Invoice> {
-    return apiClient.get<Invoice>(`/api/invoices/${id}/`);
-  }
+  getInvoice: (id: string): Promise<SalesDocument> => {
+    return salesDocumentsApi.getDocument(id);
+  },
+  createInvoice: (data: Partial<SalesDocument>): Promise<SalesDocument> => {
+    return salesDocumentsApi.createDocument({ ...data, document_type: 'INVOICE' });
+  },
 };

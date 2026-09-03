@@ -1,6 +1,6 @@
 import 'react-native-gesture-handler';
 import React, { useEffect, Component, ReactNode } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { Text as RNText, View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Stack } from 'expo-router';
 import { QueryClientProvider } from '@tanstack/react-query';
 import * as SplashScreen from 'expo-splash-screen';
@@ -8,8 +8,6 @@ import { queryClient } from '../src/config/queryClient';
 import { ThemeProvider } from '../src/theme';
 import { useSessionStore } from '../src/stores/sessionStore';
 import { useBrandStore } from '../src/stores/brandStore';
-import { Text } from '../src/components/Text';
-import { Button } from '../src/components/Button';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -32,18 +30,18 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
     if (this.state.hasError) {
       return (
         <View style={styles.errorContainer}>
-          <Text variant="h2" weight="bold" color="#ef4444" style={styles.errorTitle}>
+          <RNText style={[styles.errorTitle, { fontSize: 24, fontWeight: 'bold', color: '#ef4444' }]}>
             UwoConnect Launch Error
-          </Text>
-          <Text variant="caption" color="#a1a1aa" style={styles.errorMessage}>
+          </RNText>
+          <RNText style={[styles.errorMessage, { fontSize: 13, color: '#a1a1aa' }]}>
             {this.state.error?.message || 'An unexpected startup error occurred.'}
-          </Text>
-          <Button
-            title="Restart App"
+          </RNText>
+          <TouchableOpacity
             onPress={() => this.setState({ hasError: false, error: null })}
-            variant="primary"
-            style={styles.restartBtn}
-          />
+            style={[styles.restartBtn, { backgroundColor: '#10b981', padding: 12, borderRadius: 8 }]}
+          >
+            <RNText style={{ color: '#fff', textAlign: 'center', fontWeight: 'bold' }}>Restart App</RNText>
+          </TouchableOpacity>
         </View>
       );
     }

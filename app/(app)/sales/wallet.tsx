@@ -15,12 +15,12 @@ export default function WalletScreen() {
 
   const { data: walletData, isLoading: walletLoading, error: walletError, refetch: refetchWallet } = useQuery({
     queryKey: ['walletDashboard'],
-    queryFn: paymentsApi.getWalletDashboard
+    queryFn: () => paymentsApi.getWalletDashboard()
   });
 
   const { data: historyData, isLoading: historyLoading, refetch: refetchHistory } = useQuery({
     queryKey: ['paymentHistory'],
-    queryFn: paymentsApi.getPaymentHistory
+    queryFn: () => paymentsApi.getPaymentHistory()
   });
 
   const isLoading = walletLoading || historyLoading;

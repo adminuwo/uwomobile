@@ -20,12 +20,12 @@ export default function HomeScreen() {
 
   const { data: clientStats, isLoading: clientStatsLoading, refetch: refetchClientStats } = useQuery({
     queryKey: ['clientStats'],
-    queryFn: statsApi.getClientStats,
+    queryFn: () => statsApi.getClientStats(),
   });
 
   const { data: monitoringStats, isLoading: monitoringStatsLoading, refetch: refetchMonitoringStats } = useQuery({
     queryKey: ['monitoringStats'],
-    queryFn: statsApi.getMonitoringStats,
+    queryFn: () => statsApi.getMonitoringStats(),
   });
 
   const onRefresh = () => {
@@ -37,7 +37,7 @@ export default function HomeScreen() {
 
   return (
     <Screen safeAreaEdges={['top', 'left', 'right']}>
-      <Header showLogo />
+      {/* Header removed as requested */}
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -49,14 +49,19 @@ export default function HomeScreen() {
         {/* Welcome Section */}
         <View style={styles.welcomeRow}>
           <View style={styles.welcomeText}>
+            <Text variant="h1" weight="bold" color={colors.textPrimary}>
+              {userName}
+            </Text>
             <Text variant="caption" color={colors.textMuted}>
               Welcome back,
             </Text>
-            <Text variant="h1" weight="bold" color={colors.textPrimary}>
-              {userName} 👋
-            </Text>
           </View>
-          <Avatar name={userName} size="md" isOnline />
+          <Avatar 
+            name={brand.brand_name || userName} 
+            uri={brand.logo_url} 
+            size="md" 
+            isOnline 
+          />
         </View>
 
         {/* Workspace Brand Badge */}

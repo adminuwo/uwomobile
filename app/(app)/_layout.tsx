@@ -54,6 +54,13 @@ export default function AppLayout() {
           tabBarIcon: ({ color, size }) => <MoreHorizontal size={size || 22} color={color} />,
         }}
       />
+      {/* Hide nested routes from the tab bar */}
+      <Tabs.Screen name="sales/invoices" options={{ href: null }} />
+      <Tabs.Screen name="sales/products" options={{ href: null }} />
+      <Tabs.Screen name="sales/quotations" options={{ href: null }} />
+      <Tabs.Screen name="sales/wallet" options={{ href: null }} />
+      <Tabs.Screen name="conversation/[id]" options={{ href: null }} />
+      <Tabs.Screen name="lead/[id]" options={{ href: null }} />
     </Tabs>
   );
 }

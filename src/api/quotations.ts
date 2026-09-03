@@ -1,24 +1,13 @@
-import { apiClient } from './client';
-
-export interface Quotation {
-  id: string;
-  token: string;
-  title: string;
-  status: 'DRAFT' | 'SENT' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED';
-  customer_name: string;
-  customer_email?: string;
-  total_amount: number;
-  currency: string;
-  created_at: string;
-  valid_until?: string;
-}
+import { salesDocumentsApi, SalesDocumentsResponse, SalesDocument } from './salesDocuments';
 
 export const quotationsApi = {
-  async getQuotations(): Promise<Quotation[]> {
-    return apiClient.get<Quotation[]>('/api/quotations/');
+  getQuotations: (params?: { limit?: number; offset?: number; search?: string }): Promise<SalesDocumentsResponse> => {
+    return salesDocumentsApi.getDocuments({ ...params, document_type: 'QUOTATION' });
   },
-
-  async getQuotation(id: string): Promise<Quotation> {
-    return apiClient.get<Quotation>(`/api/quotations/${id}/`);
-  }
+  getQuotation: (id: string): Promise<SalesDocument> => {
+    return salesDocumentsApi.getDocument(id);
+  },
+  createQuotation: (data: Partial<SalesDocument>): Promise<SalesDocument> => {
+    return salesDocumentsApi.createDocument({ ...data, document_type: 'QUOTATION' });
+  },
 };

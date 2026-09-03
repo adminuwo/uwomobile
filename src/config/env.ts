@@ -15,7 +15,7 @@ const DEFAULT_PRODUCTION_URL = 'https://uwoconnectforrb-743928421487.asia-south1
 const getLocalHostApiUrl = (): string => {
   if (Platform.OS === 'android') {
     // Android emulator mapping to host machine localhost
-    return 'http://10.0.2.2:8000';
+    return 'http://192.168.29.238:8000'; // Override for physical device
   }
   // iOS simulator or web
   return 'http://127.0.0.1:8000';
@@ -31,15 +31,15 @@ const getEnv = (): EnvConfig => {
   const appEnv = (processEnv.EXPO_PUBLIC_APP_ENV || extra.APP_ENV || (isDevelopmentBuild ? 'development' : 'production')) as AppEnvironment;
   const isDev = isDevelopmentBuild && appEnv === 'development';
 
-  let apiBaseUrl = processEnv.EXPO_PUBLIC_API_BASE_URL || extra.API_BASE_URL;
-
-  if (!apiBaseUrl) {
-    if (isDev) {
-      apiBaseUrl = getLocalHostApiUrl();
-    } else {
-      apiBaseUrl = DEFAULT_PRODUCTION_URL;
-    }
-  }
+  let apiBaseUrl = 'http://192.168.29.238:8083'; // FORCED IP FOR TESTING (VIA NODE.JS PROXY)
+  
+  // if (!apiBaseUrl) {
+  //   if (isDev) {
+  //     apiBaseUrl = getLocalHostApiUrl();
+  //   } else {
+  //     apiBaseUrl = DEFAULT_PRODUCTION_URL;
+  //   }
+  // }
 
   return {
     APP_ENV: appEnv,

@@ -15,7 +15,7 @@ export default function ProductsScreen() {
 
   const { data: products, isLoading, error, refetch } = useQuery({
     queryKey: ['products'],
-    queryFn: productsApi.getProducts
+    queryFn: () => productsApi.getProducts()
   });
 
   return (
@@ -30,7 +30,7 @@ export default function ProductsScreen() {
         <View style={styles.center}>
           <Text color={colors.error}>Failed to load products.</Text>
         </View>
-      ) : products?.length === 0 ? (
+      ) : products?.results?.length === 0 ? (
         <View style={styles.emptyState}>
           <PackageOpen size={48} color={colors.textMuted} style={{ marginBottom: 16 }} />
           <Text variant="h3" color={colors.textPrimary}>No Products Found</Text>
@@ -40,7 +40,7 @@ export default function ProductsScreen() {
         </View>
       ) : (
         <FlatList
-          data={products}
+          data={products?.results}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           refreshing={isLoading}
