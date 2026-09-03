@@ -10,6 +10,8 @@ export interface EnvConfig {
   IS_DEV: boolean;
 }
 
+const DEFAULT_PRODUCTION_URL = 'https://uwoconnectforrb-743928421487.asia-south1.run.app';
+
 const getLocalHostApiUrl = (): string => {
   if (Platform.OS === 'android') {
     // Android emulator mapping to host machine localhost
@@ -23,8 +25,11 @@ const getEnv = (): EnvConfig => {
   const extra = Constants.expoConfig?.extra || {};
   const processEnv = process.env;
 
-  const appEnv = (processEnv.EXPO_PUBLIC_APP_ENV || extra.APP_ENV || 'development') as AppEnvironment;
-  const isDev = appEnv === 'development';
+  // __DEV__ is false in compiled production/release APK builds
+  const isDevelopmentBuild = typeof __DEV__ !== 'undefined' ? __DEV__ : false;
+
+  const appEnv = (processEnv.EXPO_PUBLIC_APP_ENV || extra.APP_ENV || (isDevelopmentBuild ? 'development' : 'production')) as AppEnvironment;
+  const isDev = isDevelopmentBuild && appEnv === 'development';
 
   let apiBaseUrl = processEnv.EXPO_PUBLIC_API_BASE_URL || extra.API_BASE_URL;
 
@@ -32,7 +37,7 @@ const getEnv = (): EnvConfig => {
     if (isDev) {
       apiBaseUrl = getLocalHostApiUrl();
     } else {
-      apiBaseUrl = 'https://uwoconnectforrb-743928421487.asia-south1.run.app';
+      apiBaseUrl = DEFAULT_PRODUCTION_URL;
     }
   }
 
