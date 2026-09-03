@@ -88,4 +88,29 @@ export const lightThemeColors = {
   headerBg: '#ffffff',
 };
 
+export const colors = {
+  primary: {
+    main: darkThemeColors.primary,
+    dark: darkThemeColors.primaryDark,
+    light: darkThemeColors.primaryLight,
+  },
+  surface: {
+    card: darkThemeColors.card,
+    surface: darkThemeColors.surface,
+  },
+  background: {
+    main: darkThemeColors.background,
+    secondary: darkThemeColors.surface,
+  },
+  border: {
+    default: darkThemeColors.border,
+    subtle: darkThemeColors.borderMuted,
+  },
+  text: {
+    primary: darkThemeColors.textPrimary,
+    secondary: darkThemeColors.textSecondary,
+    muted: darkThemeColors.textMuted,
+  },
+};
+
 export type ThemeColors = typeof darkThemeColors;

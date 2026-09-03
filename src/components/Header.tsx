@@ -10,6 +10,7 @@ interface HeaderProps {
   showBack?: boolean;
   onBackPress?: () => void;
   rightAction?: ReactNode;
+  rightElement?: ReactNode;
   showLogo?: boolean;
   style?: ViewStyle;
 }
@@ -19,11 +20,14 @@ export const Header: React.FC<HeaderProps> = ({
   showBack = false,
   onBackPress,
   rightAction,
+  rightElement,
   showLogo = false,
   style,
 }) => {
   const { colors, spacing } = useTheme();
   const brand = useBrandStore((state) => state.brand);
+  const actionToRender = rightElement || rightAction;
+
 
   return (
     <View
@@ -67,7 +71,7 @@ export const Header: React.FC<HeaderProps> = ({
         )}
       </View>
 
-      {rightAction && <View style={styles.rightContainer}>{rightAction}</View>}
+      {actionToRender && <View style={styles.rightContainer}>{actionToRender}</View>}
     </View>
   );
 };

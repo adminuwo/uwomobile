@@ -8,7 +8,7 @@ import { Inbox } from 'lucide-react-native';
 interface EmptyStateProps {
   title?: string;
   description?: string;
-  icon?: ReactNode;
+  icon?: ReactNode | any;
   actionTitle?: string;
   onAction?: () => void;
   style?: ViewStyle;
@@ -24,10 +24,17 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 }) => {
   const { colors, spacing } = useTheme();
 
+  const renderIcon = () => {
+    if (!icon) return <Inbox size={32} color={colors.primary} />;
+    if (React.isValidElement(icon)) return icon;
+    const IconComp = icon as any;
+    return <IconComp size={32} color={colors.primary} />;
+  };
+
   return (
     <View style={[styles.container, style]}>
       <View style={[styles.iconContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        {icon || <Inbox size={32} color={colors.primary} />}
+        {renderIcon()}
       </View>
       <Text variant="h3" weight="bold" align="center" style={styles.title}>
         {title}

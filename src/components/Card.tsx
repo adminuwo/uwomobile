@@ -1,9 +1,11 @@
 import React, { ReactNode } from 'react';
 import { View, StyleSheet, ViewStyle, TouchableOpacity } from 'react-native';
 import { useTheme } from '../theme';
+import { Text } from './Text';
 
 interface CardProps {
   children: ReactNode;
+  title?: string;
   style?: ViewStyle;
   onPress?: () => void;
   variant?: 'default' | 'outlined' | 'elevated';
@@ -11,6 +13,7 @@ interface CardProps {
 
 export const Card: React.FC<CardProps> = ({
   children,
+  title,
   style,
   onPress,
   variant = 'default',
@@ -36,6 +39,17 @@ export const Card: React.FC<CardProps> = ({
     return base;
   };
 
+  const cardContent = (
+    <>
+      {title && (
+        <Text variant="h3" weight="bold" color={colors.textPrimary} style={{ marginBottom: 8 }}>
+          {title}
+        </Text>
+      )}
+      {children}
+    </>
+  );
+
   if (onPress) {
     return (
       <TouchableOpacity
@@ -43,10 +57,11 @@ export const Card: React.FC<CardProps> = ({
         onPress={onPress}
         activeOpacity={0.85}
       >
-        {children}
+        {cardContent}
       </TouchableOpacity>
     );
   }
 
-  return <View style={[getCardStyle(), style]}>{children}</View>;
+  return <View style={[getCardStyle(), style]}>{cardContent}</View>;
 };
+

@@ -57,3 +57,8 @@ export const secureStorage = {
     await this.deleteItem(APP_CONFIG.tokenStorageKey);
   },
 };
+
+export const secureStore = {
+  getToken: (): Promise<string | null> => secureStorage.getAccessToken(),
+};
+

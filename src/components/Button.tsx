@@ -19,6 +19,7 @@ interface ButtonProps extends TouchableOpacityProps {
   size?: ButtonSize;
   loading?: boolean;
   leftIcon?: ReactNode;
+  icon?: ReactNode;
   rightIcon?: ReactNode;
   fullWidth?: boolean;
   style?: ViewStyle;
@@ -31,6 +32,7 @@ export const Button: React.FC<ButtonProps> = ({
   size = 'md',
   loading = false,
   leftIcon,
+  icon,
   rightIcon,
   fullWidth = false,
   disabled,
@@ -38,6 +40,8 @@ export const Button: React.FC<ButtonProps> = ({
   textStyle,
   ...props
 }) => {
+  const iconToRender = icon || leftIcon;
+
   const { colors, radius, spacing, typography } = useTheme();
 
   const getContainerStyle = (): ViewStyle => {
@@ -122,7 +126,7 @@ export const Button: React.FC<ButtonProps> = ({
         <ActivityIndicator color={getTextColor()} size="small" />
       ) : (
         <>
-          {leftIcon && <TouchableOpacity style={styles.iconLeft}>{leftIcon}</TouchableOpacity>}
+          {iconToRender && <TouchableOpacity style={styles.iconLeft}>{iconToRender}</TouchableOpacity>}
           <Text
             variant={size === 'sm' ? 'caption' : 'body'}
             weight="bold"
