@@ -1,0 +1,55 @@
+{
+  "expo": {
+    "name": "UwoConnect",
+    "slug": "uwo-connect",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "uwoconnect",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0a120d"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.uwo.uwoconnect",
+      "infoPlist": {
+        "NSCameraUsageDescription": "UwoConnect requires camera access to attach media to messages and CRM contacts.",
+        "NSPhotoLibraryUsageDescription": "UwoConnect requires photo library access to upload media."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0a120d"
+      },
+      "package": "com.uwo.uwoconnect"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "c984dbb0-9684-4a8b-b459-4f54e0d79b6e"
+      }
+    },
+    "owner": "uwo"
+  }
+}
