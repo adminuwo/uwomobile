@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
 import { Screen } from '../../src/components/Screen';
 import { Header } from '../../src/components/Header';
 import { Text } from '../../src/components/Text';
@@ -9,12 +10,28 @@ import { Avatar } from '../../src/components/Avatar';
 import { useSessionStore } from '../../src/stores/sessionStore';
 import { useBrandStore } from '../../src/stores/brandStore';
 import { useTheme } from '../../src/theme';
+import { statsApi } from '../../src/api/stats';
 import { MessageSquare, Users, Zap, TrendingUp, ShieldCheck } from 'lucide-react-native';
 
 export default function HomeScreen() {
   const { colors, spacing } = useTheme();
   const user = useSessionStore((state) => state.user);
   const brand = useBrandStore((state) => state.brand);
+
+  const { data: clientStats, isLoading: clientStatsLoading, refetch: refetchClientStats } = useQuery({
+    queryKey: ['clientStats'],
+    queryFn: statsApi.getClientStats,
+  });
+
+  const { data: monitoringStats, isLoading: monitoringStatsLoading, refetch: refetchMonitoringStats } = useQuery({
+    queryKey: ['monitoringStats'],
+    queryFn: statsApi.getMonitoringStats,
+  });
+
+  const onRefresh = () => {
+    refetchClientStats();
+    refetchMonitoringStats();
+  };
 
   const userName = user?.name || user?.email?.split('@')[0] || 'User';
 
@@ -25,6 +42,9 @@ export default function HomeScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={clientStatsLoading || monitoringStatsLoading} onRefresh={onRefresh} />
+        }
       >
         {/* Welcome Section */}
         <View style={styles.welcomeRow}>
@@ -66,7 +86,7 @@ export default function HomeScreen() {
               <MessageSquare size={20} color={colors.primary} />
             </View>
             <Text variant="h2" weight="bold" style={styles.statValue}>
-              128
+              {monitoringStats?.unread_conversations ?? '-'}
             </Text>
             <Text variant="caption" color={colors.textMuted}>
               Unread Messages
@@ -78,7 +98,7 @@ export default function HomeScreen() {
               <Users size={20} color={colors.secondary} />
             </View>
             <Text variant="h2" weight="bold" style={styles.statValue}>
-              1,420
+              {clientStats?.activeUsers ?? '-'}
             </Text>
             <Text variant="caption" color={colors.textMuted}>
               Total Contacts
@@ -92,7 +112,7 @@ export default function HomeScreen() {
               <Zap size={20} color={colors.warning} />
             </View>
             <Text variant="h2" weight="bold" style={styles.statValue}>
-              14
+              {clientStats?.resourceCounts?.projects ?? '-'}
             </Text>
             <Text variant="caption" color={colors.textMuted}>
               Active Workflows
@@ -104,10 +124,10 @@ export default function HomeScreen() {
               <TrendingUp size={20} color={colors.info} />
             </View>
             <Text variant="h2" weight="bold" style={styles.statValue}>
-              99.8%
+              {monitoringStats?.avg_response_time || '-'}
             </Text>
             <Text variant="caption" color={colors.textMuted}>
-              Delivery Rate
+              Avg Response Time
             </Text>
           </Card>
         </View>

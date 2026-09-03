@@ -74,6 +74,10 @@ class ApiClient {
           break;
         case 401:
           message = message || 'Session expired. Please sign in again.';
+          // Trigger logout
+          import('../stores/sessionStore').then(({ useSessionStore }) => {
+            useSessionStore.getState().logout();
+          });
           break;
         case 403:
           message = message || 'Access denied. You do not have permission.';
