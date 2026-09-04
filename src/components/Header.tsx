@@ -1,14 +1,18 @@
 import React, { ReactNode } from 'react';
-import { View, TouchableOpacity, Image, StyleSheet, ViewStyle } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
 import { useTheme } from '../theme';
 import { Text } from './Text';
-import { ChevronLeft } from 'lucide-react-native';
-import { useBrandStore } from '../stores/brandStore';
+import { ChevronLeft, Menu } from 'lucide-react-native';
+import { useDrawerStore } from '../stores/drawerStore';
+import { useTenantBranding } from '../hooks/useTenantBranding';
+import { ClientLogoBadge } from './ClientLogoBadge';
+import { Skeleton } from './Skeleton';
 
 interface HeaderProps {
   title?: string;
   showBack?: boolean;
   onBackPress?: () => void;
+  showMenu?: boolean;
   rightAction?: ReactNode;
   rightElement?: ReactNode;
   showLogo?: boolean;
@@ -19,22 +23,29 @@ export const Header: React.FC<HeaderProps> = ({
   title,
   showBack = false,
   onBackPress,
+  showMenu = true,
   rightAction,
   rightElement,
   showLogo = false,
   style,
 }) => {
   const { colors, spacing } = useTheme();
-  const brand = useBrandStore((state) => state.brand);
+  const openDrawer = useDrawerStore((state) => state.openDrawer);
+  const { clientName, logoUri, initial, isLoading } = useTenantBranding();
   const actionToRender = rightElement || rightAction;
 
+  // Title to display: Prefer specific screen title if passed, else tenant client company name
+  const displayTitle = title || clientName;
+
+  // Render Logo Badge ONLY when showLogo is explicitly true (e.g. on Home screen)
+  const shouldRenderLogo = showLogo;
 
   return (
     <View
       style={[
         styles.header,
         {
-          backgroundColor: colors.headerBg,
+          backgroundColor: colors.headerBg || colors.surface,
           borderBottomColor: colors.border,
           paddingHorizontal: spacing.lg,
         },
@@ -42,32 +53,49 @@ export const Header: React.FC<HeaderProps> = ({
       ]}
     >
       <View style={styles.leftContainer}>
-        {showBack && (
+        {showBack ? (
           <TouchableOpacity
             onPress={onBackPress}
-            style={styles.backButton}
+            style={styles.iconButton}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <ChevronLeft size={24} color={colors.textPrimary} />
           </TouchableOpacity>
+        ) : showMenu ? (
+          <TouchableOpacity
+            onPress={openDrawer}
+            style={styles.iconButton}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Menu size={22} color={colors.textPrimary} />
+          </TouchableOpacity>
+        ) : null}
+
+        {/* Dynamic Tenant Client Logo Badge (Rendered ONLY when showLogo is true) */}
+        {shouldRenderLogo && (
+          <ClientLogoBadge
+            logoUri={logoUri}
+            initial={initial}
+            isLoading={isLoading}
+            size={30}
+            style={styles.logoBadgeMargin}
+          />
         )}
 
-        {showLogo ? (
-          <View style={styles.logoRow}>
-            <Image
-              source={brand.logo_url ? { uri: brand.logo_url } : require('../../assets/icon.png')}
-              style={styles.logoImage}
-            />
-            <Text variant="h3" weight="bold" color={colors.primary}>
-              {brand.brand_name || 'UwoConnect'}
-            </Text>
-          </View>
+        {/* Display Title or Company Name */}
+        {isLoading && !title ? (
+          <Skeleton width={140} height={18} borderRadius={4} style={{ flexShrink: 1 }} />
         ) : (
-          title && (
-            <Text variant="h3" weight="bold" color={colors.textPrimary}>
-              {title}
-            </Text>
-          )
+          <Text
+            variant="h3"
+            weight="bold"
+            color={colors.textPrimary}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+            style={styles.brandTitleText}
+          >
+            {displayTitle}
+          </Text>
         )}
       </View>
 
@@ -88,20 +116,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    paddingRight: 8,
   },
-  backButton: {
-    marginRight: 12,
-  },
-  logoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  logoImage: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
+  iconButton: {
     marginRight: 10,
-    resizeMode: 'contain',
+  },
+  logoBadgeMargin: {
+    marginRight: 10,
+  },
+  brandTitleText: {
+    flex: 1,
+    fontSize: 16,
+    lineHeight: 22,
   },
   rightContainer: {
     flexDirection: 'row',

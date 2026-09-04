@@ -31,15 +31,7 @@ const getEnv = (): EnvConfig => {
   const appEnv = (processEnv.EXPO_PUBLIC_APP_ENV || extra.APP_ENV || (isDevelopmentBuild ? 'development' : 'production')) as AppEnvironment;
   const isDev = isDevelopmentBuild && appEnv === 'development';
 
-  let apiBaseUrl = 'http://192.168.29.238:8083'; // FORCED IP FOR TESTING (VIA NODE.JS PROXY)
-  
-  // if (!apiBaseUrl) {
-  //   if (isDev) {
-  //     apiBaseUrl = getLocalHostApiUrl();
-  //   } else {
-  //     apiBaseUrl = DEFAULT_PRODUCTION_URL;
-  //   }
-  // }
+  let apiBaseUrl = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.29.238:8000';
 
   return {
     APP_ENV: appEnv,

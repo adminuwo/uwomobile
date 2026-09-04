@@ -11,6 +11,7 @@ export interface ClientStats {
     teamMembers: number;
     pdfs: number;
     products: number;
+    crmLeads?: number;
   };
 }
 
@@ -30,7 +31,7 @@ export const statsApi = {
    * Fetch global client stats (counts of contacts, workflows, etc.)
    */
   async getClientStats(): Promise<ClientStats> {
-    return apiClient.get<ClientStats>('/api/client/stats/');
+    return apiClient.get<ClientStats>('/api/client/stats');
   },
 
   /**

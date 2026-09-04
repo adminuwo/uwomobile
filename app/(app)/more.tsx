@@ -13,6 +13,7 @@ import {
   Wallet, 
   Users, 
   Link, 
+  GitBranch,
   Bell, 
   Settings, 
   LogOut,
@@ -104,9 +105,16 @@ export default function MoreScreen() {
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <MenuItem 
             icon={<Link size={20} color={colors.secondary} />} 
-            title="Connectors" 
-            subtitle="WhatsApp, Instagram, APIs"
-            onPress={() => router.push('/workspace/connectors' as any)} 
+            title="Connectors & Channels" 
+            subtitle="WhatsApp, Instagram, Gmail, Outlook & APIs"
+            onPress={() => router.push('/connectors' as any)} 
+          />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <MenuItem 
+            icon={<GitBranch size={20} color={colors.info} />} 
+            title="AI Workflows & Automations" 
+            subtitle="Active routing flows & bot triggers"
+            onPress={() => router.push('/workflows' as any)} 
           />
         </Card>
 

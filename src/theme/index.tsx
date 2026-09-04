@@ -24,7 +24,7 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [mode, setModeState] = useState<ThemeMode>('dark');
+  const [mode, setModeState] = useState<ThemeMode>('light');
   const brand = useBrandStore((state) => state.brand);
 
   const baseColors = mode === 'dark' ? darkThemeColors : lightThemeColors;

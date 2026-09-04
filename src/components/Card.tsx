@@ -1,12 +1,12 @@
 import React, { ReactNode } from 'react';
-import { View, StyleSheet, ViewStyle, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ViewStyle, TouchableOpacity, StyleProp } from 'react-native';
 import { useTheme } from '../theme';
 import { Text } from './Text';
 
 interface CardProps {
   children: ReactNode;
   title?: string;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   onPress?: () => void;
   variant?: 'default' | 'outlined' | 'elevated';
 }

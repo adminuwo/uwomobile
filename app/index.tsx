@@ -1,21 +1,20 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Redirect } from 'expo-router';
 import { useSessionStore } from '../src/stores/sessionStore';
 import { useTheme } from '../src/theme';
 
 export default function IndexScreen() {
-  const router = useRouter();
   const { status } = useSessionStore();
   const { colors } = useTheme();
 
-  useEffect(() => {
-    if (status === 'authenticated') {
-      router.replace('/(app)/home');
-    } else if (status === 'unauthenticated') {
-      router.replace('/(auth)/login');
-    }
-  }, [status, router]);
+  if (status === 'authenticated') {
+    return <Redirect href="/(app)/home" />;
+  }
+
+  if (status === 'unauthenticated') {
+    return <Redirect href="/(auth)/login" />;
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

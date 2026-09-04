@@ -3,7 +3,7 @@
     "name": "UwoConnect",
     "slug": "uwo-connect",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/icon.png",
     "scheme": "uwoconnect",
     "userInterfaceStyle": "dark",
@@ -28,7 +28,27 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0a120d"
       },
-      "package": "com.uwo.uwoconnect"
+      "package": "com.uwo.uwoconnect",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "uwoconnect"
+            },
+            {
+              "scheme": "https",
+              "host": "uwoconnect.aisa24.com",
+              "pathPrefix": "/auth/qr"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "bundler": "metro",

@@ -21,6 +21,7 @@ export interface SalesDocument {
   status: DocumentStatus;
   customer: string;
   customer_name?: string;
+  currency?: string;
   issue_date: string;
   expiry_date?: string;
   due_date?: string;
