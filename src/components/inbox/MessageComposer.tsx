@@ -1,22 +1,42 @@
 import React, { useState } from 'react';
 import { View, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Text } from '../Text';
-import { Send, Lock } from 'lucide-react-native';
-import { colors } from '../../theme/colors';
+import { Send, MessageSquare, StickyNote } from 'lucide-react-native';
+import { useTheme } from '../../theme';
 
 interface MessageComposerProps {
   onSend: (text: string, isInternalNote: boolean) => void;
   onTyping?: (text: string) => void;
   sending: boolean;
+  channelColor?: string;
+  activeMode?: 'MESSAGES' | 'NOTES';
+  onModeChange?: (mode: 'MESSAGES' | 'NOTES') => void;
 }
 
-export const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, onTyping, sending }) => {
+export const MessageComposer: React.FC<MessageComposerProps> = ({
+  onSend,
+  onTyping,
+  sending,
+  channelColor,
+  activeMode,
+  onModeChange,
+}) => {
+  const { colors } = useTheme();
   const [text, setText] = useState('');
-  const [isInternalNote, setIsInternalNote] = useState(false);
+  const [localInternalNote, setLocalInternalNote] = useState(false);
+  const isInternalNote = activeMode !== undefined ? activeMode === 'NOTES' : localInternalNote;
+  const activeColor = channelColor || colors.primary;
 
   const handleTextChange = (val: string) => {
     setText(val);
     if (onTyping) onTyping(val);
+  };
+
+  const handleModeToggle = (isNote: boolean) => {
+    setLocalInternalNote(isNote);
+    if (onModeChange) {
+      onModeChange(isNote ? 'NOTES' : 'MESSAGES');
+    }
   };
 
   const handleSend = () => {
@@ -26,26 +46,57 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, onTypi
   };
 
   return (
-    <View style={styles.container}>
-      <TouchableOpacity
-        activeOpacity={0.7}
-        style={[styles.noteToggle, isInternalNote && styles.noteToggleActive]}
-        onPress={() => setIsInternalNote(!isInternalNote)}
-      >
-        <Lock size={14} color={isInternalNote ? '#EAB308' : colors.text.muted} />
-        <Text style={[styles.noteToggleText, isInternalNote && styles.noteToggleTextActive]}>
-          {isInternalNote ? 'Internal Note' : 'Reply'}
-        </Text>
-      </TouchableOpacity>
+    <View style={[styles.container, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
+      {/* Mode Selector: Reply vs Internal Note Side-by-Side */}
+      <View style={styles.modeRow}>
+        <TouchableOpacity
+          activeOpacity={0.75}
+          style={[
+            styles.modeBtn,
+            !isInternalNote
+              ? { backgroundColor: `${activeColor}15`, borderColor: activeColor }
+              : { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+          onPress={() => handleModeToggle(false)}
+        >
+          <MessageSquare size={12} color={!isInternalNote ? activeColor : colors.textMuted} />
+          <Text style={[styles.modeText, { color: !isInternalNote ? activeColor : colors.textMuted }]}>
+            Reply
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          activeOpacity={0.75}
+          style={[
+            styles.modeBtn,
+            isInternalNote
+              ? { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' }
+              : { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+          onPress={() => handleModeToggle(true)}
+        >
+          <StickyNote size={12} color={isInternalNote ? '#D97706' : colors.textMuted} />
+          <Text style={[styles.modeText, { color: isInternalNote ? '#D97706' : colors.textMuted }]}>
+            Internal Note
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.inputRow}>
         <TextInput
           value={text}
           onChangeText={handleTextChange}
-          placeholder={isInternalNote ? 'Write an internal note for team...' : 'Type a message...'}
-          placeholderTextColor={colors.text.muted}
+          placeholder={isInternalNote ? 'Write a private internal note for team...' : 'Type a message...'}
+          placeholderTextColor={colors.textMuted}
           multiline
-          style={[styles.input, isInternalNote && styles.noteInput]}
+          style={[
+            styles.input,
+            {
+              backgroundColor: isInternalNote ? 'rgba(245, 158, 11, 0.08)' : colors.surface,
+              color: colors.textPrimary,
+              borderColor: isInternalNote ? '#F59E0B' : colors.border,
+            },
+          ]}
         />
 
         <TouchableOpacity
@@ -53,7 +104,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, onTypi
           disabled={!text.trim() || sending}
           style={[
             styles.sendButton,
-            isInternalNote ? styles.noteSendButton : styles.replySendButton,
+            { backgroundColor: isInternalNote ? '#D97706' : activeColor },
             (!text.trim() || sending) && styles.disabledSend,
           ]}
           onPress={handleSend}
@@ -61,7 +112,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, onTypi
           {sending ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
-            <Send size={18} color="#FFFFFF" />
+            <Send size={16} color="#FFFFFF" />
           )}
         </TouchableOpacity>
       </View>
@@ -72,32 +123,27 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, onTypi
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: colors.surface.card,
+    paddingVertical: 8,
     borderTopWidth: 1,
-    borderTopColor: colors.border.default,
-    gap: 8,
+    gap: 6,
   },
-  noteToggle: {
+  modeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    alignSelf: 'flex-start',
+  },
+  modeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: colors.background.secondary,
+    borderRadius: 8,
+    borderWidth: 1,
   },
-  noteToggleActive: {
-    backgroundColor: 'rgba(234, 179, 8, 0.15)',
-  },
-  noteToggleText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.text.muted,
-  },
-  noteToggleTextActive: {
-    color: '#EAB308',
+  modeText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   inputRow: {
     flexDirection: 'row',
@@ -106,34 +152,21 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    minHeight: 40,
+    minHeight: 38,
     maxHeight: 100,
-    backgroundColor: colors.background.secondary,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 10,
-    fontSize: 14,
-    color: colors.text.primary,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingTop: 8,
+    paddingBottom: 8,
+    fontSize: 13,
     borderWidth: 1,
-    borderColor: colors.border.default,
-  },
-  noteInput: {
-    borderColor: '#EAB308',
-    backgroundColor: 'rgba(234, 179, 8, 0.05)',
   },
   sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  replySendButton: {
-    backgroundColor: colors.primary.main,
-  },
-  noteSendButton: {
-    backgroundColor: '#EAB308',
   },
   disabledSend: {
     opacity: 0.5,

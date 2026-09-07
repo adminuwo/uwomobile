@@ -27,58 +27,58 @@ export const Text: React.FC<TextProps> = ({
     switch (variant) {
       case 'h1':
         return {
-          fontSize: typography.fontSize['3xl'],
-          lineHeight: typography.fontSize['3xl'] * typography.lineHeight.tight,
+          fontSize: 28,
+          lineHeight: 36,
           fontWeight: weight || typography.fontWeight.bold,
           color: color || colors.textPrimary,
         };
       case 'h2':
         return {
-          fontSize: typography.fontSize['2xl'],
-          lineHeight: typography.fontSize['2xl'] * typography.lineHeight.tight,
+          fontSize: 22,
+          lineHeight: 28,
           fontWeight: weight || typography.fontWeight.bold,
           color: color || colors.textPrimary,
         };
       case 'h3':
         return {
-          fontSize: typography.fontSize.xl,
-          lineHeight: typography.fontSize.xl * typography.lineHeight.normal,
+          fontSize: 18,
+          lineHeight: 24,
           fontWeight: weight || typography.fontWeight.semibold,
           color: color || colors.textPrimary,
         };
       case 'subtitle':
         return {
-          fontSize: typography.fontSize.lg,
-          lineHeight: typography.fontSize.lg * typography.lineHeight.normal,
+          fontSize: 16,
+          lineHeight: 22,
           fontWeight: weight || typography.fontWeight.medium,
           color: color || colors.textSecondary,
         };
       case 'caption':
         return {
-          fontSize: typography.fontSize.xs,
-          lineHeight: typography.fontSize.xs * typography.lineHeight.normal,
+          fontSize: 11,
+          lineHeight: 16,
           fontWeight: weight || typography.fontWeight.regular,
           color: color || colors.textMuted,
         };
       case 'label':
         return {
-          fontSize: typography.fontSize.sm,
-          lineHeight: typography.fontSize.sm * typography.lineHeight.normal,
+          fontSize: 13,
+          lineHeight: 18,
           fontWeight: weight || typography.fontWeight.medium,
           color: color || colors.textSecondary,
         };
       case 'emerald':
         return {
-          fontSize: typography.fontSize.base,
-          lineHeight: typography.fontSize.base * typography.lineHeight.normal,
+          fontSize: 15,
+          lineHeight: 21,
           fontWeight: weight || typography.fontWeight.semibold,
           color: color || colors.primary,
         };
       case 'body':
       default:
         return {
-          fontSize: typography.fontSize.base,
-          lineHeight: typography.fontSize.base * typography.lineHeight.normal,
+          fontSize: 15,
+          lineHeight: 21,
           fontWeight: weight || typography.fontWeight.regular,
           color: color || colors.textPrimary,
         };
@@ -88,7 +88,7 @@ export const Text: React.FC<TextProps> = ({
   return (
     <RNText
       style={[
-        { fontFamily: Platform.OS === 'android' ? 'serif' : 'Times New Roman' },
+        { includeFontPadding: false },
         getVariantStyle(),
         align !== 'auto' && { textAlign: align },
         style,

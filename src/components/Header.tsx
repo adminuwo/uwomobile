@@ -26,7 +26,7 @@ export const Header: React.FC<HeaderProps> = ({
   showMenu = true,
   rightAction,
   rightElement,
-  showLogo = false,
+  showLogo = true,
   style,
 }) => {
   const { colors, spacing } = useTheme();
@@ -37,8 +37,8 @@ export const Header: React.FC<HeaderProps> = ({
   // Title to display: Prefer specific screen title if passed, else tenant client company name
   const displayTitle = title || clientName;
 
-  // Render Logo Badge ONLY when showLogo is explicitly true (e.g. on Home screen)
-  const shouldRenderLogo = showLogo;
+  // Render Logo Badge only when title is absent (e.g. Home screen) and showBack is false
+  const shouldRenderLogo = showLogo && !showBack && !title;
 
   return (
     <View
@@ -71,14 +71,14 @@ export const Header: React.FC<HeaderProps> = ({
           </TouchableOpacity>
         ) : null}
 
-        {/* Dynamic Tenant Client Logo Badge (Rendered ONLY when showLogo is true) */}
+        {/* Dynamic Tenant Client Logo/Initials Badge placed BEFORE company name */}
         {shouldRenderLogo && (
           <ClientLogoBadge
             logoUri={logoUri}
             initial={initial}
             isLoading={isLoading}
-            size={30}
-            style={styles.logoBadgeMargin}
+            size={28}
+            style={styles.logoBadgeMarginRight}
           />
         )}
 
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
   iconButton: {
     marginRight: 10,
   },
-  logoBadgeMargin: {
+  logoBadgeMarginRight: {
     marginRight: 10,
   },
   brandTitleText: {

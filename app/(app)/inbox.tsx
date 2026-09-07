@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
@@ -22,7 +22,7 @@ export default function InboxScreen() {
     try {
       if (isRefresh) {
         setRefreshing(true);
-      } else {
+      } else if (conversations.length === 0) {
         setLoading(true);
       }
       setError(null);
@@ -30,7 +30,7 @@ export default function InboxScreen() {
       const res = await inboxApi.getConversations({
         channel: selectedChannel,
         search: searchQuery,
-        limit: 30,
+        limit: 50,
         offset: 0,
       });
 
@@ -41,11 +41,29 @@ export default function InboxScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [selectedChannel, searchQuery]);
+  }, [selectedChannel, searchQuery, conversations.length]);
 
   useEffect(() => {
     loadConversations();
   }, [loadConversations]);
+
+  // Instant reactive client-side filtering for 0ms response time
+  const filteredConversations = useMemo(() => {
+    let list = conversations;
+    if (selectedChannel && selectedChannel !== 'ALL') {
+      list = list.filter((c) => (c.channel || '').toUpperCase() === selectedChannel.toUpperCase());
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(
+        (c) =>
+          (c.name || '').toLowerCase().includes(q) ||
+          (c.rawAddress || '').toLowerCase().includes(q) ||
+          (c.lastMessage || '').toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [conversations, selectedChannel, searchQuery]);
 
   // Subscribe to real-time WebSocket for live auto-bumping of new messages
   useEffect(() => {
@@ -102,6 +120,8 @@ export default function InboxScreen() {
         rawAddress: rawAddress,
         name: conversation.name,
         channel: conversation.channel,
+        isLocked: conversation.isLocked ? 'true' : 'false',
+        assignedTo: conversation.assignedTo || '',
       },
     });
   };
@@ -123,14 +143,16 @@ export default function InboxScreen() {
         onSelectChannel={setSelectedChannel}
       />
 
-      <ConversationList
-        conversations={conversations}
-        loading={loading}
-        refreshing={refreshing}
-        error={error}
-        onRefresh={() => loadConversations(true)}
-        onSelectConversation={handleSelectConversation}
-      />
+      <View style={styles.listWrapper}>
+        <ConversationList
+          conversations={filteredConversations}
+          loading={loading}
+          refreshing={refreshing}
+          error={error}
+          onRefresh={() => loadConversations(true)}
+          onSelectConversation={handleSelectConversation}
+        />
+      </View>
     </Screen>
   );
 }
@@ -139,5 +161,8 @@ const styles = StyleSheet.create({
   searchContainer: {
     paddingHorizontal: 16,
     paddingVertical: 8,
+  },
+  listWrapper: {
+    flex: 1,
   },
 });

@@ -1,7 +1,8 @@
 import React from 'react';
-import { ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { Text } from '../Text';
-import { colors } from '../../theme/colors';
+import { View, ScrollView, TouchableOpacity, StyleSheet, Text as RNText } from 'react-native';
+import { useTheme } from '../../theme';
+
+import { getChannelColor } from './ChannelBadge';
 
 export type ChannelFilter = 'ALL' | 'WHATSAPP' | 'INSTAGRAM' | 'FACEBOOK' | 'YOUTUBE';
 
@@ -19,56 +20,80 @@ const CHANNELS: { id: ChannelFilter; label: string }[] = [
 ];
 
 export const ChannelFilterBar: React.FC<ChannelFilterBarProps> = ({ selectedChannel, onSelectChannel }) => {
+  const { colors } = useTheme();
+
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.container}
-    >
-      {CHANNELS.map((ch) => {
-        const isSelected = selectedChannel === ch.id;
-        return (
-          <TouchableOpacity
-            key={ch.id}
-            activeOpacity={0.7}
-            style={[styles.chip, isSelected && styles.selectedChip]}
-            onPress={() => onSelectChannel(ch.id)}
-          >
-            <Text style={[styles.chipText, isSelected && styles.selectedChipText]}>
-              {ch.label}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
-    </ScrollView>
+    <View style={styles.wrapper}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.scrollView}
+        contentContainerStyle={styles.container}
+      >
+        {CHANNELS.map((ch) => {
+          const isSelected = selectedChannel === ch.id;
+          const chipColor = ch.id === 'ALL' ? colors.primary : getChannelColor(ch.id);
+          return (
+            <TouchableOpacity
+              key={ch.id}
+              activeOpacity={0.75}
+              style={[
+                styles.chip,
+                {
+                  backgroundColor: isSelected ? chipColor : colors.card,
+                  borderColor: isSelected ? chipColor : colors.border,
+                },
+              ]}
+              onPress={() => onSelectChannel(ch.id)}
+            >
+              <RNText
+                style={[
+                  styles.chipText,
+                  { color: isSelected ? '#FFFFFF' : colors.textPrimary },
+                  isSelected && styles.selectedChipText,
+                ]}
+              >
+                {ch.label}
+              </RNText>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  wrapper: {
+    height: 52,
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  scrollView: {
+    flexGrow: 0,
+  },
   container: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 6,
     gap: 8,
+    alignItems: 'center',
   },
   chip: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: colors.surface.card,
-    borderWidth: 1,
-    borderColor: colors.border.default,
-  },
-  selectedChip: {
-    backgroundColor: colors.primary.main,
-    borderColor: colors.primary.main,
+    borderWidth: 1.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 38,
   },
   chipText: {
     fontSize: 13,
-    fontWeight: '500',
-    color: colors.text.secondary,
+    fontWeight: '600',
+    includeFontPadding: false,
+    textAlign: 'center',
   },
   selectedChipText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

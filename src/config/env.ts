@@ -12,12 +12,14 @@ export interface EnvConfig {
 
 const DEFAULT_PRODUCTION_URL = 'https://uwoconnectforrb-743928421487.asia-south1.run.app';
 
-const getLocalHostApiUrl = (): string => {
-  if (Platform.OS === 'android') {
-    // Android emulator mapping to host machine localhost
-    return 'http://192.168.29.238:8000'; // Override for physical device
+const getDynamicApiUrl = (): string => {
+  const hostUri = Constants.expoConfig?.hostUri;
+  if (hostUri) {
+    const host = hostUri.split(':')[0];
+    if (host) {
+      return `http://${host}:8000`;
+    }
   }
-  // iOS simulator or web
   return 'http://127.0.0.1:8000';
 };
 
@@ -31,7 +33,7 @@ const getEnv = (): EnvConfig => {
   const appEnv = (processEnv.EXPO_PUBLIC_APP_ENV || extra.APP_ENV || (isDevelopmentBuild ? 'development' : 'production')) as AppEnvironment;
   const isDev = isDevelopmentBuild && appEnv === 'development';
 
-  let apiBaseUrl = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.29.238:8000';
+  let apiBaseUrl = process.env.EXPO_PUBLIC_API_URL || getDynamicApiUrl();
 
   return {
     APP_ENV: appEnv,

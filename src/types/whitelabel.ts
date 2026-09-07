@@ -8,4 +8,5 @@ export interface WhiteLabelConfig {
   support_email?: string;
   custom_domain?: string | null;
   is_active?: boolean;
+  is_whitelabel?: boolean;
 }

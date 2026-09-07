@@ -9,8 +9,8 @@ import { ThemeProvider } from '../src/theme';
 import { useSessionStore } from '../src/stores/sessionStore';
 import { useBrandStore } from '../src/stores/brandStore';
 
-// Keep the splash screen visible while we fetch resources
-SplashScreen.preventAutoHideAsync().catch(() => {});
+// Hide native splash screen quickly so JS white splash screen is shown
+SplashScreen.hideAsync().catch(() => {});
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
   constructor(props: { children: ReactNode }) {
@@ -54,16 +54,10 @@ function RootLayoutNav() {
   const { fetchBrandConfig } = useBrandStore();
 
   useEffect(() => {
-    // Initial app launch setup
+    // Ensure native splash screen is hidden immediately so white JS screen displays
+    SplashScreen.hideAsync().catch(() => {});
     fetchBrandConfig().catch(() => {});
     initialize().catch(() => {});
-
-    // Fallback safety: hide splash screen after 1.5s no matter what
-    const timer = setTimeout(() => {
-      SplashScreen.hideAsync().catch(() => {});
-    }, 1500);
-
-    return () => clearTimeout(timer);
   }, [initialize, fetchBrandConfig]);
 
   useEffect(() => {
@@ -96,7 +90,7 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   errorContainer: {
     flex: 1,
-    backgroundColor: '#0a120d',
+    backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,

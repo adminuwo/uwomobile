@@ -19,7 +19,13 @@ import {
   LogOut,
   ChevronRight,
   Moon,
-  Sun
+  Sun,
+  Send,
+  Zap,
+  Bot,
+  MessageSquare,
+  FileSpreadsheet,
+  HelpCircle
 } from 'lucide-react-native';
 import { useSessionStore } from '../../src/stores/sessionStore';
 
@@ -67,6 +73,30 @@ export default function MoreScreen() {
       <Header title="Menu" />
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
+        <Text variant="label" style={styles.sectionLabel}>Communication & Marketing</Text>
+        <Card style={styles.sectionCard}>
+          <MenuItem 
+            icon={<Send size={20} color={colors.primary} />} 
+            title="Mass Broadcast Campaigns" 
+            subtitle="WhatsApp & Email bulk messaging"
+            onPress={() => router.push('/broadcasts' as any)} 
+          />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <MenuItem 
+            icon={<Zap size={20} color={colors.warning} />} 
+            title="Keyword Auto-Replies" 
+            subtitle="Automatic bot response rules"
+            onPress={() => router.push('/automations' as any)} 
+          />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <MenuItem 
+            icon={<Bot size={20} color={colors.success} />} 
+            title="AI Knowledge Base" 
+            subtitle="PDF, DOCX, URL RAG indexing"
+            onPress={() => router.push('/knowledge' as any)} 
+          />
+        </Card>
+
         <Text variant="label" style={styles.sectionLabel}>Sales & Finance</Text>
         <Card style={styles.sectionCard}>
           <MenuItem 
@@ -95,12 +125,33 @@ export default function MoreScreen() {
           />
         </Card>
 
-        <Text variant="label" style={styles.sectionLabel}>Workspace</Text>
+        <Text variant="label" style={styles.sectionLabel}>Workspace & Team</Text>
         <Card style={styles.sectionCard}>
           <MenuItem 
             icon={<Users size={20} color={colors.secondary} />} 
-            title="Team Management" 
-            onPress={() => router.push('/workspace/team' as any)} 
+            title="Team Management & Directory" 
+            onPress={() => router.push('/team' as any)} 
+          />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <MenuItem 
+            icon={<MessageSquare size={20} color={colors.secondary} />} 
+            title="Team Workspace Chat" 
+            subtitle="Internal real-time agent & supervisor chat"
+            onPress={() => router.push('/team-chat' as any)} 
+          />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <MenuItem 
+            icon={<FileSpreadsheet size={20} color={colors.info} />} 
+            title="Daily Work Reports" 
+            subtitle="Agent submissions & Manager approvals"
+            onPress={() => router.push('/reports' as any)} 
+          />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <MenuItem 
+            icon={<HelpCircle size={20} color={colors.warning} />} 
+            title="Support Desk Tickets" 
+            subtitle="Customer support tickets & issues"
+            onPress={() => router.push('/support' as any)} 
           />
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <MenuItem 
@@ -112,8 +163,8 @@ export default function MoreScreen() {
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <MenuItem 
             icon={<GitBranch size={20} color={colors.info} />} 
-            title="AI Workflows & Automations" 
-            subtitle="Active routing flows & bot triggers"
+            title="AI Workflows & Visual Builder" 
+            subtitle="Active routing flows & node canvas"
             onPress={() => router.push('/workflows' as any)} 
           />
         </Card>

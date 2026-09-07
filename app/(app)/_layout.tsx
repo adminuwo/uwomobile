@@ -71,6 +71,12 @@ export default function AppLayout() {
         <Tabs.Screen name="conversation/[id]" options={{ href: null }} />
         <Tabs.Screen name="lead/[id]" options={{ href: null }} />
         <Tabs.Screen name="workflows" options={{ href: null }} />
+        <Tabs.Screen name="broadcasts" options={{ href: null }} />
+        <Tabs.Screen name="knowledge" options={{ href: null }} />
+        <Tabs.Screen name="reports" options={{ href: null }} />
+        <Tabs.Screen name="support" options={{ href: null }} />
+        <Tabs.Screen name="automations" options={{ href: null }} />
+        <Tabs.Screen name="team-chat" options={{ href: null }} />
       </Tabs>
     </View>
   );

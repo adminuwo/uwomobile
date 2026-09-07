@@ -6,9 +6,25 @@ import { MessageSquare, Instagram, Facebook, Youtube } from 'lucide-react-native
 interface ChannelBadgeProps {
   channel: string;
   size?: 'sm' | 'md';
+  showBg?: boolean;
 }
 
-export const ChannelBadge: React.FC<ChannelBadgeProps> = ({ channel, size = 'sm' }) => {
+export const getChannelColor = (channel: string = 'WHATSAPP'): string => {
+  const normalized = (channel || 'WHATSAPP').toUpperCase();
+  switch (normalized) {
+    case 'INSTAGRAM':
+      return '#E1306C'; // Pink
+    case 'FACEBOOK':
+      return '#1877F2'; // Blue
+    case 'YOUTUBE':
+      return '#FF0000'; // Red
+    case 'WHATSAPP':
+    default:
+      return '#10B981'; // Green
+  }
+};
+
+export const ChannelBadge: React.FC<ChannelBadgeProps> = ({ channel, size = 'sm', showBg = true }) => {
   const normalized = (channel || 'WHATSAPP').toUpperCase();
 
   const getConfig = () => {
@@ -30,7 +46,14 @@ export const ChannelBadge: React.FC<ChannelBadgeProps> = ({ channel, size = 'sm'
   const iconSize = size === 'sm' ? 12 : 14;
 
   return (
-    <View style={[styles.badge, { backgroundColor: bgColor }, size === 'md' && styles.badgeMd]}>
+    <View
+      style={[
+        styles.badge,
+        { backgroundColor: showBg ? bgColor : 'transparent' },
+        !showBg && styles.noBg,
+        size === 'md' && styles.badgeMd,
+      ]}
+    >
       <Icon size={iconSize} color={color} />
       <Text style={[styles.text, { color }, size === 'md' && styles.textMd]}>{label}</Text>
     </View>
@@ -45,6 +68,10 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 6,
     gap: 4,
+  },
+  noBg: {
+    paddingHorizontal: 0,
+    paddingVertical: 0,
   },
   badgeMd: {
     paddingHorizontal: 8,

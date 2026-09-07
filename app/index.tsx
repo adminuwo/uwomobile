@@ -1,12 +1,10 @@
 import React from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Image, ActivityIndicator, StyleSheet } from 'react-native';
 import { Redirect } from 'expo-router';
 import { useSessionStore } from '../src/stores/sessionStore';
-import { useTheme } from '../src/theme';
 
 export default function IndexScreen() {
   const { status } = useSessionStore();
-  const { colors } = useTheme();
 
   if (status === 'authenticated') {
     return <Redirect href="/(app)/home" />;
@@ -17,8 +15,12 @@ export default function IndexScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ActivityIndicator size="large" color={colors.primary} />
+    <View style={styles.container}>
+      <Image
+        source={require('../assets/splash.png')}
+        style={styles.logo}
+      />
+      <ActivityIndicator size="small" color="#10b981" />
     </View>
   );
 }
@@ -26,7 +28,14 @@ export default function IndexScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 20,
+  },
+  logo: {
+    width: 130,
+    height: 130,
+    resizeMode: 'contain',
   },
 });

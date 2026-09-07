@@ -19,15 +19,15 @@ export function useTenantBranding(): TenantBranding {
 
   const client = user?.client;
 
-  // Resolve Client Company Name
+  // Resolve Client Company Name (Prefer authenticated client business/company name)
   const resolvedClientName =
     client?.business_name ||
     client?.company_name ||
     user?.company_name ||
-    (brand?.brand_name && brand.brand_name !== 'UwoConnect' ? brand.brand_name : null) ||
-    'My Workspace';
+    (brand?.brand_name && brand.brand_name !== 'UwoConnect' && brand.brand_name !== 'UWO Connect' ? brand.brand_name : null) ||
+    'Workspace';
 
-  // Resolve Logo URL (check client logo fields, user logo fields, avatar, and brand logo)
+  // Resolve Logo URL (Check authenticated client logo fields, user logo fields, and active whitelabel config)
   const rawLogo =
     client?.company_logo_url ||
     client?.logo_url ||
@@ -35,8 +35,7 @@ export function useTenantBranding(): TenantBranding {
     client?.company_logo ||
     user?.company_logo_url ||
     user?.company_logo ||
-    user?.avatar ||
-    brand?.logo_url;
+    (brand?.is_whitelabel && brand?.logo_url ? brand.logo_url : null);
 
   const formatLogoUri = (url: string | null | undefined): string | null => {
     if (!url || typeof url !== 'string') return null;
@@ -54,8 +53,8 @@ export function useTenantBranding(): TenantBranding {
 
   const logoUri = formatLogoUri(rawLogo);
 
-  // Initial for avatar fallback
-  const initial = (resolvedClientName || 'C')
+  // Initial for avatar fallback (e.g. "U" for "Unified Web Options Pvt Ltd")
+  const initial = (resolvedClientName || 'W')
     .trim()
     .charAt(0)
     .toUpperCase();

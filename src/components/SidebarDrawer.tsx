@@ -63,7 +63,7 @@ export const SidebarDrawer: React.FC = () => {
 
   const mainMenuItems: MenuItem[] = [
     { id: 'home', label: 'Home Dashboard', icon: Home, route: '/(app)/home' },
-    { id: 'inbox', label: 'Omnichannel Inbox', icon: MessageSquare, route: '/(app)/inbox' },
+    { id: 'inbox', label: 'Inbox', icon: MessageSquare, route: '/(app)/inbox' },
     { id: 'crm', label: 'CRM & Contacts', icon: Users, route: '/(app)/crm' },
     { id: 'team', label: 'Team Hub & QR Invites', icon: UserCheck, route: '/(app)/team', badge: 'QR' },
   ];

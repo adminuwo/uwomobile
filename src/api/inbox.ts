@@ -163,4 +163,16 @@ export const inboxApi = {
   takeoverConversation: async (convoId: string): Promise<any> => {
     return client.post(`/api/conversations/${convoId}/takeover/`, {});
   },
+
+  resumeBot: async (convoId: string): Promise<any> => {
+    return client.post(`/api/conversations/${convoId}/resume_bot/`, {});
+  },
+
+  transferConversation: async (convoId: string, payload: { agent_id?: string; department?: string; note?: string }): Promise<any> => {
+    return client.post(`/api/conversations/${convoId}/transfer/`, payload);
+  },
+
+  getAuditLogs: async (convoId: string): Promise<any> => {
+    return client.get(`/api/conversations/${convoId}/audit_logs/`);
+  },
 };

@@ -1,16 +1,30 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Text } from '../Text';
+import { Avatar } from '../Avatar';
 import { Message } from '../../api/inbox';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../theme';
+import { MessageSquare } from 'lucide-react-native';
 
 interface MessageBubbleProps {
   message: Message;
+  contactName?: string;
+  contactAvatar?: string;
+  channelColor?: string;
+  onPressButton?: (buttonText: string) => void;
 }
 
-export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
+export const MessageBubble: React.FC<MessageBubbleProps> = ({
+  message,
+  contactName = 'Customer',
+  contactAvatar,
+  channelColor,
+  onPressButton,
+}) => {
+  const { colors } = useTheme();
   const isInternal = message.message_type === 'INTERNAL';
   const isOutgoing = message.message_type === 'OUTGOING';
+  const themeColor = channelColor || colors.primary;
 
   const formatTime = (timeStr: string) => {
     if (!timeStr) return '';
@@ -21,26 +35,96 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
     }
   };
 
+  const extractMessageButtons = (m: any): string[] => {
+    if (!m) return [];
+    let btnList: any[] = [];
+    if (Array.isArray(m.buttons) && m.buttons.length > 0) {
+      btnList = m.buttons;
+    } else if (m.metadata) {
+      if (Array.isArray(m.metadata.buttons) && m.metadata.buttons.length > 0) {
+        btnList = m.metadata.buttons;
+      } else {
+        const interactiveBtns = m.metadata?.payload?.interactive?.action?.buttons;
+        if (Array.isArray(interactiveBtns) && interactiveBtns.length > 0) {
+          btnList = interactiveBtns;
+        }
+      }
+    }
+    return btnList
+      .map((b: any) => {
+        if (typeof b === 'string') return b;
+        return b.reply?.title || b.title || b.text || b.label || '';
+      })
+      .filter(Boolean);
+  };
+
+  const msgButtons = extractMessageButtons(message);
+
   if (isInternal) {
     return (
       <View style={styles.internalContainer}>
-        <Text style={styles.internalHeader}>🔒 Internal Note by {message.sender_name || 'Team Member'}</Text>
-        <Text style={styles.internalBody}>{message.body}</Text>
-        <Text style={styles.internalTime}>{formatTime(message.created_at)}</Text>
+        <View style={styles.internalHeaderRow}>
+          <MessageSquare size={13} color="#D97706" />
+          <Text style={styles.internalHeader}>Internal Private Note • {message.sender_name || 'Team Member'}</Text>
+        </View>
+        <Text style={[styles.internalBody, { color: colors.textPrimary }]}>{message.body}</Text>
+        <Text style={[styles.internalTime, { color: colors.textMuted }]}>{formatTime(message.created_at)}</Text>
       </View>
     );
   }
 
   return (
-    <View style={[styles.bubbleWrapper, isOutgoing ? styles.outgoingWrapper : styles.incomingWrapper]}>
-      <View style={[styles.bubble, isOutgoing ? styles.outgoingBubble : styles.incomingBubble]}>
-        {!isOutgoing && message.sender_name && (
-          <Text style={styles.senderName}>{message.sender_name}</Text>
+    <View style={[styles.bubbleRow, isOutgoing ? styles.outgoingRow : styles.incomingRow]}>
+      <View
+        style={[
+          styles.bubble,
+          isOutgoing
+            ? { backgroundColor: themeColor, borderBottomRightRadius: 2 }
+            : { backgroundColor: colors.card, borderBottomLeftRadius: 2, borderWidth: 1, borderColor: colors.border },
+        ]}
+      >
+        {!isOutgoing && Boolean(message.sender_name) && (
+          <Text style={[styles.senderName, { color: themeColor }]}>{message.sender_name}</Text>
         )}
-        <Text style={[styles.bodyText, isOutgoing ? styles.outgoingText : styles.incomingText]}>
-          {message.body}
+        <Text style={[styles.bodyText, { color: isOutgoing ? '#FFFFFF' : colors.textPrimary }]}>
+          {(message.body || '').trim()}
         </Text>
-        <Text style={[styles.timeText, isOutgoing ? styles.outgoingTime : styles.incomingTime]}>
+
+        {msgButtons.length > 0 ? (
+          <View style={styles.buttonList}>
+            {msgButtons.map((btnText, idx) => (
+              <TouchableOpacity
+                key={idx}
+                activeOpacity={0.8}
+                style={[
+                  styles.optionButton,
+                  {
+                    backgroundColor: isOutgoing ? 'rgba(255, 255, 255, 0.18)' : 'rgba(0, 0, 0, 0.04)',
+                    borderColor: isOutgoing ? 'rgba(255, 255, 255, 0.3)' : themeColor,
+                  },
+                ]}
+                onPress={() => onPressButton && onPressButton(btnText)}
+              >
+                <MessageSquare size={12} color={isOutgoing ? '#FFFFFF' : themeColor} />
+                <Text
+                  style={[
+                    styles.optionText,
+                    { color: isOutgoing ? '#FFFFFF' : themeColor },
+                  ]}
+                >
+                  {btnText}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : null}
+
+        <Text
+          style={[
+            styles.timeText,
+            { color: isOutgoing ? 'rgba(255, 255, 255, 0.7)' : colors.textMuted },
+          ]}
+        >
           {formatTime(message.created_at)}
         </Text>
       </View>
@@ -49,82 +133,92 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
 };
 
 const styles = StyleSheet.create({
-  bubbleWrapper: {
-    marginVertical: 4,
+  bubbleRow: {
+    marginVertical: 3,
     paddingHorizontal: 12,
     flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 8,
   },
-  outgoingWrapper: {
+  outgoingRow: {
     justifyContent: 'flex-end',
   },
-  incomingWrapper: {
+  incomingRow: {
     justifyContent: 'flex-start',
+  },
+  avatarLeft: {
+    marginBottom: 2,
+  },
+  avatarRight: {
+    marginBottom: 2,
   },
   bubble: {
     maxWidth: '80%',
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    gap: 4,
-  },
-  outgoingBubble: {
-    backgroundColor: colors.primary.main,
-    borderBottomRightRadius: 2,
-  },
-  incomingBubble: {
-    backgroundColor: colors.surface.card,
-    borderBottomLeftRadius: 2,
-    borderWidth: 1,
-    borderColor: colors.border.default,
+    paddingTop: 8,
+    paddingBottom: 6,
+    borderRadius: 14,
   },
   senderName: {
     fontSize: 11,
     fontWeight: '700',
-    color: colors.primary.light,
     marginBottom: 2,
   },
   bodyText: {
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 19,
   },
-  outgoingText: {
-    color: '#FFFFFF',
+  buttonList: {
+    marginTop: 6,
+    gap: 6,
   },
-  incomingText: {
-    color: colors.text.primary,
+  optionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  optionText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   timeText: {
     fontSize: 10,
     alignSelf: 'flex-end',
-  },
-  outgoingTime: {
-    color: 'rgba(255, 255, 255, 0.7)',
-  },
-  incomingTime: {
-    color: colors.text.muted,
+    marginTop: 2,
   },
   internalContainer: {
     marginVertical: 6,
     marginHorizontal: 16,
-    padding: 10,
-    backgroundColor: 'rgba(234, 179, 8, 0.12)',
+    padding: 12,
+    backgroundColor: '#FEF3C7',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(234, 179, 8, 0.3)',
+    borderColor: '#F59E0B',
     gap: 4,
+  },
+  internalHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2,
   },
   internalHeader: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#EAB308',
+    color: '#D97706',
   },
   internalBody: {
     fontSize: 13,
-    color: colors.text.primary,
+    lineHeight: 18,
+    color: '#1E293B',
   },
   internalTime: {
     fontSize: 10,
-    color: colors.text.muted,
     alignSelf: 'flex-end',
+    color: '#B45309',
   },
 });

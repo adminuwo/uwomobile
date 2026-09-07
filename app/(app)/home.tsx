@@ -8,6 +8,7 @@ import { Text } from '../../src/components/Text';
 import { Card } from '../../src/components/Card';
 import { Badge } from '../../src/components/Badge';
 import { Avatar } from '../../src/components/Avatar';
+import { ClientLogoBadge } from '../../src/components/ClientLogoBadge';
 import { useSessionStore } from '../../src/stores/sessionStore';
 import { useBrandStore } from '../../src/stores/brandStore';
 import { useTheme } from '../../src/theme';
@@ -124,6 +125,11 @@ export default function HomeScreen() {
               {userName}
             </Text>
           </View>
+          <ClientLogoBadge
+            logoUri={clientLogoUri}
+            initial={(companyName || 'U').charAt(0)}
+            size={42}
+          />
         </View>
 
         {/* Overview Snapshot */}

@@ -58,6 +58,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
 
   return (
     <FlatList
+      style={styles.list}
       data={conversations}
       keyExtractor={(item) => item.id}
       renderItem={({ item }) => (
@@ -74,7 +75,11 @@ export const ConversationList: React.FC<ConversationListProps> = ({
 };
 
 const styles = StyleSheet.create({
+  list: {
+    flex: 1,
+  },
   loadingContainer: {
+    flex: 1,
     padding: 16,
     gap: 16,
   },

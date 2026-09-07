@@ -4,7 +4,7 @@ import { Text } from '../Text';
 import { Avatar } from '../Avatar';
 import { ChannelBadge } from './ChannelBadge';
 import { Conversation } from '../../api/inbox';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../theme';
 
 interface ConversationRowProps {
   conversation: Conversation;
@@ -12,6 +12,8 @@ interface ConversationRowProps {
 }
 
 export const ConversationRow: React.FC<ConversationRowProps> = ({ conversation, onPress }) => {
+  const { colors } = useTheme();
+
   const formatTime = (timeStr: string) => {
     if (!timeStr) return '';
     try {
@@ -31,27 +33,33 @@ export const ConversationRow: React.FC<ConversationRowProps> = ({ conversation, 
   return (
     <TouchableOpacity
       activeOpacity={0.7}
-      style={styles.container}
+      style={[
+        styles.container,
+        {
+          backgroundColor: colors.card,
+          borderBottomColor: colors.borderMuted || colors.border,
+        },
+      ]}
       onPress={() => onPress(conversation)}
     >
       <Avatar name={conversation.name} size="md" />
 
       <View style={styles.content}>
         <View style={styles.headerRow}>
-          <Text numberOfLines={1} style={styles.name}>
+          <Text numberOfLines={1} style={[styles.name, { color: colors.textPrimary }]}>
             {conversation.name}
           </Text>
-          <Text style={styles.time}>{formatTime(conversation.time)}</Text>
+          <Text style={[styles.time, { color: colors.textMuted }]}>{formatTime(conversation.time)}</Text>
         </View>
 
         <View style={styles.footerRow}>
-          <Text numberOfLines={1} style={styles.lastMessage}>
+          <Text numberOfLines={1} style={[styles.lastMessage, { color: colors.textSecondary }]}>
             {conversation.lastMessage}
           </Text>
           <View style={styles.badgeContainer}>
             <ChannelBadge channel={conversation.channel} size="sm" />
             {conversation.unread > 0 && (
-              <View style={styles.unreadBadge}>
+              <View style={[styles.unreadBadge, { backgroundColor: colors.primary }]}>
                 <Text style={styles.unreadText}>
                   {conversation.unread > 99 ? '99+' : conversation.unread}
                 </Text>
@@ -70,9 +78,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: colors.surface.card,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border.subtle,
     gap: 12,
   },
   content: {
@@ -87,12 +93,10 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 15,
     fontWeight: '600',
-    color: colors.text.primary,
     flex: 1,
   },
   time: {
     fontSize: 12,
-    color: colors.text.muted,
   },
   footerRow: {
     flexDirection: 'row',
@@ -102,7 +106,6 @@ const styles = StyleSheet.create({
   },
   lastMessage: {
     fontSize: 13,
-    color: colors.text.secondary,
     flex: 1,
   },
   badgeContainer: {
@@ -111,7 +114,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   unreadBadge: {
-    backgroundColor: colors.primary.main,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 10,

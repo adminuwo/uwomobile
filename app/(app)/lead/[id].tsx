@@ -10,7 +10,7 @@ import { Button } from '../../../src/components/Button';
 import { Input } from '../../../src/components/Input';
 import { LeadStageBadge } from '../../../src/components/crm/LeadStageBadge';
 import { crmApi, Contact, LeadStage } from '../../../src/api/crm';
-import { colors } from '../../../src/theme/colors';
+import { useTheme } from '../../../src/theme';
 import { Phone, Mail, MessageSquare, Calendar, Tag, FileText, ArrowLeft, Save } from 'lucide-react-native';
 
 const STAGES: { id: LeadStage; label: string }[] = [
@@ -23,6 +23,7 @@ const STAGES: { id: LeadStage; label: string }[] = [
 
 export default function LeadDetailScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const [contact, setContact] = useState<Contact | null>(null);
@@ -101,7 +102,7 @@ export default function LeadDetailScreen() {
       <Screen safeAreaEdges={['top', 'left', 'right']}>
         <Header title="Lead Details" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary.main} />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       </Screen>
     );
@@ -115,7 +116,7 @@ export default function LeadDetailScreen() {
         {/* Profile Card */}
         <Card style={styles.profileCard}>
           <Avatar name={contact.name || contact.phone_number || 'Lead'} size="lg" />
-          <Text style={styles.name}>{contact.name || 'Unnamed Lead'}</Text>
+          <Text style={[styles.name, { color: colors.textPrimary }]}>{contact.name || 'Unnamed Lead'}</Text>
           <LeadStageBadge stage={contact.stage} size="md" />
 
           <Button
@@ -136,10 +137,16 @@ export default function LeadDetailScreen() {
                   key={st.id}
                   activeOpacity={0.7}
                   disabled={updatingStage}
-                  style={[styles.stageChip, isSelected && styles.selectedStageChip]}
+                  style={[
+                    styles.stageChip,
+                    {
+                      backgroundColor: isSelected ? colors.primary : colors.surface,
+                      borderColor: isSelected ? colors.primary : colors.border,
+                    },
+                  ]}
                   onPress={() => handleStageChange(st.id)}
                 >
-                  <Text style={[styles.stageChipText, isSelected && styles.selectedStageText]}>
+                  <Text style={[styles.stageChipText, { color: isSelected ? '#FFFFFF' : colors.textSecondary }]}>
                     {st.label}
                   </Text>
                 </TouchableOpacity>
@@ -151,21 +158,21 @@ export default function LeadDetailScreen() {
         {/* Contact Info Card */}
         <Card title="Contact Information">
           <View style={styles.infoRow}>
-            <Phone size={16} color={colors.text.muted} />
-            <Text style={styles.infoLabel}>Phone:</Text>
-            <Text style={styles.infoValue}>{contact.phone_number || 'N/A'}</Text>
+            <Phone size={16} color={colors.textMuted} />
+            <Text style={[styles.infoLabel, { color: colors.textMuted }]}>Phone:</Text>
+            <Text style={[styles.infoValue, { color: colors.textPrimary }]}>{contact.phone_number || 'N/A'}</Text>
           </View>
 
           <View style={styles.infoRow}>
-            <Mail size={16} color={colors.text.muted} />
-            <Text style={styles.infoLabel}>Email:</Text>
-            <Text style={styles.infoValue}>{contact.email || 'N/A'}</Text>
+            <Mail size={16} color={colors.textMuted} />
+            <Text style={[styles.infoLabel, { color: colors.textMuted }]}>Email:</Text>
+            <Text style={[styles.infoValue, { color: colors.textPrimary }]}>{contact.email || 'N/A'}</Text>
           </View>
 
           <View style={styles.infoRow}>
-            <Calendar size={16} color={colors.text.muted} />
-            <Text style={styles.infoLabel}>Created:</Text>
-            <Text style={styles.infoValue}>
+            <Calendar size={16} color={colors.textMuted} />
+            <Text style={[styles.infoLabel, { color: colors.textMuted }]}>Created:</Text>
+            <Text style={[styles.infoValue, { color: colors.textPrimary }]}>
               {new Date(contact.created_at).toLocaleDateString()}
             </Text>
           </View>
@@ -184,7 +191,7 @@ export default function LeadDetailScreen() {
             title="Save Notes"
             variant="outline"
             loading={savingNotes}
-            icon={<Save size={16} color={colors.primary.main} />}
+            icon={<Save size={16} color={colors.primary} />}
             onPress={handleSaveNotes}
             style={styles.saveNotesBtn}
           />
@@ -211,7 +218,6 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.text.primary,
   },
   chatButton: {
     marginTop: 8,
@@ -227,21 +233,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: colors.background.secondary,
     borderWidth: 1,
-    borderColor: colors.border.default,
-  },
-  selectedStageChip: {
-    backgroundColor: colors.primary.main,
-    borderColor: colors.primary.main,
   },
   stageChipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: colors.text.secondary,
-  },
-  selectedStageText: {
-    color: '#FFFFFF',
   },
   infoRow: {
     flexDirection: 'row',
@@ -251,13 +247,11 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 13,
-    color: colors.text.muted,
     width: 60,
   },
   infoValue: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.text.primary,
     flex: 1,
   },
   saveNotesBtn: {

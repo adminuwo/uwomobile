@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Share } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { Screen } from '../../../src/components/Screen';
@@ -7,15 +7,17 @@ import { Text } from '../../../src/components/Text';
 import { Card } from '../../../src/components/Card';
 import { Badge } from '../../../src/components/Badge';
 import { useTheme } from '../../../src/theme';
-import { quotationsApi } from '../../../src/api/quotations';
-import { FileText } from 'lucide-react-native';
+import { salesDocumentsApi } from '../../../src/api/salesDocuments';
+import { SalesDocumentModal } from '../../../src/components/sales/SalesDocumentModal';
+import { FileText, Plus, Share2 } from 'lucide-react-native';
 
 export default function QuotationsScreen() {
   const { colors } = useTheme();
+  const [modalVisible, setModalVisible] = useState(false);
 
   const { data: quotations, isLoading, error, refetch } = useQuery({
     queryKey: ['quotations'],
-    queryFn: () => quotationsApi.getQuotations()
+    queryFn: () => salesDocumentsApi.getDocuments({ document_type: 'QUOTATION' })
   });
 
   const getStatusColor = (status: string) => {
@@ -27,9 +29,31 @@ export default function QuotationsScreen() {
     }
   };
 
+  const handleShare = (id: string, num: string) => {
+    Share.share({
+      message: `View Quotation #${num} from Unified Web Options: https://uwoconnect.aisa24.com/public/quotation/${id}`,
+    });
+  };
+
   return (
     <Screen safeAreaEdges={['bottom']}>
-      <Stack.Screen options={{ title: 'Quotations', headerShown: true }} />
+      <Stack.Screen 
+        options={{ 
+          title: 'Quotations', 
+          headerShown: true,
+          headerRight: () => (
+            <TouchableOpacity
+              style={[styles.addBtn, { backgroundColor: colors.primary }]}
+              onPress={() => setModalVisible(true)}
+            >
+              <Plus size={16} color="#FFF" />
+              <Text variant="caption" weight="bold" color="#FFF">
+                New Quotation
+              </Text>
+            </TouchableOpacity>
+          )
+        }} 
+      />
       
       {isLoading ? (
         <View style={styles.center}>
@@ -44,7 +68,7 @@ export default function QuotationsScreen() {
           <FileText size={48} color={colors.textMuted} style={{ marginBottom: 16 }} />
           <Text variant="h3" color={colors.textPrimary}>No Quotations Found</Text>
           <Text variant="body" color={colors.textMuted} style={{ textAlign: 'center', marginTop: 8 }}>
-            Quotations created in the UwoConnect web dashboard will appear here.
+            Click 'New Quotation' above to build and share a client proposal/quote.
           </Text>
         </View>
       ) : (
@@ -58,34 +82,52 @@ export default function QuotationsScreen() {
             <Card style={styles.card}>
               <View style={styles.row}>
                 <View style={styles.content}>
-                  <Text variant="h3" weight="bold">{item.document_number}</Text>
+                  <Text variant="h3" weight="bold">{item.document_number || 'QTN-1001'}</Text>
                   <Text variant="body" style={{ marginTop: 4 }}>
-                    {item.customer_name}
+                    {item.customer_name || item.customer}
                   </Text>
                   <Text variant="caption" color={colors.textMuted}>
-                    Created: {new Date(item.created_at).toLocaleDateString()}
+                    Created: {new Date(item.created_at || Date.now()).toLocaleDateString()}
                   </Text>
                 </View>
                 <View style={styles.rightContent}>
                   <Text variant="h3" color={colors.primary} weight="bold">
-                    {item.currency} {item.total_amount}
+                    ₹{item.total_amount?.toLocaleString('en-IN') || 0}
                   </Text>
-                  <Badge 
-                    label={item.status} 
-                    variant={getStatusColor(item.status) as any} 
-                    style={{ marginTop: 8 }}
-                  />
+                  <TouchableOpacity style={styles.shareRow} onPress={() => handleShare(item.id, item.document_number)}>
+                    <Badge 
+                      label={item.status} 
+                      variant={getStatusColor(item.status) as any} 
+                    />
+                    <Share2 size={16} color={colors.primary} />
+                  </TouchableOpacity>
                 </View>
               </View>
             </Card>
           )}
         />
       )}
+
+      <SalesDocumentModal
+        visible={modalVisible}
+        documentType="QUOTATION"
+        onClose={() => setModalVisible(false)}
+        onSuccess={refetch}
+      />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  addBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginRight: 10,
+  },
   center: {
     flex: 1,
     justifyContent: 'center',
@@ -107,6 +149,12 @@ const styles = StyleSheet.create({
   },
   rightContent: {
     alignItems: 'flex-end',
+  },
+  shareRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
   },
   emptyState: {
     flex: 1,

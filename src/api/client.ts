@@ -33,10 +33,29 @@ class ApiClient {
       (error) => Promise.reject(error)
     );
 
-    // Response Interceptor: Standardized Error Handling
+    // Response Interceptor: Standardized Error Handling with ADB Tunnel Fallback
     this.instance.interceptors.response.use(
       (response: AxiosResponse) => response,
       async (error: AxiosError<ApiErrorResponse>) => {
+        const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
+
+        // If network error occurred and not retried yet, try falling back to 127.0.0.1 (ADB reverse tunnel)
+        if (!error.response && originalRequest && !originalRequest._retry) {
+          originalRequest._retry = true;
+          const currentBase = this.instance.defaults.baseURL || '';
+
+          if (currentBase.includes('192.168.') || currentBase.includes('10.')) {
+            const fallbackUrl = 'http://127.0.0.1:8000';
+            this.instance.defaults.baseURL = fallbackUrl;
+            originalRequest.baseURL = fallbackUrl;
+            try {
+              return await this.instance(originalRequest);
+            } catch (retryErr: any) {
+              return Promise.reject(this.handleApiError(retryErr));
+            }
+          }
+        }
+
         const formattedError = this.handleApiError(error);
         return Promise.reject(formattedError);
       }

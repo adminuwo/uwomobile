@@ -5,7 +5,7 @@ import { Text } from './Text';
 import { Skeleton } from './Skeleton';
 
 interface ClientLogoBadgeProps {
-  logoUri: string | null;
+  logoUri?: string | null;
   initial: string;
   size?: number;
   isLoading?: boolean;
@@ -15,7 +15,7 @@ interface ClientLogoBadgeProps {
 export const ClientLogoBadge: React.FC<ClientLogoBadgeProps> = ({
   logoUri,
   initial,
-  size = 30,
+  size = 28,
   isLoading = false,
   style,
 }) => {
@@ -31,6 +31,7 @@ export const ClientLogoBadge: React.FC<ClientLogoBadgeProps> = ({
   }
 
   const showImage = !!logoUri && !hasError;
+  const displayInitial = (initial || 'W').trim().charAt(0).toUpperCase();
 
   return (
     <View
@@ -41,7 +42,7 @@ export const ClientLogoBadge: React.FC<ClientLogoBadgeProps> = ({
           height: size,
           borderRadius: size / 4,
           backgroundColor: showImage ? '#FFFFFF' : colors.primary,
-          borderColor: colors.border,
+          borderColor: showImage ? colors.border : 'transparent',
           borderWidth: showImage ? 1 : 0,
         },
         style,
@@ -59,9 +60,9 @@ export const ClientLogoBadge: React.FC<ClientLogoBadgeProps> = ({
           variant="caption"
           weight="bold"
           color="#FFFFFF"
-          style={{ fontSize: Math.max(10, size * 0.46) }}
+          style={{ fontSize: Math.max(11, size * 0.48), lineHeight: size, textAlign: 'center' }}
         >
-          {initial}
+          {displayInitial}
         </Text>
       )}
     </View>

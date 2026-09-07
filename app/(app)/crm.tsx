@@ -10,14 +10,17 @@ import { Modal } from '../../src/components/Modal';
 import { Input } from '../../src/components/Input';
 import { LeadCard } from '../../src/components/crm/LeadCard';
 import { PipelineView } from '../../src/components/crm/PipelineView';
+import { ImportLeadsModal } from '../../src/components/crm/ImportLeadsModal';
+import { ExportLeadsModal } from '../../src/components/crm/ExportLeadsModal';
 import { EmptyState } from '../../src/components/EmptyState';
 import { ErrorState } from '../../src/components/ErrorState';
 import { crmApi, Contact, LeadStage } from '../../src/api/crm';
-import { colors } from '../../src/theme/colors';
-import { Users, LayoutGrid, List, Plus } from 'lucide-react-native';
+import { useTheme } from '../../src/theme';
+import { Users, LayoutGrid, List, Plus, Upload, Download } from 'lucide-react-native';
 
 export default function CRMScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const [viewMode, setViewMode] = useState<'list' | 'pipeline'>('list');
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -25,8 +28,10 @@ export default function CRMScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Add Lead Modal state
+  // Add & Import/Export Modal states
   const [addModalVisible, setAddModalVisible] = useState(false);
+  const [importModalVisible, setImportModalVisible] = useState(false);
+  const [exportModalVisible, setExportModalVisible] = useState(false);
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [newEmail, setNewEmail] = useState('');
@@ -104,14 +109,34 @@ export default function CRMScreen() {
       <Header
         title="CRM Pipeline"
         rightElement={
-          <TouchableOpacity
-            activeOpacity={0.7}
-            style={styles.addButton}
-            onPress={() => setAddModalVisible(true)}
-          >
-            <Plus size={18} color="#FFFFFF" />
-            <Text style={styles.addButtonText}>Add Lead</Text>
-          </TouchableOpacity>
+          <View style={styles.headerRightActions}>
+            <TouchableOpacity
+              activeOpacity={0.75}
+              style={[styles.actionIconBtn, { borderColor: colors.border, backgroundColor: colors.card }]}
+              onPress={() => setImportModalVisible(true)}
+            >
+              <Upload size={14} color={colors.textPrimary} />
+              <Text style={[styles.actionIconText, { color: colors.textPrimary }]}>Import</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.75}
+              style={[styles.actionIconBtn, { borderColor: colors.border, backgroundColor: colors.card }]}
+              onPress={() => setExportModalVisible(true)}
+            >
+              <Download size={14} color={colors.textPrimary} />
+              <Text style={[styles.actionIconText, { color: colors.textPrimary }]}>Export</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.75}
+              style={[styles.addButton, { backgroundColor: colors.primary }]}
+              onPress={() => setAddModalVisible(true)}
+            >
+              <Plus size={16} color="#FFFFFF" />
+              <Text style={styles.addButtonText}>Add Lead</Text>
+            </TouchableOpacity>
+          </View>
         }
       />
 
@@ -125,21 +150,21 @@ export default function CRMScreen() {
           />
         </View>
 
-        <View style={styles.toggleContainer}>
+        <View style={[styles.toggleContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <TouchableOpacity
             activeOpacity={0.7}
-            style={[styles.toggleBtn, viewMode === 'list' && styles.activeToggle]}
+            style={[styles.toggleBtn, viewMode === 'list' && { backgroundColor: colors.primary }]}
             onPress={() => setViewMode('list')}
           >
-            <List size={16} color={viewMode === 'list' ? '#FFFFFF' : colors.text.muted} />
+            <List size={16} color={viewMode === 'list' ? '#FFFFFF' : colors.textMuted} />
           </TouchableOpacity>
 
           <TouchableOpacity
             activeOpacity={0.7}
-            style={[styles.toggleBtn, viewMode === 'pipeline' && styles.activeToggle]}
+            style={[styles.toggleBtn, viewMode === 'pipeline' && { backgroundColor: colors.primary }]}
             onPress={() => setViewMode('pipeline')}
           >
-            <LayoutGrid size={16} color={viewMode === 'pipeline' ? '#FFFFFF' : colors.text.muted} />
+            <LayoutGrid size={16} color={viewMode === 'pipeline' ? '#FFFFFF' : colors.textMuted} />
           </TouchableOpacity>
         </View>
       </View>
@@ -155,6 +180,7 @@ export default function CRMScreen() {
         />
       ) : (
         <FlatList
+          style={{ flex: 1 }}
           data={contacts}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
@@ -207,16 +233,47 @@ export default function CRMScreen() {
           <Button title="Create Lead" loading={creating} onPress={handleCreateLead} />
         </View>
       </Modal>
+
+      {/* Import Leads Modal */}
+      <ImportLeadsModal
+        visible={importModalVisible}
+        onClose={() => setImportModalVisible(false)}
+        onSuccess={() => loadContacts(true)}
+      />
+
+      {/* Export Leads Modal */}
+      <ExportLeadsModal
+        visible={exportModalVisible}
+        onClose={() => setExportModalVisible(false)}
+        contacts={contacts}
+      />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  headerRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  actionIconBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  actionIconText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: colors.primary.main,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
@@ -238,18 +295,13 @@ const styles = StyleSheet.create({
   },
   toggleContainer: {
     flexDirection: 'row',
-    backgroundColor: colors.surface.card,
     borderRadius: 10,
     padding: 2,
     borderWidth: 1,
-    borderColor: colors.border.default,
   },
   toggleBtn: {
     padding: 8,
     borderRadius: 8,
-  },
-  activeToggle: {
-    backgroundColor: colors.primary.main,
   },
   listContent: {
     padding: 16,

@@ -3,7 +3,7 @@ import { View, Image, StyleSheet, ViewStyle, ImageSourcePropType } from 'react-n
 import { useTheme } from '../theme';
 import { Text } from './Text';
 
-export type AvatarSize = 'sm' | 'md' | 'lg' | 'xl';
+export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
 interface AvatarProps {
   uri?: string | null;
@@ -26,6 +26,8 @@ export const Avatar: React.FC<AvatarProps> = ({
 
   const getDimensions = (): number => {
     switch (size) {
+      case 'xs':
+        return 28;
       case 'sm':
         return 32;
       case 'lg':

@@ -4,7 +4,7 @@ import { Text } from '../Text';
 import { LeadCard } from './LeadCard';
 import { LeadStageBadge } from './LeadStageBadge';
 import { Contact, LeadStage } from '../../api/crm';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../theme';
 
 interface PipelineViewProps {
   contacts: Contact[];
@@ -21,17 +21,19 @@ const STAGES: { id: LeadStage; title: string }[] = [
 ];
 
 export const PipelineView: React.FC<PipelineViewProps> = ({ contacts, onSelectLead, onOpenChat }) => {
+  const { colors } = useTheme();
+
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.container}>
       {STAGES.map((st) => {
         const stageContacts = contacts.filter((c) => (c.stage || 'NEW').toUpperCase() === st.id);
 
         return (
-          <View key={st.id} style={styles.column}>
+          <View key={st.id} style={[styles.column, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={styles.columnHeader}>
               <LeadStageBadge stage={st.id} size="md" />
-              <View style={styles.countBadge}>
-                <Text style={styles.countText}>{stageContacts.length}</Text>
+              <View style={[styles.countBadge, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Text style={[styles.countText, { color: colors.textSecondary }]}>{stageContacts.length}</Text>
               </View>
             </View>
 
@@ -59,11 +61,9 @@ const styles = StyleSheet.create({
   },
   column: {
     width: 280,
-    backgroundColor: colors.background.secondary,
     borderRadius: 16,
     padding: 12,
     borderWidth: 1,
-    borderColor: colors.border.default,
   },
   columnHeader: {
     flexDirection: 'row',
@@ -72,17 +72,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   countBadge: {
-    backgroundColor: colors.surface.card,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.border.default,
   },
   countText: {
     fontSize: 12,
     fontWeight: '700',
-    color: colors.text.secondary,
   },
   columnContent: {
     gap: 8,

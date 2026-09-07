@@ -4,7 +4,7 @@ import { Text } from '../Text';
 import { Avatar } from '../Avatar';
 import { LeadStageBadge } from './LeadStageBadge';
 import { Contact } from '../../api/crm';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../theme';
 import { Phone, Mail, MessageSquare, ChevronRight } from 'lucide-react-native';
 
 interface LeadCardProps {
@@ -14,48 +14,60 @@ interface LeadCardProps {
 }
 
 export const LeadCard: React.FC<LeadCardProps> = ({ contact, onPress, onOpenChat }) => {
+  const { colors } = useTheme();
+
   return (
-    <TouchableOpacity activeOpacity={0.7} style={styles.card} onPress={() => onPress(contact)}>
+    <TouchableOpacity
+      activeOpacity={0.7}
+      style={[
+        styles.card,
+        {
+          backgroundColor: colors.card,
+          borderColor: colors.border,
+        },
+      ]}
+      onPress={() => onPress(contact)}
+    >
       <View style={styles.headerRow}>
         <Avatar name={contact.name || contact.phone_number || 'Lead'} size="md" />
 
         <View style={styles.info}>
-          <Text numberOfLines={1} style={styles.name}>
+          <Text numberOfLines={1} style={[styles.name, { color: colors.textPrimary }]}>
             {contact.name || 'Unnamed Lead'}
           </Text>
           {contact.phone_number ? (
             <View style={styles.iconText}>
-              <Phone size={12} color={colors.text.muted} />
-              <Text style={styles.subText}>{contact.phone_number}</Text>
+              <Phone size={12} color={colors.textMuted} />
+              <Text style={[styles.subText, { color: colors.textMuted }]}>{contact.phone_number}</Text>
             </View>
           ) : null}
           {contact.email ? (
             <View style={styles.iconText}>
-              <Mail size={12} color={colors.text.muted} />
-              <Text numberOfLines={1} style={styles.subText}>
+              <Mail size={12} color={colors.textMuted} />
+              <Text numberOfLines={1} style={[styles.subText, { color: colors.textMuted }]}>
                 {contact.email}
               </Text>
             </View>
           ) : null}
         </View>
 
-        <ChevronRight size={18} color={colors.text.muted} />
+        <ChevronRight size={18} color={colors.textMuted} />
       </View>
 
-      <View style={styles.footerRow}>
+      <View style={[styles.footerRow, { borderTopColor: colors.borderMuted || colors.border }]}>
         <LeadStageBadge stage={contact.stage} size="sm" />
 
         {onOpenChat && (
           <TouchableOpacity
             activeOpacity={0.7}
-            style={styles.chatButton}
+            style={[styles.chatButton, { backgroundColor: `${colors.primary}18` }]}
             onPress={(e) => {
               e.stopPropagation();
               onOpenChat(contact);
             }}
           >
-            <MessageSquare size={14} color={colors.primary.main} />
-            <Text style={styles.chatButtonText}>Chat</Text>
+            <MessageSquare size={14} color={colors.primary} />
+            <Text style={[styles.chatButtonText, { color: colors.primary }]}>Chat</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -65,12 +77,10 @@ export const LeadCard: React.FC<LeadCardProps> = ({ contact, onPress, onOpenChat
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface.card,
     borderRadius: 14,
     padding: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: colors.border.default,
     gap: 12,
   },
   headerRow: {
@@ -85,7 +95,6 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 15,
     fontWeight: '600',
-    color: colors.text.primary,
   },
   iconText: {
     flexDirection: 'row',
@@ -94,7 +103,6 @@ const styles = StyleSheet.create({
   },
   subText: {
     fontSize: 12,
-    color: colors.text.muted,
   },
   footerRow: {
     flexDirection: 'row',
@@ -102,7 +110,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: colors.border.subtle,
   },
   chatButton: {
     flexDirection: 'row',
@@ -111,11 +118,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
   },
   chatButtonText: {
     fontSize: 12,
     fontWeight: '600',
-    color: colors.primary.main,
   },
 });
