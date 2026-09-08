@@ -89,13 +89,37 @@ export default function KnowledgeScreen() {
   };
 
   const handleCreateKnowledge = async () => {
-    if (!title.trim() || submitting) return;
+    if (submitting) return;
+
+    if (tab === 'FILE' && !pickedFile) {
+      Alert.alert('File Required', 'Please select a PDF or DOCX file to upload.');
+      return;
+    }
+    if (tab === 'URL' && !urlInput.trim()) {
+      Alert.alert('URL Required', 'Please enter a website URL to index.');
+      return;
+    }
+    if (tab === 'TEXT' && !textContent.trim()) {
+      Alert.alert('Content Required', 'Please enter text or FAQ content to index.');
+      return;
+    }
+
+    let effectiveTitle = title.trim();
+    if (!effectiveTitle) {
+      if (tab === 'FILE' && pickedFile) {
+        effectiveTitle = pickedFile.name;
+      } else if (tab === 'URL') {
+        effectiveTitle = urlInput.trim().replace(/^https?:\/\//, '').split('/')[0] || urlInput.trim();
+      } else {
+        effectiveTitle = textContent.trim().slice(0, 30) + '...';
+      }
+    }
 
     setSubmitting(true);
     try {
       if (tab === 'FILE' && pickedFile) {
         const formData = new FormData();
-        formData.append('title', title.trim());
+        formData.append('title', effectiveTitle);
         formData.append('doc_type', pickedFile.name.endsWith('.pdf') ? 'PDF' : 'DOCX');
         formData.append('file', {
           uri: pickedFile.uri,
@@ -108,13 +132,13 @@ export default function KnowledgeScreen() {
         });
       } else if (tab === 'URL') {
         await apiClient.post('/api/knowledge/', {
-          title: title.trim(),
+          title: effectiveTitle,
           doc_type: 'URL',
           website_url: urlInput.trim(),
         });
       } else {
         await apiClient.post('/api/knowledge/', {
-          title: title.trim(),
+          title: effectiveTitle,
           doc_type: 'TEXT',
           content_snippet: textContent.trim(),
         });
@@ -126,8 +150,9 @@ export default function KnowledgeScreen() {
       setTextContent('');
       setPickedFile(null);
       fetchKnowledge(true);
+      Alert.alert('Knowledge Added', 'AI Knowledge has been indexed successfully.');
     } catch (err: any) {
-      Alert.alert('Upload Error', err.message || 'Failed to index knowledge item.');
+      Alert.alert('Index Error', err.message || 'Failed to index knowledge item.');
     } finally {
       setSubmitting(false);
     }
