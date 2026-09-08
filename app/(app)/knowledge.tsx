@@ -23,6 +23,27 @@ import { useTheme } from '../../src/theme';
 import { apiClient } from '../../src/api/client';
 import { downloadFile, shareFile } from '../../src/services/fileDownload';
 import { Brain, Plus, Upload, Globe, FileText, Trash2, CheckCircle2, Download, ExternalLink, Share2 } from 'lucide-react-native';
+import * as FileSystem from 'expo-file-system';
+
+const cleanHtmlToText = (rawHtml: string): string => {
+  let str = rawHtml
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ' ')
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, ' ')
+    .replace(/<svg\b[^<]*(?:(?!<\/svg>)<[^<]*)*<\/svg>/gi, ' ')
+    .replace(/<nav\b[^<]*(?:(?!<\/nav>)<[^<]*)*<\/nav>/gi, ' ')
+    .replace(/<footer\b[^<]*(?:(?!<\/footer>)<[^<]*)*<\/footer>/gi, ' ')
+    .replace(/<header\b[^<]*(?:(?!<\/header>)<[^<]*)*<\/header>/gi, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return str;
+};
 
 export interface KnowledgeItem {
   id: string;
@@ -131,16 +152,66 @@ export default function KnowledgeScreen() {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
       } else if (tab === 'URL') {
-        await apiClient.post('/api/knowledge/', {
-          title: effectiveTitle,
-          doc_type: 'URL',
-          website_url: urlInput.trim(),
-        });
+        let targetUrl = urlInput.trim();
+        if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+          targetUrl = 'https://' + targetUrl;
+        }
+
+        let extractedText = '';
+        try {
+          const resp = await fetch(targetUrl);
+          if (resp.ok) {
+            const html = await resp.text();
+            extractedText = cleanHtmlToText(html);
+          }
+        } catch (fetchErr) {
+          console.warn('On-device webpage fetch notice:', fetchErr);
+        }
+
+        // Package as text file for seamless RAG ingestion across both live and local backends
+        if (extractedText && extractedText.length > 20) {
+          const domain = targetUrl.replace(/^https?:\/\//, '').split('/')[0].replace(/[^a-zA-Z0-9]/g, '_');
+          const tempPath = `${FileSystem.cacheDirectory}${domain}_${Date.now()}.txt`;
+          await FileSystem.writeAsStringAsync(tempPath, extractedText);
+
+          const formData = new FormData();
+          formData.append('title', effectiveTitle);
+          formData.append('doc_type', 'URL');
+          formData.append('website_url', targetUrl);
+          formData.append('file', {
+            uri: tempPath,
+            name: `${domain}_web.txt`,
+            type: 'text/plain',
+          } as any);
+
+          await apiClient.post('/api/knowledge/', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          });
+        } else {
+          // Fallback to server-side scraping
+          await apiClient.post('/api/knowledge/', {
+            title: effectiveTitle,
+            doc_type: 'URL',
+            website_url: targetUrl,
+          });
+        }
       } else {
-        await apiClient.post('/api/knowledge/', {
-          title: effectiveTitle,
-          doc_type: 'TEXT',
-          content_snippet: textContent.trim(),
+        // Direct Text / FAQ
+        const tempPath = `${FileSystem.cacheDirectory}faq_${Date.now()}.txt`;
+        await FileSystem.writeAsStringAsync(tempPath, textContent.trim());
+
+        const formData = new FormData();
+        formData.append('title', effectiveTitle);
+        formData.append('doc_type', 'TEXT');
+        formData.append('content_snippet', textContent.trim());
+        formData.append('file', {
+          uri: tempPath,
+          name: `faq_${Date.now()}.txt`,
+          type: 'text/plain',
+        } as any);
+
+        await apiClient.post('/api/knowledge/', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
         });
       }
 
@@ -150,7 +221,7 @@ export default function KnowledgeScreen() {
       setTextContent('');
       setPickedFile(null);
       fetchKnowledge(true);
-      Alert.alert('Knowledge Added', 'AI Knowledge has been indexed successfully.');
+      Alert.alert('Knowledge Added', 'AI Knowledge has been indexed and trained successfully.');
     } catch (err: any) {
       Alert.alert('Index Error', err.message || 'Failed to index knowledge item.');
     } finally {
