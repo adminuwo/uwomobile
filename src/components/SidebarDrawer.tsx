@@ -36,6 +36,12 @@ import {
   FileText,
   ShoppingBag,
   BookOpen,
+  Receipt,
+  Wallet,
+  Brain,
+  FileSpreadsheet,
+  HelpCircle,
+  Bot,
 } from 'lucide-react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -68,29 +74,41 @@ export const SidebarDrawer: React.FC = () => {
     router.replace('/(auth)/login');
   };
 
-  const mainMenuItems: MenuItem[] = [
+  const channelItems: MenuItem[] = [
     { id: 'home', label: 'Home Dashboard', icon: Home, route: '/(app)/home' },
     { id: 'inbox', label: 'Inbox', icon: MessageSquare, route: '/(app)/inbox' },
     { id: 'gmail', label: 'Gmail', icon: Mail, route: '/(app)/gmail' },
     { id: 'email', label: 'Email (Outlook)', icon: Mail, route: '/(app)/email' },
     { id: 'youtube', label: 'YouTube Studio', icon: Youtube, route: '/(app)/youtube' },
     { id: 'google-news', label: 'Google News Hub', icon: Newspaper, route: '/(app)/google-news', badge: 'LIVE' },
-    { id: 'crm', label: 'CRM & Contacts', icon: Users, route: '/(app)/crm' },
     { id: 'team', label: 'Team Hub & QR Invites', icon: UserCheck, route: '/(app)/team', badge: 'QR' },
+    { id: 'team-chat', label: 'Team Workspace Chat', icon: MessageSquare, route: '/(app)/team-chat' },
   ];
 
   const automationItems: MenuItem[] = [
-    { id: 'broadcasts', label: 'Broadcasts', icon: Megaphone, route: '/(app)/broadcasts' },
+    { id: 'broadcasts', label: 'Broadcast Campaigns', icon: Megaphone, route: '/(app)/broadcasts' },
     { id: 'workflows', label: 'Workflows & Bots', icon: Zap, route: '/(app)/workflows' },
+    { id: 'automations', label: 'Keyword Auto-Replies', icon: Bot, route: '/(app)/automations' },
+    { id: 'knowledge', label: 'AI Knowledge Base', icon: Brain, route: '/(app)/knowledge' },
     { id: 'connectors', label: 'Integrations & Apps', icon: Layers, route: '/(app)/connectors' },
-    { id: 'proposals', label: 'Proposals', icon: FileText, route: '/(app)/sales/proposals' },
-    { id: 'products', label: 'Products & Sales', icon: Package, route: '/(app)/sales/products' },
-    { id: 'orders', label: 'Orders & Sales', icon: ShoppingBag, route: '/(app)/sales/orders' },
-    { id: 'guides', label: 'Learning Center & Guides', icon: BookOpen, route: '/(app)/guides' },
   ];
 
-  const systemItems: MenuItem[] = [
-    { id: 'more', label: 'Settings & Workspace', icon: Settings, route: '/(app)/more' },
+  const salesItems: MenuItem[] = [
+    { id: 'proposals', label: 'Proposals', icon: FileText, route: '/(app)/sales/proposals', badge: 'NEW' },
+    { id: 'quotations', label: 'Quotations', icon: FileText, route: '/(app)/sales/quotations' },
+    { id: 'invoices', label: 'GST Invoices', icon: Receipt, route: '/(app)/sales/invoices' },
+    { id: 'products', label: 'Products & Services', icon: Package, route: '/(app)/sales/products' },
+    { id: 'orders', label: 'Orders & Sales', icon: ShoppingBag, route: '/(app)/sales/orders' },
+    { id: 'wallet', label: 'Wallet & Billing', icon: Wallet, route: '/(app)/sales/wallet' },
+  ];
+
+  const managementItems: MenuItem[] = [
+    { id: 'crm', label: 'CRM & Contacts', icon: Users, route: '/(app)/crm' },
+    { id: 'reports', label: 'Daily Work Reports', icon: FileSpreadsheet, route: '/(app)/reports' },
+    { id: 'support', label: 'Support Desk Tickets', icon: HelpCircle, route: '/(app)/support' },
+    { id: 'guides', label: 'Learning Center & Guides', icon: BookOpen, route: '/(app)/guides' },
+    { id: 'settings', label: 'Settings & Profile', icon: Settings, route: '/(app)/settings' },
+    { id: 'more', label: 'More Workspace Menu', icon: Settings, route: '/(app)/more' },
   ];
 
   // Helper for initials
@@ -256,9 +274,10 @@ export const SidebarDrawer: React.FC = () => {
 
           {/* Navigation Links */}
           <ScrollView style={styles.menuScroll} showsVerticalScrollIndicator={false}>
-            {renderNavGroup('MAIN MENU', mainMenuItems)}
-            {renderNavGroup('AUTOMATION & SALES', automationItems)}
-            {renderNavGroup('SETTINGS', systemItems)}
+            {renderNavGroup('COMMUNICATION & CHANNELS', channelItems)}
+            {renderNavGroup('MARKETING & AUTOMATIONS', automationItems)}
+            {renderNavGroup('SALES & FINANCE', salesItems)}
+            {renderNavGroup('MANAGEMENT & SETTINGS', managementItems)}
           </ScrollView>
 
           {/* Footer Actions */}

@@ -81,6 +81,10 @@ export default function AppLayout() {
         <Tabs.Screen name="google-news" options={{ href: null }} />
         <Tabs.Screen name="automations" options={{ href: null }} />
         <Tabs.Screen name="team-chat" options={{ href: null }} />
+        <Tabs.Screen name="guides" options={{ href: null }} />
+        <Tabs.Screen name="settings" options={{ href: null }} />
+        <Tabs.Screen name="sales/proposals" options={{ href: null }} />
+        <Tabs.Screen name="sales/orders" options={{ href: null }} />
       </Tabs>
     </View>
   );
