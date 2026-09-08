@@ -1162,53 +1162,69 @@ export default function TeamScreen() {
           onRequestClose={() => setShowQrModal(false)}
         >
           <View style={styles.modalOverlay}>
-            <View style={[styles.qrModalCard, { backgroundColor: '#FFFFFF' }]}>
-              <View style={styles.qrModalHeader}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <QrCode size={20} color={colors.primary} />
-                  <Text variant="h3" weight="bold" color={colors.textPrimary}>
-                    QR Code Workspace Invite
-                  </Text>
+            <TouchableOpacity
+              style={StyleSheet.absoluteFill}
+              activeOpacity={1}
+              onPress={() => setShowQrModal(false)}
+            />
+            <View style={styles.modernModalCard}>
+              <View style={styles.modernModalHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <View style={[styles.modalIconBadge, { backgroundColor: '#ECFDF5' }]}>
+                    <QrCode size={20} color="#059669" />
+                  </View>
+                  <View>
+                    <Text variant="h3" weight="bold" color="#0F172A">
+                      QR Workspace Invite
+                    </Text>
+                    <Text variant="caption" color="#64748B" style={{ fontSize: 12, marginTop: 1 }}>
+                      Instant member onboarding scan
+                    </Text>
+                  </View>
                 </View>
-                <TouchableOpacity onPress={() => setShowQrModal(false)}>
-                  <X size={18} color={colors.textMuted} />
+                <TouchableOpacity
+                  style={styles.modalCloseCircle}
+                  onPress={() => setShowQrModal(false)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <X size={18} color="#64748B" />
                 </TouchableOpacity>
               </View>
 
-              <ScrollView style={{ paddingHorizontal: 16, paddingVertical: 10 }} contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={true}>
-                <Text variant="caption" color={colors.textMuted} style={{ textAlign: 'center', marginBottom: 12 }}>
+              <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+                <Text variant="caption" color="#64748B" style={{ textAlign: 'center', marginBottom: 14, fontSize: 12, lineHeight: 18 }}>
                   Scan this QR Code from the UwoConnect Mobile App to join this workspace instantly as an Agent/Supervisor.
                 </Text>
 
                 {/* Live Real-Time Auth Status Badge */}
-                <View style={{ alignSelf: 'center', marginBottom: 10 }}>
+                <View style={{ alignSelf: 'center', marginBottom: 12 }}>
                   {qrSessionStatus === 'WAITING' && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#EEF2FF', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 }}>
-                      <Clock size={12} color="#4F46E5" />
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#EEF2FF', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20 }}>
+                      <Clock size={13} color="#4F46E5" />
                       <Text variant="caption" weight="bold" color="#4F46E5" style={{ fontSize: 11 }}>
                         Waiting for scan... ({Math.floor(qrRemainingSeconds / 60)}:{(qrRemainingSeconds % 60).toString().padStart(2, '0')})
                       </Text>
                     </View>
                   )}
                   {(qrSessionStatus === 'SCANNED' || qrSessionStatus === 'AUTHENTICATING') && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FEF3C7', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 }}>
-                      <Zap size={12} color="#D97706" />
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FEF3C7', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20 }}>
+                      <Zap size={13} color="#D97706" />
                       <Text variant="caption" weight="bold" color="#D97706" style={{ fontSize: 11 }}>
                         📱 Phone Scanned! Authenticating Device...
                       </Text>
                     </View>
                   )}
                   {(qrSessionStatus === 'CONSUMED' || qrSessionStatus === 'AUTHENTICATED') && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#ECFDF5', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 }}>
-                      <CheckCircle2 size={12} color="#059669" />
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#ECFDF5', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20 }}>
+                      <CheckCircle2 size={13} color="#059669" />
                       <Text variant="caption" weight="bold" color="#059669" style={{ fontSize: 11 }}>
                         ✅ Mobile Device Connected & Logged In!
                       </Text>
                     </View>
                   )}
                   {qrSessionStatus === 'EXPIRED' && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FEF2F2', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 }}>
-                      <X size={12} color="#EF4444" />
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FEF2F2', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20 }}>
+                      <X size={13} color="#EF4444" />
                       <Text variant="caption" weight="bold" color="#EF4444" style={{ fontSize: 11 }}>
                         ⚠️ QR Expired! Click "New" to Refresh.
                       </Text>
@@ -1220,7 +1236,7 @@ export default function TeamScreen() {
                 <View style={styles.qrGraphicContainer}>
                   <View
                     style={{
-                      padding: 12,
+                      padding: 14,
                       backgroundColor: '#FFFFFF',
                       borderRadius: 16,
                       borderWidth: 1,
@@ -1228,10 +1244,10 @@ export default function TeamScreen() {
                       alignItems: 'center',
                       justifyContent: 'center',
                       shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.05,
-                      shadowRadius: 8,
-                      elevation: 2,
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.08,
+                      shadowRadius: 12,
+                      elevation: 3,
                     }}
                   >
                     <QRCode
@@ -1249,7 +1265,7 @@ export default function TeamScreen() {
                   </View>
 
                   <View style={{ width: '100%', marginTop: 14 }}>
-                    <Text variant="caption" weight="bold" color={colors.textMuted} style={{ fontSize: 10, marginBottom: 4, textAlign: 'center' }}>
+                    <Text style={[styles.fieldLabel, { fontSize: 11, textAlign: 'center', marginBottom: 6 }]}>
                       WORKSPACE / INVITE CODE
                     </Text>
                     <View
@@ -1257,28 +1273,28 @@ export default function TeamScreen() {
                         flexDirection: 'row',
                         alignItems: 'center',
                         gap: 8,
-                        backgroundColor: colors.background,
-                        borderRadius: 8,
-                        borderWidth: 1,
-                        borderColor: colors.border,
+                        backgroundColor: '#F8FAFC',
+                        borderRadius: 10,
+                        borderWidth: 1.5,
+                        borderColor: '#E2E8F0',
                         paddingHorizontal: 10,
                         paddingVertical: 6,
                       }}
                     >
                       <TextInput
-                        style={{ flex: 1, fontSize: 13, fontWeight: '700', color: colors.primary, textAlign: 'center' }}
+                        style={{ flex: 1, fontSize: 14, fontWeight: '700', color: '#059669', textAlign: 'center' }}
                         value={qrInviteCode}
                         onChangeText={setQrInviteCode}
                         placeholder="Type custom workspace code..."
-                        placeholderTextColor={colors.textMuted}
+                        placeholderTextColor="#94A3B8"
                         autoCapitalize="characters"
                       />
                       <TouchableOpacity
                         style={{
-                          backgroundColor: colors.primary,
-                          paddingHorizontal: 10,
-                          paddingVertical: 6,
-                          borderRadius: 6,
+                          backgroundColor: '#059669',
+                          paddingHorizontal: 12,
+                          paddingVertical: 7,
+                          borderRadius: 8,
                           flexDirection: 'row',
                           alignItems: 'center',
                           gap: 4,
@@ -1286,7 +1302,7 @@ export default function TeamScreen() {
                         onPress={handleGenerateNewQr}
                       >
                         <Zap size={12} color="#FFF" />
-                        <Text variant="caption" weight="bold" color="#FFF" style={{ fontSize: 10 }}>
+                        <Text variant="caption" weight="bold" color="#FFF" style={{ fontSize: 11 }}>
                           New
                         </Text>
                       </TouchableOpacity>
@@ -1295,38 +1311,31 @@ export default function TeamScreen() {
                 </View>
 
                 <TouchableOpacity
-                  style={{
-                    backgroundColor: copiedLink ? '#047857' : '#059669',
-                    marginTop: 14,
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    paddingVertical: 12,
-                    paddingHorizontal: 14,
-                    borderRadius: 10,
-                    width: '100%',
-                  }}
-                  activeOpacity={0.8}
+                  style={[styles.primaryModalBtn, { backgroundColor: copiedLink ? '#047857' : '#059669' }]}
+                  activeOpacity={0.85}
                   onPress={handleCopyInviteLink}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    {copiedLink ? <Check size={16} color="#FFFFFF" /> : <Copy size={16} color="#FFFFFF" />}
-                    <Text variant="caption" weight="bold" style={{ fontSize: 13, color: '#FFFFFF' }}>
-                      {copiedLink ? '✓ Link Copied to Clipboard!' : 'Copy & Share Invite Link'}
-                    </Text>
-                  </View>
-                  <Text variant="caption" style={{ fontSize: 10, marginTop: 4, textAlign: 'center', color: '#D1FAE5', fontWeight: '500' }}>
-                    {`https://uwoconnect.aisa24.com/join?code=${qrInviteCode}`}
+                  {copiedLink ? <Check size={18} color="#FFFFFF" /> : <Copy size={18} color="#FFFFFF" />}
+                  <Text style={styles.primaryModalBtnText}>
+                    {copiedLink ? '✓ Link Copied to Clipboard!' : 'Copy & Share Invite Link'}
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.copyBtnModal, { backgroundColor: '#0F172A', marginTop: 8 }]}
+                  style={[styles.primaryModalBtn, { backgroundColor: '#1E293B', marginTop: 8 }]}
                   onPress={() => handleJoinWorkspace(qrInviteCode)}
                 >
                   <Sparkles size={16} color="#FFF" />
-                  <Text variant="caption" weight="bold" color="#FFF">
-                    🚀 Join Workspace In-App Now
+                  <Text style={styles.primaryModalBtnText}>
+                    Join Workspace In-App Now
                   </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.secondaryCancelBtn}
+                  onPress={() => setShowQrModal(false)}
+                >
+                  <Text style={styles.secondaryCancelText}>Close</Text>
                 </TouchableOpacity>
               </ScrollView>
             </View>
@@ -1345,86 +1354,119 @@ export default function TeamScreen() {
           onRequestClose={() => setShowInviteModal(false)}
         >
           <View style={styles.modalOverlay}>
-            <View style={[styles.qrModalCard, { backgroundColor: '#FFFFFF' }]}>
-              <View style={[styles.qrModalHeader, { backgroundColor: colors.primary }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <UserPlus size={18} color="#FFF" />
-                  <Text variant="h3" weight="bold" color="#FFF">
-                    Invite Team Member
-                  </Text>
+            <TouchableOpacity
+              style={StyleSheet.absoluteFill}
+              activeOpacity={1}
+              onPress={() => setShowInviteModal(false)}
+            />
+            <View style={styles.modernModalCard}>
+              <View style={styles.modernModalHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <View style={[styles.modalIconBadge, { backgroundColor: '#ECFDF5' }]}>
+                    <UserPlus size={20} color="#059669" />
+                  </View>
+                  <View>
+                    <Text variant="h3" weight="bold" color="#0F172A">
+                      Invite Team Member
+                    </Text>
+                    <Text variant="caption" color="#64748B" style={{ fontSize: 12, marginTop: 1 }}>
+                      Add colleague with role permissions
+                    </Text>
+                  </View>
                 </View>
-                <TouchableOpacity onPress={() => setShowInviteModal(false)}>
-                  <X size={18} color="#FFF" />
+                <TouchableOpacity
+                  style={styles.modalCloseCircle}
+                  onPress={() => setShowInviteModal(false)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <X size={18} color="#64748B" />
                 </TouchableOpacity>
               </View>
 
-              <ScrollView style={{ padding: 18 }} showsVerticalScrollIndicator={false}>
-                <Text variant="caption" weight="bold" color={colors.textPrimary} style={{ marginBottom: 4 }}>
-                  FULL NAME
-                </Text>
-                <TextInput
-                  style={[styles.modalInput, { color: colors.textPrimary }]}
-                  placeholder="e.g. Vikram Malhotra"
-                  placeholderTextColor={colors.textMuted}
-                  value={inviteName}
-                  onChangeText={setInviteName}
-                />
-
-                <Text variant="caption" weight="bold" color={colors.textPrimary} style={{ marginTop: 10, marginBottom: 4 }}>
-                  EMAIL ADDRESS *
-                </Text>
-                <TextInput
-                  style={[styles.modalInput, { color: colors.textPrimary }]}
-                  placeholder="name@company.com"
-                  placeholderTextColor={colors.textMuted}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  value={inviteEmail}
-                  onChangeText={setInviteEmail}
-                />
-
-                <Text variant="caption" weight="bold" color={colors.textPrimary} style={{ marginTop: 10, marginBottom: 6 }}>
-                  ASSIGN ROLE
-                </Text>
-                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
-                  {(['AGENT', 'SUPERVISOR', 'ADMIN'] as const).map((r) => (
-                    <TouchableOpacity
-                      key={r}
-                      style={[
-                        styles.rolePillOption,
-                        {
-                          backgroundColor: inviteRole === r ? colors.primary : colors.background,
-                          borderColor: inviteRole === r ? colors.primary : colors.border,
-                        },
-                      ]}
-                      onPress={() => setInviteRole(r)}
-                    >
-                      <Text variant="caption" weight="bold" color={inviteRole === r ? '#FFF' : colors.textMuted} style={{ fontSize: 10 }}>
-                        {r}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+              <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+                <View style={styles.formGroup}>
+                  <Text style={styles.fieldLabel}>Full Name</Text>
+                  <TextInput
+                    style={styles.modernTextInput}
+                    placeholder="e.g. Vikram Malhotra"
+                    placeholderTextColor="#94A3B8"
+                    value={inviteName}
+                    onChangeText={setInviteName}
+                  />
                 </View>
 
-                <Text variant="caption" weight="bold" color={colors.textPrimary} style={{ marginBottom: 4 }}>
-                  DEPARTMENT
-                </Text>
-                <TextInput
-                  style={[styles.modalInput, { color: colors.textPrimary }]}
-                  placeholder="Sales & Marketing"
-                  placeholderTextColor={colors.textMuted}
-                  value={inviteDept}
-                  onChangeText={setInviteDept}
-                />
+                <View style={styles.formGroup}>
+                  <Text style={styles.fieldLabel}>
+                    Email Address <Text style={{ color: '#EF4444' }}>*</Text>
+                  </Text>
+                  <TextInput
+                    style={styles.modernTextInput}
+                    placeholder="name@company.com"
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    value={inviteEmail}
+                    onChangeText={setInviteEmail}
+                  />
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.fieldLabel}>Assign Role</Text>
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 2 }}>
+                    {(['AGENT', 'SUPERVISOR', 'ADMIN'] as const).map((r) => {
+                      const isSelected = inviteRole === r;
+                      return (
+                        <TouchableOpacity
+                          key={r}
+                          style={[
+                            styles.priorityCard,
+                            isSelected
+                              ? { backgroundColor: '#ECFDF5', borderColor: '#059669' }
+                              : { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' },
+                          ]}
+                          onPress={() => setInviteRole(r)}
+                        >
+                          <Text
+                            style={[
+                              styles.priorityCardText,
+                              isSelected ? { color: '#059669' } : { color: '#64748B' },
+                            ]}
+                          >
+                            {r}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.fieldLabel}>Department</Text>
+                  <TextInput
+                    style={styles.modernTextInput}
+                    placeholder="Sales & Marketing"
+                    placeholderTextColor="#94A3B8"
+                    value={inviteDept}
+                    onChangeText={setInviteDept}
+                  />
+                </View>
 
                 <TouchableOpacity
-                  style={[styles.copyBtnModal, { backgroundColor: colors.primary, marginTop: 16 }]}
+                  style={styles.primaryModalBtn}
                   onPress={handleSendInvite}
+                  activeOpacity={0.85}
                 >
-                  <UserPlus size={16} color="#FFF" />
-                  <Text variant="caption" weight="bold" color="#FFF">
-                    Send Invitation ➔
+                  <UserPlus size={18} color="#FFFFFF" />
+                  <Text style={styles.primaryModalBtnText}>
+                    Send Invitation
                   </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.secondaryCancelBtn}
+                  onPress={() => setShowInviteModal(false)}
+                >
+                  <Text style={styles.secondaryCancelText}>Cancel</Text>
                 </TouchableOpacity>
               </ScrollView>
             </View>
@@ -1443,73 +1485,165 @@ export default function TeamScreen() {
           onRequestClose={() => setShowCreateTaskModal(false)}
         >
           <View style={styles.modalOverlay}>
-            <View style={[styles.qrModalCard, { backgroundColor: '#FFFFFF' }]}>
-              <View style={[styles.qrModalHeader, { backgroundColor: '#0F172A' }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <CheckSquare size={18} color="#FFF" />
-                  <Text variant="h3" weight="bold" color="#FFF">
-                    Create & Assign Task
-                  </Text>
+            <TouchableOpacity
+              style={StyleSheet.absoluteFill}
+              activeOpacity={1}
+              onPress={() => setShowCreateTaskModal(false)}
+            />
+            <View style={styles.modernModalCard}>
+              {/* Modern Header */}
+              <View style={styles.modernModalHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <View style={[styles.modalIconBadge, { backgroundColor: '#ECFDF5' }]}>
+                    <CheckSquare size={20} color="#059669" />
+                  </View>
+                  <View>
+                    <Text variant="h3" weight="bold" color="#0F172A">
+                      Create & Assign Task
+                    </Text>
+                    <Text variant="caption" color="#64748B" style={{ fontSize: 12, marginTop: 1 }}>
+                      Assign actionable work to team
+                    </Text>
+                  </View>
                 </View>
-                <TouchableOpacity onPress={() => setShowCreateTaskModal(false)}>
-                  <X size={18} color="#FFF" />
+                <TouchableOpacity
+                  style={styles.modalCloseCircle}
+                  onPress={() => setShowCreateTaskModal(false)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <X size={18} color="#64748B" />
                 </TouchableOpacity>
               </View>
 
-              <ScrollView style={{ padding: 18 }} showsVerticalScrollIndicator={false}>
-                <Text variant="caption" weight="bold" color={colors.textPrimary} style={{ marginBottom: 4 }}>
-                  TASK TITLE *
-                </Text>
-                <TextInput
-                  style={[styles.modalInput, { color: colors.textPrimary }]}
-                  placeholder="e.g. Follow up on High Intent Hospital Lead"
-                  placeholderTextColor={colors.textMuted}
-                  value={taskTitle}
-                  onChangeText={setTaskTitle}
-                />
-
-                <Text variant="caption" weight="bold" color={colors.textPrimary} style={{ marginTop: 10, marginBottom: 4 }}>
-                  ASSIGNEE
-                </Text>
-                <TextInput
-                  style={[styles.modalInput, { color: colors.textPrimary }]}
-                  placeholder="Aditya Sharma"
-                  placeholderTextColor={colors.textMuted}
-                  value={taskAssignee}
-                  onChangeText={setTaskAssignee}
-                />
-
-                <Text variant="caption" weight="bold" color={colors.textPrimary} style={{ marginTop: 10, marginBottom: 6 }}>
-                  PRIORITY LEVEL
-                </Text>
-                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
-                  {(['HIGH', 'MEDIUM', 'LOW'] as const).map((p) => (
-                    <TouchableOpacity
-                      key={p}
-                      style={[
-                        styles.rolePillOption,
-                        {
-                          backgroundColor: taskPriority === p ? (p === 'HIGH' ? '#EF4444' : (p === 'MEDIUM' ? '#F59E0B' : '#059669')) : colors.background,
-                          borderColor: taskPriority === p ? 'transparent' : colors.border,
-                        },
-                      ]}
-                      onPress={() => setTaskPriority(p)}
-                    >
-                      <Text variant="caption" weight="bold" color={taskPriority === p ? '#FFF' : colors.textMuted} style={{ fontSize: 10 }}>
-                        {p}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+              <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+                {/* Task Title */}
+                <View style={styles.formGroup}>
+                  <Text style={styles.fieldLabel}>
+                    Task Title <Text style={{ color: '#EF4444' }}>*</Text>
+                  </Text>
+                  <TextInput
+                    style={styles.modernTextInput}
+                    placeholder="e.g. Follow up on High Intent Hospital Lead"
+                    placeholderTextColor="#94A3B8"
+                    value={taskTitle}
+                    onChangeText={setTaskTitle}
+                  />
                 </View>
 
-                <TouchableOpacity
-                  style={[styles.copyBtnModal, { backgroundColor: '#0F172A', marginTop: 16 }]}
-                  onPress={handleCreateTask}
-                >
-                  <CheckSquare size={16} color="#FFF" />
-                  <Text variant="caption" weight="bold" color="#FFF">
-                    Create & Assign Task ➔
+                {/* Assignee Selection */}
+                <View style={styles.formGroup}>
+                  <Text style={styles.fieldLabel}>Assignee</Text>
+                  
+                  {/* Selected Member Display Card */}
+                  <View style={styles.selectedMemberCard}>
+                    <View style={styles.memberAvatarMini}>
+                      <Text style={styles.memberAvatarMiniText}>
+                        {taskAssignee ? taskAssignee.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() : 'TM'}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>
+                        {taskAssignee || 'Unassigned'}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: '#64748B' }}>
+                        Assigned team member
+                      </Text>
+                    </View>
+                    <View style={{ backgroundColor: '#ECFDF5', borderRadius: 10, padding: 4 }}>
+                      <Check size={14} color="#059669" />
+                    </View>
+                  </View>
+
+                  {/* Quick Select Member Chips */}
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#64748B', marginBottom: 6 }}>
+                    Quick Select Assignee:
                   </Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ gap: 6, paddingBottom: 4 }}
+                  >
+                    {teamMembers.map((m) => {
+                      const isSelected = taskAssignee === m.name;
+                      return (
+                        <TouchableOpacity
+                          key={m.id}
+                          style={[
+                            styles.quickMemberChip,
+                            isSelected && styles.quickMemberChipActive,
+                          ]}
+                          onPress={() => setTaskAssignee(m.name)}
+                        >
+                          <Text
+                            style={[
+                              styles.quickMemberChipText,
+                              isSelected && styles.quickMemberChipTextActive,
+                            ]}
+                          >
+                            {m.name}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+
+                {/* Priority Level Segmented Cards */}
+                <View style={styles.formGroup}>
+                  <Text style={styles.fieldLabel}>Priority Level</Text>
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 2 }}>
+                    {(['HIGH', 'MEDIUM', 'LOW'] as const).map((p) => {
+                      const isSelected = taskPriority === p;
+                      const config = {
+                        HIGH: { label: 'High', activeBg: '#FEF2F2', activeBorder: '#EF4444', activeText: '#DC2626', dot: '#EF4444' },
+                        MEDIUM: { label: 'Medium', activeBg: '#FFFBEB', activeBorder: '#F59E0B', activeText: '#D97706', dot: '#F59E0B' },
+                        LOW: { label: 'Low', activeBg: '#ECFDF5', activeBorder: '#10B981', activeText: '#059669', dot: '#10B981' },
+                      }[p];
+
+                      return (
+                        <TouchableOpacity
+                          key={p}
+                          style={[
+                            styles.priorityCard,
+                            isSelected
+                              ? { backgroundColor: config.activeBg, borderColor: config.activeBorder }
+                              : { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' },
+                          ]}
+                          onPress={() => setTaskPriority(p)}
+                          activeOpacity={0.8}
+                        >
+                          <View style={[styles.priorityDot, { backgroundColor: config.dot }]} />
+                          <Text
+                            style={[
+                              styles.priorityCardText,
+                              isSelected ? { color: config.activeText } : { color: '#64748B' },
+                            ]}
+                          >
+                            {config.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                {/* Action Buttons */}
+                <TouchableOpacity
+                  style={styles.primaryModalBtn}
+                  onPress={handleCreateTask}
+                  activeOpacity={0.85}
+                >
+                  <CheckSquare size={18} color="#FFFFFF" />
+                  <Text style={styles.primaryModalBtnText}>
+                    Create & Assign Task
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.secondaryCancelBtn}
+                  onPress={() => setShowCreateTaskModal(false)}
+                >
+                  <Text style={styles.secondaryCancelText}>Cancel</Text>
                 </TouchableOpacity>
               </ScrollView>
             </View>
@@ -1528,40 +1662,56 @@ export default function TeamScreen() {
           onRequestClose={() => setShowCreateProjectModal(false)}
         >
           <View style={styles.modalOverlay}>
-            <View style={[styles.qrModalCard, { backgroundColor: '#FFFFFF' }]}>
-              <View style={[styles.qrModalHeader, { backgroundColor: '#0F172A' }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <FolderPlus size={18} color="#FFF" />
-                  <Text variant="h3" weight="bold" color="#FFF">
-                    New Workspace Project
-                  </Text>
+            <TouchableOpacity
+              style={StyleSheet.absoluteFill}
+              activeOpacity={1}
+              onPress={() => setShowCreateProjectModal(false)}
+            />
+            <View style={styles.modernModalCard}>
+              <View style={styles.modernModalHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <View style={[styles.modalIconBadge, { backgroundColor: '#EEF2FF' }]}>
+                    <FolderPlus size={20} color="#4F46E5" />
+                  </View>
+                  <View>
+                    <Text variant="h3" weight="bold" color="#0F172A">
+                      New Workspace Project
+                    </Text>
+                    <Text variant="caption" color="#64748B" style={{ fontSize: 12, marginTop: 1 }}>
+                      Organize workflows and team assignments
+                    </Text>
+                  </View>
                 </View>
-                <TouchableOpacity onPress={() => setShowCreateProjectModal(false)}>
-                  <X size={18} color="#FFF" />
+                <TouchableOpacity
+                  style={styles.modalCloseCircle}
+                  onPress={() => setShowCreateProjectModal(false)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <X size={18} color="#64748B" />
                 </TouchableOpacity>
               </View>
 
-              <ScrollView style={{ padding: 18 }} showsVerticalScrollIndicator={false}>
-                <Text variant="caption" weight="bold" color={colors.textPrimary} style={{ marginBottom: 4 }}>
-                  PROJECT NAME
-                </Text>
-                <TextInput
-                  style={[styles.modalInput, { color: colors.textPrimary }]}
-                  placeholder="e.g. Q4 WhatsApp Marketing Campaign"
-                  placeholderTextColor={colors.textMuted}
-                />
+              <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+                <View style={styles.formGroup}>
+                  <Text style={styles.fieldLabel}>Project Name</Text>
+                  <TextInput
+                    style={styles.modernTextInput}
+                    placeholder="e.g. Q4 WhatsApp Marketing Campaign"
+                    placeholderTextColor="#94A3B8"
+                  />
+                </View>
 
-                <Text variant="caption" weight="bold" color={colors.textPrimary} style={{ marginTop: 10, marginBottom: 4 }}>
-                  DEPARTMENT
-                </Text>
-                <TextInput
-                  style={[styles.modalInput, { color: colors.textPrimary }]}
-                  placeholder="Sales & Marketing"
-                  placeholderTextColor={colors.textMuted}
-                />
+                <View style={styles.formGroup}>
+                  <Text style={styles.fieldLabel}>Department</Text>
+                  <TextInput
+                    style={styles.modernTextInput}
+                    placeholder="Sales & Marketing"
+                    placeholderTextColor="#94A3B8"
+                  />
+                </View>
 
                 <TouchableOpacity
-                  style={[styles.copyBtnModal, { backgroundColor: colors.primary, marginTop: 16 }]}
+                  style={[styles.primaryModalBtn, { backgroundColor: '#4F46E5' }]}
                   onPress={() => {
                     setShowCreateProjectModal(false);
                     setProjectsList((prev) => [
@@ -1577,11 +1727,19 @@ export default function TeamScreen() {
                       ...prev,
                     ]);
                   }}
+                  activeOpacity={0.85}
                 >
-                  <FolderPlus size={16} color="#FFF" />
-                  <Text variant="caption" weight="bold" color="#FFF">
-                    Create Project ➔
+                  <FolderPlus size={18} color="#FFFFFF" />
+                  <Text style={styles.primaryModalBtnText}>
+                    Create Project
                   </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.secondaryCancelBtn}
+                  onPress={() => setShowCreateProjectModal(false)}
+                >
+                  <Text style={styles.secondaryCancelText}>Cancel</Text>
                 </TouchableOpacity>
               </ScrollView>
             </View>
@@ -1914,61 +2072,183 @@ const styles = StyleSheet.create({
   // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    backgroundColor: 'rgba(15, 23, 42, 0.7)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
   },
-  qrModalCard: {
-    width: '92%',
-    maxWidth: 420,
+  modernModalCard: {
+    width: '94%',
+    maxWidth: 440,
     maxHeight: '90%',
-    borderRadius: 16,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
     overflow: 'hidden',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.18,
+    shadowRadius: 28,
+    elevation: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
-  qrModalHeader: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+  modernModalHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F8FAFC',
     borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
+  },
+  modalIconBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCloseCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalBody: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 24,
+  },
+  formGroup: {
+    marginBottom: 16,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#334155',
+    marginBottom: 6,
+    letterSpacing: 0.2,
+  },
+  modernTextInput: {
+    borderWidth: 1.5,
     borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    fontSize: 14,
+    color: '#0F172A',
+    backgroundColor: '#F8FAFC',
+  },
+  priorityCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1.5,
+  },
+  priorityDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  priorityCardText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  primaryModalBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#059669',
+    paddingVertical: 13,
+    borderRadius: 12,
+    shadowColor: '#059669',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+    marginTop: 8,
+  },
+  primaryModalBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  secondaryCancelBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    marginTop: 4,
+  },
+  secondaryCancelText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  selectedMemberCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 8,
+    gap: 10,
+  },
+  memberAvatarMini: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: '#ECFDF5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  memberAvatarMiniText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#059669',
+  },
+  quickMemberChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  quickMemberChipActive: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#059669',
+  },
+  quickMemberChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  quickMemberChipTextActive: {
+    color: '#059669',
+    fontWeight: '700',
   },
   qrGraphicContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
     backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    borderWidth: 1,
+    borderRadius: 16,
+    borderWidth: 1.5,
     borderColor: '#E2E8F0',
     marginBottom: 14,
-  },
-  copyBtnModal: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 13,
-    backgroundColor: '#F8FAFC',
-    marginBottom: 4,
-  },
-  rolePillOption: {
-    flex: 1,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-    alignItems: 'center',
   },
 });
