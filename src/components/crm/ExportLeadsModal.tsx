@@ -6,8 +6,8 @@ import { Avatar } from '../Avatar';
 import { Badge } from '../Badge';
 import { useTheme } from '../../theme';
 import { Contact } from '../../api/crm';
-import { Download, Copy, Check, FileSpreadsheet, FileText, ChevronDown, ChevronUp, Share2 } from 'lucide-react-native';
-import { downloadFile, shareFile } from '../../services/fileDownload';
+import { Download, Copy, Check, FileSpreadsheet, FileText, ChevronDown, ChevronUp, Share2, ExternalLink, Eye } from 'lucide-react-native';
+import { downloadFile, shareFile, openFile } from '../../services/fileDownload';
 
 interface ExportLeadsModalProps {
   visible: boolean;
@@ -22,6 +22,7 @@ export const ExportLeadsModal: React.FC<ExportLeadsModalProps> = ({ visible, onC
   const [downloading, setDownloading] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [showRawCsv, setShowRawCsv] = useState(false);
+  const [viewReportModal, setViewReportModal] = useState(false);
 
   const generateCsv = () => {
     const headers = ['Name', 'Phone Number', 'Email', 'Channel', 'Stage', 'Created Date'];
@@ -102,39 +103,72 @@ export const ExportLeadsModal: React.FC<ExportLeadsModalProps> = ({ visible, onC
       setDownloading(true);
       const today = new Date().toISOString().split('T')[0];
       const isPdf = exportFormat === 'pdf';
-      const filename = isPdf ? `CRM_Leads_${today}.html` : `CRM_Leads_${today}.csv`;
-      const mimeType = isPdf ? 'text/html' : 'text/csv';
-      const content = isPdf ? generatePdfHtml() : csvContent;
+      let filename = isPdf ? `CRM_Leads_${today}.pdf` : `CRM_Leads_${today}.csv`;
+      let mimeType = isPdf ? 'application/pdf' : 'text/csv';
+      let fileUri: string | undefined;
 
-      const result = await downloadFile({
-        filename,
-        content,
-        mimeType,
-      });
+      if (isPdf) {
+        try {
+          const Print = require('expo-print');
+          if (Print && typeof Print.printToFileAsync === 'function') {
+            const printRes = await Print.printToFileAsync({
+              html: generatePdfHtml(),
+            });
+            fileUri = printRes.uri;
+          }
+        } catch (_err) {
+          filename = `CRM_Leads_${today}.html`;
+          mimeType = 'text/html';
+        }
+      }
+
+      let result;
+      if (fileUri) {
+        result = await downloadFile({
+          filename,
+          url: fileUri,
+          mimeType: 'application/pdf',
+          dialogTitle: `Save CRM Leads PDF (${contacts.length} leads)`,
+        });
+      } else {
+        const content = isPdf ? generatePdfHtml() : csvContent;
+        result = await downloadFile({
+          filename,
+          content,
+          mimeType,
+          dialogTitle: `Save ${filename}`,
+        });
+      }
 
       if (result.success) {
+        const activeUri = fileUri || result.uri;
         Alert.alert(
           '✓ Download Complete',
-          `CRM Leads ${isPdf ? 'PDF/HTML' : 'CSV'} (${contacts.length} leads) saved successfully on your device.`
+          `CRM Leads ${isPdf ? 'PDF' : 'CSV'} (${contacts.length} leads) is ready. Open now?`,
+          [
+            {
+              text: 'Open File',
+              onPress: async () => {
+                setViewReportModal(true);
+                if (activeUri) {
+                  await openFile(activeUri, mimeType, filename);
+                }
+              },
+            },
+            { text: 'Done', style: 'cancel' },
+          ]
         );
       } else if (result.permissionDenied) {
         Alert.alert(
-          'Storage Access Denied',
-          'File access permission was denied. Please allow file access to save the download.',
+          'Storage Permission Required',
+          'Please grant storage folder permission so the file can be downloaded and saved on your device.',
           [
-            { text: 'Try Again', onPress: handleDownload },
+            { text: 'Grant Permission', onPress: handleDownload },
             { text: 'Cancel', style: 'cancel' },
           ]
         );
       } else {
-        Alert.alert(
-          'Download Failed',
-          result.message || 'Unable to save the file on this device.',
-          [
-            { text: 'Retry', onPress: handleDownload },
-            { text: 'Cancel', style: 'cancel' },
-          ]
-        );
+        Alert.alert('Download Failed', result.message || 'Unable to save file on this device.');
       }
     } catch (err: any) {
       Alert.alert('Download Error', err?.message || 'Failed to save file.');
@@ -149,19 +183,44 @@ export const ExportLeadsModal: React.FC<ExportLeadsModalProps> = ({ visible, onC
       setSharing(true);
       const today = new Date().toISOString().split('T')[0];
       const isPdf = exportFormat === 'pdf';
-      const filename = isPdf ? `CRM_Leads_${today}.html` : `CRM_Leads_${today}.csv`;
-      const mimeType = isPdf ? 'text/html' : 'text/csv';
-      const content = isPdf ? generatePdfHtml() : csvContent;
+      let filename = isPdf ? `CRM_Leads_${today}.pdf` : `CRM_Leads_${today}.csv`;
+      let mimeType = isPdf ? 'application/pdf' : 'text/csv';
+      let fileUri: string | undefined;
 
-      const result = await shareFile({
-        filename,
-        content,
-        mimeType,
-        dialogTitle: `Share CRM Leads ${isPdf ? 'PDF' : 'CSV'}`,
-      });
+      if (isPdf) {
+        try {
+          const Print = require('expo-print');
+          if (Print && typeof Print.printToFileAsync === 'function') {
+            const printRes = await Print.printToFileAsync({
+              html: generatePdfHtml(),
+            });
+            fileUri = printRes.uri;
+          }
+        } catch (_err) {
+          filename = `CRM_Leads_${today}.html`;
+          mimeType = 'text/html';
+        }
+      }
 
-      if (!result.success && result.message) {
-        Alert.alert('Share Failed', result.message);
+      if (fileUri) {
+        await shareFile({
+          filename,
+          url: fileUri,
+          mimeType: 'application/pdf',
+          dialogTitle: `Share CRM Leads PDF`,
+        });
+      } else {
+        const content = isPdf ? generatePdfHtml() : csvContent;
+        const result = await shareFile({
+          filename,
+          content,
+          mimeType,
+          dialogTitle: `Share CRM Leads ${isPdf ? 'PDF' : 'CSV'}`,
+        });
+
+        if (!result.success && result.message) {
+          Alert.alert('Share Failed', result.message);
+        }
       }
     } catch (err: any) {
       console.warn('Share error:', err);
@@ -185,153 +244,256 @@ export const ExportLeadsModal: React.FC<ExportLeadsModalProps> = ({ visible, onC
   const previewContacts = contacts.slice(0, 3);
 
   return (
-    <Modal visible={visible} title="Export CRM Leads" onClose={onClose}>
-      <View style={styles.container}>
-        {/* Format Selector Bar */}
-        <View style={styles.formatSelector}>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            style={[
-              styles.formatChip,
-              exportFormat === 'csv' && { backgroundColor: '#10B981', borderColor: '#10B981' },
-              exportFormat !== 'csv' && { backgroundColor: colors.surface, borderColor: colors.border },
-            ]}
-            onPress={() => setExportFormat('csv')}
+    <>
+      <Modal visible={visible} title="Export CRM Leads" onClose={onClose}>
+        <View style={styles.modalWrapper}>
+          <ScrollView
+            style={styles.scrollContainer}
+            contentContainerStyle={styles.container}
+            showsVerticalScrollIndicator={true}
+            nestedScrollEnabled={true}
+            keyboardShouldPersistTaps="handled"
+            bounces={true}
           >
-            <FileSpreadsheet size={14} color={exportFormat === 'csv' ? '#FFFFFF' : colors.textSecondary} />
-            <Text style={[styles.formatChipText, { color: exportFormat === 'csv' ? '#FFFFFF' : colors.textSecondary }]}>
-              Excel CSV (.csv)
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            activeOpacity={0.8}
-            style={[
-              styles.formatChip,
-              exportFormat === 'pdf' && { backgroundColor: '#10B981', borderColor: '#10B981' },
-              exportFormat !== 'pdf' && { backgroundColor: colors.surface, borderColor: colors.border },
-            ]}
-            onPress={() => setExportFormat('pdf')}
-          >
-            <FileText size={14} color={exportFormat === 'pdf' ? '#FFFFFF' : colors.textSecondary} />
-            <Text style={[styles.formatChipText, { color: exportFormat === 'pdf' ? '#FFFFFF' : colors.textSecondary }]}>
-              PDF / HTML (.pdf)
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Banner Summary */}
-        <View style={[styles.summaryBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={[styles.iconCircle, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
-            <Download size={20} color="#10B981" />
-          </View>
-          <View style={styles.summaryInfo}>
-            <View style={styles.titleRow}>
-              <Text style={[styles.summaryTitle, { color: colors.textPrimary }]}>
-                {contacts.length} Leads Ready
-              </Text>
-              <Badge label={exportFormat === 'pdf' ? 'PDF File' : 'CSV File'} variant="success" />
-            </View>
-            <Text style={[styles.summarySub, { color: colors.textMuted }]}>
-              Standard Export (Name, Phone, Email, Stage, Channel)
-            </Text>
-          </View>
-        </View>
-
-        {/* Structured Lead Sample Cards */}
-        <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Export Sample Preview:</Text>
-
-        <View style={styles.sampleList}>
-          {previewContacts.map((item, idx) => (
-            <View key={idx} style={[styles.sampleRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Avatar name={item.name || 'Lead'} size="sm" />
-              <View style={styles.sampleInfo}>
-                <Text style={[styles.sampleName, { color: colors.textPrimary }]} numberOfLines={1}>
-                  {item.name || 'Unnamed Customer'}
+            {/* Format Selector Bar */}
+            <View style={styles.formatSelector}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={[
+                  styles.formatChip,
+                  exportFormat === 'csv' && { backgroundColor: '#10B981', borderColor: '#10B981' },
+                  exportFormat !== 'csv' && { backgroundColor: colors.surface, borderColor: colors.border },
+                ]}
+                onPress={() => setExportFormat('csv')}
+              >
+                <FileSpreadsheet size={14} color={exportFormat === 'csv' ? '#FFFFFF' : colors.textSecondary} />
+                <Text style={[styles.formatChipText, { color: exportFormat === 'csv' ? '#FFFFFF' : colors.textSecondary }]}>
+                  Excel CSV (.csv)
                 </Text>
-                <Text style={[styles.sampleSub, { color: colors.textMuted }]} numberOfLines={1}>
-                  {item.phone_number || item.email || item.platform_id || 'No contact info'}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={[
+                  styles.formatChip,
+                  exportFormat === 'pdf' && { backgroundColor: '#10B981', borderColor: '#10B981' },
+                  exportFormat !== 'pdf' && { backgroundColor: colors.surface, borderColor: colors.border },
+                ]}
+                onPress={() => setExportFormat('pdf')}
+              >
+                <FileText size={14} color={exportFormat === 'pdf' ? '#FFFFFF' : colors.textSecondary} />
+                <Text style={[styles.formatChipText, { color: exportFormat === 'pdf' ? '#FFFFFF' : colors.textSecondary }]}>
+                  PDF / HTML (.pdf)
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Banner Summary */}
+            <View style={[styles.summaryBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={[styles.iconCircle, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+                <Download size={20} color="#10B981" />
+              </View>
+              <View style={styles.summaryInfo}>
+                <View style={styles.titleRow}>
+                  <Text style={[styles.summaryTitle, { color: colors.textPrimary }]}>
+                    {contacts.length} Leads Ready
+                  </Text>
+                  <Badge label={exportFormat === 'pdf' ? 'PDF File' : 'CSV File'} variant="success" />
+                </View>
+                <Text style={[styles.summarySub, { color: colors.textMuted }]}>
+                  Standard Export (Name, Phone, Email, Stage, Channel)
                 </Text>
               </View>
-              <Badge label={item.stage || 'NEW'} variant="info" />
             </View>
-          ))}
-        </View>
 
-        {/* Collapsible Raw CSV View */}
-        <TouchableOpacity
-          activeOpacity={0.75}
-          style={styles.toggleRawBtn}
-          onPress={() => setShowRawCsv(!showRawCsv)}
-        >
-          <FileSpreadsheet size={14} color={colors.primary} />
-          <Text style={[styles.toggleRawText, { color: colors.primary }]}>
-            {showRawCsv ? 'Hide Raw CSV Code' : 'View Raw CSV Code'}
-          </Text>
-          {showRawCsv ? <ChevronUp size={14} color={colors.primary} /> : <ChevronDown size={14} color={colors.primary} />}
-        </TouchableOpacity>
+            {/* Structured Lead Sample Cards */}
+            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Export Sample Preview:</Text>
 
-        {showRawCsv ? (
-          <ScrollView
-            style={[
-              styles.rawCsvBox,
-              { backgroundColor: colors.surface, borderColor: colors.border },
-            ]}
-            nestedScrollEnabled
-          >
-            <Text style={[styles.rawCsvText, { color: colors.textSecondary }]}>{csvContent}</Text>
+            <View style={styles.sampleList}>
+              {previewContacts.map((item, idx) => (
+                <View key={idx} style={[styles.sampleRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <Avatar name={item.name || 'Lead'} size="sm" />
+                  <View style={styles.sampleInfo}>
+                    <Text style={[styles.sampleName, { color: colors.textPrimary }]} numberOfLines={1}>
+                      {item.name || 'Unnamed Customer'}
+                    </Text>
+                    <Text style={[styles.sampleSub, { color: colors.textMuted }]} numberOfLines={1}>
+                      {item.phone_number || item.email || item.platform_id || 'No contact info'}
+                    </Text>
+                  </View>
+                  <Badge label={item.stage || 'NEW'} variant="info" />
+                </View>
+              ))}
+            </View>
+
+            {/* View Full Report Button */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={[styles.viewReportBtn, { backgroundColor: colors.surface, borderColor: '#10B981' }]}
+              onPress={() => setViewReportModal(true)}
+            >
+              <Eye size={16} color="#10B981" />
+              <Text style={[styles.viewReportBtnText, { color: '#10B981' }]}>
+                Preview & Open Full Report ({contacts.length} Leads)
+              </Text>
+            </TouchableOpacity>
+
+            {/* Collapsible Raw CSV View */}
+            <TouchableOpacity
+              activeOpacity={0.75}
+              style={styles.toggleRawBtn}
+              onPress={() => setShowRawCsv(!showRawCsv)}
+            >
+              <FileSpreadsheet size={14} color={colors.primary} />
+              <Text style={[styles.toggleRawText, { color: colors.primary }]}>
+                {showRawCsv ? 'Hide Raw CSV Code' : 'View Raw CSV Code'}
+              </Text>
+              {showRawCsv ? <ChevronUp size={14} color={colors.primary} /> : <ChevronDown size={14} color={colors.primary} />}
+            </TouchableOpacity>
+
+            {showRawCsv ? (
+              <View
+                style={[
+                  styles.rawCsvBox,
+                  { backgroundColor: colors.surface, borderColor: colors.border },
+                ]}
+              >
+                <Text style={[styles.rawCsvText, { color: colors.textSecondary }]}>{csvContent}</Text>
+              </View>
+            ) : null}
           </ScrollView>
-        ) : null}
 
-        {/* Action Buttons: 1. Download, 2. Share File Attachment, 3. Copy */}
-        <View style={styles.actionsRow}>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            disabled={downloading}
-            style={[styles.downloadBtn, { backgroundColor: colors.primary }]}
-            onPress={handleDownload}
-          >
-            {downloading ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Download size={16} color="#FFFFFF" />
-            )}
-            <Text style={styles.downloadBtnText}>
-              {downloading ? 'Downloading...' : `Download ${exportFormat.toUpperCase()}`}
-            </Text>
-          </TouchableOpacity>
+          {/* Action Buttons Pinned at bottom of Modal */}
+          <View style={[styles.actionsRow, { borderTopColor: colors.border }]}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              disabled={downloading}
+              style={[styles.downloadBtn, { backgroundColor: colors.primary }]}
+              onPress={handleDownload}
+            >
+              {downloading ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Download size={16} color="#FFFFFF" />
+              )}
+              <Text style={styles.downloadBtnText}>
+                {downloading ? 'Downloading...' : `Download ${exportFormat.toUpperCase()}`}
+              </Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            activeOpacity={0.8}
-            disabled={sharing}
-            style={[styles.secondaryActionBtn, { borderColor: colors.border, backgroundColor: colors.card }]}
-            onPress={handleShare}
-          >
-            {sharing ? <ActivityIndicator size="small" color={colors.textPrimary} /> : <Share2 size={16} color={colors.textPrimary} />}
-            <Text style={[styles.secondaryActionText, { color: colors.textPrimary }]}>Share File</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              disabled={sharing}
+              style={[styles.secondaryActionBtn, { borderColor: colors.border, backgroundColor: colors.card }]}
+              onPress={handleShare}
+            >
+              {sharing ? <ActivityIndicator size="small" color={colors.textPrimary} /> : <Share2 size={16} color={colors.textPrimary} />}
+              <Text style={[styles.secondaryActionText, { color: colors.textPrimary }]}>Share</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            activeOpacity={0.8}
-            style={[styles.secondaryActionBtn, { borderColor: colors.border, backgroundColor: colors.card }]}
-            onPress={handleCopy}
-          >
-            {copied ? <Check size={16} color="#10B981" /> : <Copy size={16} color={colors.textPrimary} />}
-            <Text style={[styles.secondaryActionText, { color: copied ? '#10B981' : colors.textPrimary }]}>
-              {copied ? 'Copied' : 'Copy'}
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={[styles.secondaryActionBtn, { borderColor: colors.border, backgroundColor: colors.card }]}
+              onPress={handleCopy}
+            >
+              {copied ? <Check size={16} color="#10B981" /> : <Copy size={16} color={colors.textPrimary} />}
+              <Text style={[styles.secondaryActionText, { color: copied ? '#10B981' : colors.textPrimary }]}>
+                {copied ? 'Copied' : 'Copy'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+
+      {/* Full In-App Report Viewer Modal */}
+      <Modal visible={viewReportModal} title="CRM Leads Full Report" onClose={() => setViewReportModal(false)}>
+        <View style={styles.fullReportContainer}>
+          <View style={[styles.reportHeaderBadge, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.reportHeaderCount, { color: colors.textPrimary }]}>
+              Total {contacts.length} Exported Leads
+            </Text>
+            <Badge label={exportFormat.toUpperCase()} variant="success" />
+          </View>
+
+          <ScrollView style={styles.fullReportScroll} nestedScrollEnabled>
+            <View style={[styles.tableHeader, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.colName, styles.tableHeaderText, { color: colors.textSecondary }]}>Name</Text>
+              <Text style={[styles.colPhone, styles.tableHeaderText, { color: colors.textSecondary }]}>Phone</Text>
+              <Text style={[styles.colStage, styles.tableHeaderText, { color: colors.textSecondary }]}>Stage</Text>
+            </View>
+
+            {contacts.map((c, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.tableRow,
+                  {
+                    backgroundColor: i % 2 === 0 ? colors.card : colors.surface,
+                    borderColor: colors.border,
+                  },
+                ]}
+              >
+                <View style={styles.colName}>
+                  <Text style={[styles.rowNameText, { color: colors.textPrimary }]} numberOfLines={1}>
+                    {c.name || 'Unnamed'}
+                  </Text>
+                  {c.email ? (
+                    <Text style={[styles.rowSubText, { color: colors.textMuted }]} numberOfLines={1}>
+                      {c.email}
+                    </Text>
+                  ) : null}
+                </View>
+
+                <View style={styles.colPhone}>
+                  <Text style={[styles.rowPhoneText, { color: colors.textSecondary }]} numberOfLines={1}>
+                    {c.phone_number || c.platform_id || '-'}
+                  </Text>
+                  <Text style={[styles.rowSubText, { color: '#10B981' }]}>
+                    {c.preferred_channel || 'WhatsApp'}
+                  </Text>
+                </View>
+
+                <View style={styles.colStage}>
+                  <Badge label={c.stage || 'NEW'} variant="info" />
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+
+          <View style={styles.modalFooterActions}>
+            <TouchableOpacity
+              style={[styles.downloadBtn, { backgroundColor: colors.primary, flex: 1 }]}
+              onPress={handleDownload}
+            >
+              <Download size={16} color="#FFF" />
+              <Text style={styles.downloadBtnText}>Save / Download</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.secondaryActionBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+              onPress={() => setViewReportModal(false)}
+            >
+              <Text style={[styles.secondaryActionText, { color: colors.textPrimary }]}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 };
 
 
 const styles = StyleSheet.create({
+  modalWrapper: {
+    maxHeight: 520,
+    flexShrink: 1,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    flexShrink: 1,
+  },
   container: {
-    gap: 10,
-    maxHeight: 480,
+    gap: 12,
+    paddingBottom: 10,
   },
   formatSelector: {
     flexDirection: 'row',
@@ -424,7 +586,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   rawCsvBox: {
-    maxHeight: 110,
     borderRadius: 8,
     borderWidth: 1,
     padding: 10,
@@ -435,10 +596,13 @@ const styles = StyleSheet.create({
     fontFamily: 'Platform',
   },
   actionsRow: {
+    flexShrink: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginTop: 4,
+    paddingTop: 12,
+    marginTop: 6,
+    borderTopWidth: 1,
   },
   downloadBtn: {
     flex: 1,
@@ -467,5 +631,85 @@ const styles = StyleSheet.create({
   secondaryActionText: {
     fontSize: 13,
     fontWeight: '600',
+  },
+  viewReportBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    marginVertical: 4,
+  },
+  viewReportBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  fullReportContainer: {
+    gap: 12,
+    maxHeight: 520,
+  },
+  reportHeaderBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 10,
+    borderRadius: 8,
+  },
+  reportHeaderCount: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  fullReportScroll: {
+    maxHeight: 360,
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderRadius: 6,
+  },
+  tableHeaderText: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+  },
+  colName: {
+    flex: 2,
+    gap: 2,
+  },
+  colPhone: {
+    flex: 2,
+    gap: 2,
+  },
+  colStage: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  rowNameText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  rowPhoneText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  rowSubText: {
+    fontSize: 11,
+  },
+  modalFooterActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 6,
   },
 });

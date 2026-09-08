@@ -1,6 +1,6 @@
 import 'react-native-gesture-handler';
 import React, { useEffect, Component, ReactNode } from 'react';
-import { Text as RNText, View, StyleSheet, TouchableOpacity } from 'react-native';
+import { Text as RNText, View, StyleSheet, TouchableOpacity, LogBox } from 'react-native';
 import { Stack } from 'expo-router';
 import { QueryClientProvider } from '@tanstack/react-query';
 import * as SplashScreen from 'expo-splash-screen';
@@ -8,6 +8,13 @@ import { queryClient } from '../src/config/queryClient';
 import { ThemeProvider } from '../src/theme';
 import { useSessionStore } from '../src/stores/sessionStore';
 import { useBrandStore } from '../src/stores/brandStore';
+
+// Suppress routine background dev warnings from interrupting the UI
+LogBox.ignoreLogs([
+  'WebSocket error:',
+  'Cannot connect to Metro',
+  'Software caused connection abort',
+]);
 
 // Hide native splash screen quickly so JS white splash screen is shown
 SplashScreen.hideAsync().catch(() => {});
@@ -75,15 +82,19 @@ function RootLayoutNav() {
   );
 }
 
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
 export default function RootLayout() {
   return (
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <RootLayoutNav />
-        </ThemeProvider>
-      </QueryClientProvider>
-    </ErrorBoundary>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ErrorBoundary>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+            <RootLayoutNav />
+          </ThemeProvider>
+        </QueryClientProvider>
+      </ErrorBoundary>
+    </GestureHandlerRootView>
   );
 }
 

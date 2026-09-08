@@ -689,7 +689,7 @@ export default function ConnectorsScreen() {
 
   return (
     <Screen safeAreaEdges={['top', 'left', 'right']}>
-      <Header title="Connectors & Channels" showBack onBackPress={() => router.back()} />
+      <Header title="Connectors & Channels" showMenu={true} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}

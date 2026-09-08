@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Screen } from '../../../src/components/Screen';
+import { Header } from '../../../src/components/Header';
 import { Text } from '../../../src/components/Text';
 import { Card } from '../../../src/components/Card';
 import { Badge } from '../../../src/components/Badge';
@@ -12,6 +13,7 @@ import { AddProductModal } from '../../../src/components/sales/AddProductModal';
 import { PackageOpen, Plus, Edit2 } from 'lucide-react-native';
 
 export default function ProductsScreen() {
+  const router = useRouter();
   const { colors } = useTheme();
   const [modalVisible, setModalVisible] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -32,23 +34,21 @@ export default function ProductsScreen() {
   };
 
   return (
-    <Screen safeAreaEdges={['bottom']}>
-      <Stack.Screen 
-        options={{ 
-          title: 'Products & Services', 
-          headerShown: true,
-          headerRight: () => (
-            <TouchableOpacity
-              style={[styles.addBtn, { backgroundColor: colors.primary }]}
-              onPress={handleOpenAdd}
-            >
-              <Plus size={16} color="#FFF" />
-              <Text variant="caption" weight="bold" color="#FFF">
-                Add Product
-              </Text>
-            </TouchableOpacity>
-          )
-        }} 
+    <Screen safeAreaEdges={['top', 'left', 'right']}>
+      <Header
+        title="Products & Services"
+        showMenu={true}
+        rightElement={
+          <TouchableOpacity
+            style={[styles.addBtn, { backgroundColor: colors.primary }]}
+            onPress={handleOpenAdd}
+          >
+            <Plus size={16} color="#FFF" />
+            <Text variant="caption" weight="bold" color="#FFF">
+              Add Product
+            </Text>
+          </TouchableOpacity>
+        }
       />
       
       {isLoading ? (

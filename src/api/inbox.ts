@@ -35,8 +35,10 @@ export interface Message {
   sender_name?: string;
   sender_avatar?: string;
   sender_department?: string;
-  created_at: string;
+  whatsapp_message_id?: string;
   status?: string;
+  metadata?: any;
+  created_at: string;
 }
 
 export interface SendMessagePayload {
@@ -174,5 +176,9 @@ export const inboxApi = {
 
   getAuditLogs: async (convoId: string): Promise<any> => {
     return client.get(`/api/conversations/${convoId}/audit_logs/`);
+  },
+
+  markAsRead: async (convoId: string): Promise<any> => {
+    return client.post(`/api/conversations/${convoId}/mark_read/`, {}).catch(() => null);
   },
 };

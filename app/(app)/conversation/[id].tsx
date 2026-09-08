@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, FlatList, KeyboardAvoidingView, Platform, StyleSheet, TouchableOpacity, ActivityIndicator, BackHandler, Alert } from 'react-native';
+import { View, FlatList, KeyboardAvoidingView, Platform, StyleSheet, TouchableOpacity, ActivityIndicator, BackHandler, Alert, RefreshControl } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Screen } from '../../../src/components/Screen';
 import { Text } from '../../../src/components/Text';
@@ -31,6 +31,7 @@ export default function ConversationDetailScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [activeTab, setActiveTab] = useState<'MESSAGES' | 'NOTES'>('MESSAGES');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [sending, setSending] = useState(false);
   const [takingOver, setTakingOver] = useState(false);
   const [resumingBot, setResumingBot] = useState(false);
@@ -44,30 +45,88 @@ export default function ConversationDetailScreen() {
   const [loadingAudit, setLoadingAudit] = useState(false);
 
   const flatListRef = useRef<FlatList>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Background message synchronizer (quietly fetches updates without flickering loader)
+  const syncMessages = useCallback(async (isSilent = true) => {
+    if (!targetAddress) return;
+    try {
+      if (!isSilent) setRefreshing(true);
+      const res = await inboxApi.getMessages({ contactId: targetAddress, limit: 50, offset: 0 });
+      const fetched = res.messages;
+      if (!fetched) return;
+
+      setMessages((prev) => {
+        if (prev.length === 0) return fetched;
+
+        const pendingTemps = prev.filter(
+          (m) => m.id.startsWith('temp_') && !fetched.some((f) => f.body === m.body)
+        );
+        const nonTempPrev = prev.filter((m) => !m.id.startsWith('temp_'));
+
+        const hasChanges =
+          fetched.length !== nonTempPrev.length ||
+          fetched.some((f, idx) => {
+            const p = nonTempPrev[idx];
+            return !p || p.id !== f.id || p.status !== f.status;
+          });
+
+        if (!hasChanges && pendingTemps.length === prev.filter((m) => m.id.startsWith('temp_')).length) {
+          return prev;
+        }
+
+        return [...fetched, ...pendingTemps];
+      });
+    } catch (err) {
+      console.warn('Failed to sync messages:', err);
+    } finally {
+      if (!isSilent) setRefreshing(false);
+    }
+  }, [targetAddress]);
 
   const fetchChatHistory = useCallback(async () => {
     if (!targetAddress) return;
     try {
       setLoading(true);
-      const res = await inboxApi.getMessages({ contactId: targetAddress, limit: 50, offset: 0 });
-      setMessages(res.messages);
+      await syncMessages(true);
     } catch (err) {
       console.warn('Failed to fetch messages:', err);
     } finally {
       setLoading(false);
     }
-  }, [targetAddress]);
+  }, [targetAddress, syncMessages]);
 
   useEffect(() => {
     fetchChatHistory();
   }, [fetchChatHistory]);
+
+  // Periodic quiet auto-polling every 2.5s so new incoming WhatsApp messages show immediately
+  useEffect(() => {
+    const interval = setInterval(() => {
+      syncMessages(true);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [syncMessages]);
 
   // Real-time WebSocket integration for live incoming messages & typing indicators
   useEffect(() => {
     const unsubscribe = inboxWebSocket.subscribe((data) => {
       if (data.type === 'new_message' && data.message) {
         const msg: Message = data.message;
+        setIsTyping(false);
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+
+        const cleanTarget = (targetAddress || '').replace(/\D/g, '');
+        const cleanFrom = (msg.from_address || '').replace(/\D/g, '');
+        const cleanTo = (msg.to_address || '').replace(/\D/g, '');
+
+        const matchesTargetNumber =
+          (cleanTarget && cleanFrom && (cleanFrom.endsWith(cleanTarget) || cleanTarget.endsWith(cleanFrom))) ||
+          (cleanTarget && cleanTo && (cleanTo.endsWith(cleanTarget) || cleanTarget.endsWith(cleanTo)));
+
         const isForThisChat =
+          matchesTargetNumber ||
           msg.from_address === targetAddress ||
           msg.to_address === targetAddress ||
           msg.from_address === convoId ||
@@ -87,24 +146,62 @@ export default function ConversationDetailScreen() {
         }
       }
 
-      if (data.type === 'typing_status' && data.conversation_id === convoId) {
-        setIsTyping(Boolean(data.is_typing));
+      if (data.type === 'message_status_update') {
+        const targetId = data.message_id;
+        const wamid = data.whatsapp_message_id;
+        const newStatus = data.status;
+
+        setMessages((prev) =>
+          prev.map((m) => {
+            const matches =
+              (targetId && m.id === targetId) ||
+              (wamid && (m as any).whatsapp_message_id === wamid) ||
+              (wamid && m.metadata?.response?.messages?.[0]?.id === wamid);
+            return matches ? { ...m, status: newStatus } : m;
+          })
+        );
+      }
+
+      if (data.type === 'typing_status') {
+        // Ignore typing events generated by current app or other agents
+        if (data.sender_type === 'agent' || data.sender === 'agent') return;
+        if (data.conversation_id === convoId || data.contact_id === targetAddress) {
+          if (data.is_typing) {
+            setIsTyping(true);
+            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+            // Auto-clear typing indicator after 3.5 seconds
+            typingTimeoutRef.current = setTimeout(() => {
+              setIsTyping(false);
+            }, 3500);
+          } else {
+            setIsTyping(false);
+            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+          }
+        }
       }
     });
 
-    // Broadcast viewing status
+    // Broadcast viewing status and mark messages as read
     inboxWebSocket.send({
       type: 'view_conversation',
       conversation_id: convoId,
     });
+    if (convoId) {
+      inboxApi.markAsRead(convoId);
+    }
 
     return () => {
       unsubscribe();
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      if (typingDebounceRef.current) clearTimeout(typingDebounceRef.current);
     };
   }, [convoId, targetAddress]);
 
   const handleSendMessage = async (text: string, isInternalNote: boolean) => {
     if (!text.trim() || sending) return;
+
+    setIsTyping(false);
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
     setSending(true);
     const nowTs = Date.now();
@@ -140,6 +237,9 @@ export default function ConversationDetailScreen() {
       }
     } catch (err: any) {
       console.warn('Send message error:', err);
+      setMessages((prev) =>
+        prev.map((m) => (m.id === optimisticMsg.id ? { ...m, status: 'FAILED' } : m))
+      );
     } finally {
       setSending(false);
     }
@@ -236,8 +336,21 @@ export default function ConversationDetailScreen() {
       inboxWebSocket.send({
         type: 'typing_status',
         conversation_id: convoId,
+        contact_id: targetAddress,
+        sender_type: 'agent',
         is_typing: true,
       });
+
+      if (typingDebounceRef.current) clearTimeout(typingDebounceRef.current);
+      typingDebounceRef.current = setTimeout(() => {
+        inboxWebSocket.send({
+          type: 'typing_status',
+          conversation_id: convoId,
+          contact_id: targetAddress,
+          sender_type: 'agent',
+          is_typing: false,
+        });
+      }, 2000);
     }
   };
 
@@ -358,6 +471,14 @@ export default function ConversationDetailScreen() {
             contentContainerStyle={styles.messagesList}
             onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
             onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={() => syncMessages(false)}
+                colors={[channelColor || colors.primary]}
+                tintColor={channelColor || colors.primary}
+              />
+            }
           />
         )}
 

@@ -4,7 +4,7 @@ import { Text } from '../Text';
 import { Avatar } from '../Avatar';
 import { Message } from '../../api/inbox';
 import { useTheme } from '../../theme';
-import { MessageSquare } from 'lucide-react-native';
+import { MessageSquare, AlertCircle, Check, CheckCheck, Clock } from 'lucide-react-native';
 
 interface MessageBubbleProps {
   message: Message;
@@ -25,6 +25,37 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   const isInternal = message.message_type === 'INTERNAL';
   const isOutgoing = message.message_type === 'OUTGOING';
   const themeColor = channelColor || colors.primary;
+
+  const renderDeliveryStatus = () => {
+    if (!isOutgoing) return null;
+
+    const status = (message.status || '').toUpperCase();
+    const isTemp = message.id?.startsWith('temp_');
+
+    if (status === 'FAILED') {
+      return (
+        <View style={styles.failedBadge}>
+          <AlertCircle size={10} color="#FEE2E2" />
+          <Text style={styles.failedText}>Failed</Text>
+        </View>
+      );
+    }
+
+    if (isTemp || status === 'PENDING') {
+      return <Clock size={11} color="rgba(255, 255, 255, 0.65)" style={styles.statusIcon} />;
+    }
+
+    if (status === 'READ') {
+      return <CheckCheck size={14} color="#38BDF8" style={styles.statusIcon} />;
+    }
+
+    if (status === 'DELIVERED' || status === 'RECEIVED') {
+      return <CheckCheck size={14} color="rgba(255, 255, 255, 0.75)" style={styles.statusIcon} />;
+    }
+
+    // Default for SENT
+    return <Check size={13} color="rgba(255, 255, 255, 0.75)" style={styles.statusIcon} />;
+  };
 
   const formatTime = (timeStr: string) => {
     if (!timeStr) return '';
@@ -119,14 +150,17 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           </View>
         ) : null}
 
-        <Text
-          style={[
-            styles.timeText,
-            { color: isOutgoing ? 'rgba(255, 255, 255, 0.7)' : colors.textMuted },
-          ]}
-        >
-          {formatTime(message.created_at)}
-        </Text>
+        <View style={styles.footerRow}>
+          <Text
+            style={[
+              styles.timeText,
+              { color: isOutgoing ? 'rgba(255, 255, 255, 0.7)' : colors.textMuted },
+            ]}
+          >
+            {formatTime(message.created_at)}
+          </Text>
+          {renderDeliveryStatus()}
+        </View>
       </View>
     </View>
   );
@@ -187,8 +221,30 @@ const styles = StyleSheet.create({
   },
   timeText: {
     fontSize: 10,
-    alignSelf: 'flex-end',
+  },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 3,
     marginTop: 2,
+  },
+  statusIcon: {
+    marginLeft: 2,
+  },
+  failedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: 'rgba(239, 68, 68, 0.5)',
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+    borderRadius: 4,
+  },
+  failedText: {
+    fontSize: 9,
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   internalContainer: {
     marginVertical: 6,

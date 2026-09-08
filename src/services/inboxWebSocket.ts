@@ -36,12 +36,12 @@ class InboxWebSocketService {
           const data = JSON.parse(event.data);
           this.listeners.forEach((listener) => listener(data));
         } catch (err) {
-          console.warn('Failed to parse WS message:', err);
+          console.log('[WebSocket] Failed to parse message:', err);
         }
       };
 
       this.ws.onerror = (error) => {
-        console.warn('WebSocket error:', error);
+        console.log('[WebSocket] Connection note:', error);
       };
 
       this.ws.onclose = () => {
@@ -50,7 +50,7 @@ class InboxWebSocketService {
         }
       };
     } catch (err) {
-      console.warn('WebSocket connection error:', err);
+      console.log('[WebSocket] Connection attempt:', err);
       this.scheduleReconnect();
     }
   }

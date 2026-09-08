@@ -306,7 +306,7 @@ function generateQrMatrix(text: string): boolean[][] {
 
 export default function TeamScreen() {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, mode } = useTheme();
   const user = useSessionStore((state) => state.user);
 
   const [activeTab, setActiveTab] = useState<'DIRECTORY' | 'PROJECTS' | 'TASKS'>('DIRECTORY');
@@ -616,8 +616,7 @@ export default function TeamScreen() {
     <Screen safeAreaEdges={['top', 'left', 'right']}>
       <Header
         title="Team"
-        showBack
-        onBackPress={() => router.back()}
+        showMenu={true}
         rightElement={
           <TouchableOpacity
             style={[styles.topHeaderActionBtn, { backgroundColor: colors.primary }]}
@@ -641,59 +640,89 @@ export default function TeamScreen() {
           <View style={styles.heroCardHeaderRow}>
             <View style={styles.heroTitleGroup}>
               <View style={styles.heroBadgeRow}>
-                <Users size={22} color={colors.primary} />
-                <Text variant="h2" weight="bold" color={colors.textPrimary}>
-                  Team & Workspace Hub
-                </Text>
+                <View style={[styles.heroIconBox, { backgroundColor: colors.primary + '18' }]}>
+                  <Users size={20} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text variant="h3" weight="bold" color={colors.textPrimary}>
+                    Team & Workspace Hub
+                  </Text>
+                  <Text variant="caption" color={colors.textMuted} style={styles.heroSubtitle}>
+                    Manage your organization, assign tasks, and monitor performance.
+                  </Text>
+                </View>
               </View>
-              <Text variant="caption" color={colors.textMuted} style={styles.heroSubtitle}>
-                Manage your organization, assign tasks, track attendance, and monitor team performance.
-              </Text>
             </View>
           </View>
 
-          {/* Quick Action Button Pills */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.actionPillsScroll}>
-            <TouchableOpacity
-              style={[styles.actionPillBtn, { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' }]}
-              onPress={handleOpenQrModal}
-            >
-              <QrCode size={14} color="#059669" />
-              <Text variant="caption" weight="bold" color="#059669">
-                QR Code Invite
-              </Text>
-            </TouchableOpacity>
+          {/* Quick Action Button Grid */}
+          <View style={styles.quickActionsContainer}>
+            <View style={styles.actionGridRow}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={[styles.quickActionBtn, styles.quickActionPrimary, { backgroundColor: colors.primary }]}
+                onPress={() => setShowInviteModal(true)}
+              >
+                <UserPlus size={15} color="#FFF" />
+                <Text variant="caption" weight="bold" color="#FFF" style={styles.actionBtnText}>
+                  Invite Member
+                </Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.actionPillBtn, { backgroundColor: colors.primary, borderColor: colors.primary }]}
-              onPress={() => setShowInviteModal(true)}
-            >
-              <UserPlus size={14} color="#FFF" />
-              <Text variant="caption" weight="bold" color="#FFF">
-                Invite Member
-              </Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={[
+                  styles.quickActionBtn,
+                  {
+                    backgroundColor: mode === 'dark' ? 'rgba(16, 185, 129, 0.14)' : '#ECFDF5',
+                    borderColor: mode === 'dark' ? 'rgba(16, 185, 129, 0.28)' : '#A7F3D0',
+                  },
+                ]}
+                onPress={handleOpenQrModal}
+              >
+                <QrCode size={15} color={colors.primary} />
+                <Text variant="caption" weight="bold" color={colors.primary} style={styles.actionBtnText}>
+                  QR Code Invite
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-            <TouchableOpacity
-              style={[styles.actionPillBtn, { backgroundColor: '#0F172A', borderColor: '#1E293B' }]}
-              onPress={() => setShowCreateProjectModal(true)}
-            >
-              <FolderPlus size={14} color="#FFF" />
-              <Text variant="caption" weight="bold" color="#FFF">
-                New Project
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.actionGridRow}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={[
+                  styles.quickActionBtn,
+                  {
+                    backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F8FAFC',
+                    borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : '#E2E8F0',
+                  },
+                ]}
+                onPress={() => setShowCreateProjectModal(true)}
+              >
+                <FolderPlus size={15} color={colors.textPrimary} />
+                <Text variant="caption" weight="bold" color={colors.textPrimary} style={styles.actionBtnText}>
+                  New Project
+                </Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.actionPillBtn, { backgroundColor: '#F1F5F9', borderColor: '#E2E8F0' }]}
-              onPress={() => setShowCreateTaskModal(true)}
-            >
-              <CheckSquare size={14} color="#475569" />
-              <Text variant="caption" weight="bold" color="#475569">
-                + Create Task
-              </Text>
-            </TouchableOpacity>
-          </ScrollView>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={[
+                  styles.quickActionBtn,
+                  {
+                    backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F8FAFC',
+                    borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : '#E2E8F0',
+                  },
+                ]}
+                onPress={() => setShowCreateTaskModal(true)}
+              >
+                <CheckSquare size={15} color={colors.textPrimary} />
+                <Text variant="caption" weight="bold" color={colors.textPrimary} style={styles.actionBtnText}>
+                  Create Task
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </Card>
 
         {/* Success Toasts */}
@@ -715,55 +744,95 @@ export default function TeamScreen() {
           </View>
         )}
 
-        {/* Section Nav Tabs: Directory | Projects | Tasks & Board */}
-        <View style={styles.tabNavRow}>
-          <TouchableOpacity
-            style={[
-              styles.navTabBtn,
-              {
-                backgroundColor: activeTab === 'DIRECTORY' ? colors.primary : colors.surface,
-                borderColor: activeTab === 'DIRECTORY' ? colors.primary : colors.border,
-              },
-            ]}
-            onPress={() => setActiveTab('DIRECTORY')}
-          >
-            <Users size={14} color={activeTab === 'DIRECTORY' ? '#FFF' : colors.textMuted} />
-            <Text variant="caption" weight="bold" color={activeTab === 'DIRECTORY' ? '#FFF' : colors.textMuted}>
-              Directory ({statsData?.resourceCounts?.teamMembers ?? teamMembers.length})
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.navTabBtn,
-              {
-                backgroundColor: activeTab === 'PROJECTS' ? colors.primary : colors.surface,
-                borderColor: activeTab === 'PROJECTS' ? colors.primary : colors.border,
-              },
-            ]}
-            onPress={() => setActiveTab('PROJECTS')}
-          >
-            <FolderPlus size={14} color={activeTab === 'PROJECTS' ? '#FFF' : colors.textMuted} />
-            <Text variant="caption" weight="bold" color={activeTab === 'PROJECTS' ? '#FFF' : colors.textMuted}>
-              Projects ({statsData?.resourceCounts?.projects ?? projectsList.length})
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.navTabBtn,
-              {
-                backgroundColor: activeTab === 'TASKS' ? colors.primary : colors.surface,
-                borderColor: activeTab === 'TASKS' ? colors.primary : colors.border,
-              },
-            ]}
-            onPress={() => setActiveTab('TASKS')}
-          >
-            <CheckSquare size={14} color={activeTab === 'TASKS' ? '#FFF' : colors.textMuted} />
-            <Text variant="caption" weight="bold" color={activeTab === 'TASKS' ? '#FFF' : colors.textMuted}>
-              Tasks & Board ({tasksList.length})
-            </Text>
-          </TouchableOpacity>
+        {/* Section Nav Tabs: Directory | Projects | Tasks */}
+        <View
+          style={[
+            styles.tabSegmentContainer,
+            {
+              backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F1F5F9',
+              borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0',
+            },
+          ]}
+        >
+          {[
+            {
+              id: 'DIRECTORY' as const,
+              label: 'Directory',
+              count: statsData?.resourceCounts?.teamMembers ?? teamMembers.length,
+              icon: Users,
+            },
+            {
+              id: 'PROJECTS' as const,
+              label: 'Projects',
+              count: statsData?.resourceCounts?.projects ?? projectsList.length,
+              icon: FolderPlus,
+            },
+            {
+              id: 'TASKS' as const,
+              label: 'Tasks',
+              count: tasksList.length,
+              icon: CheckSquare,
+            },
+          ].map((tab) => {
+            const isActive = activeTab === tab.id;
+            const Icon = tab.icon;
+            return (
+              <TouchableOpacity
+                key={tab.id}
+                activeOpacity={0.75}
+                onPress={() => setActiveTab(tab.id)}
+                style={[
+                  styles.tabSegmentItem,
+                  isActive && [
+                    styles.tabSegmentItemActive,
+                    {
+                      backgroundColor: colors.primary,
+                      shadowColor: colors.primary,
+                    },
+                  ],
+                ]}
+              >
+                <Icon
+                  size={14}
+                  color={isActive ? '#FFF' : colors.textMuted}
+                  strokeWidth={isActive ? 2.5 : 2}
+                />
+                <Text
+                  variant="caption"
+                  weight={isActive ? 'bold' : 'medium'}
+                  color={isActive ? '#FFF' : colors.textMuted}
+                  style={styles.tabLabel}
+                  numberOfLines={1}
+                >
+                  {tab.label}
+                </Text>
+                <View
+                  style={[
+                    styles.tabBadgePill,
+                    {
+                      backgroundColor: isActive
+                        ? 'rgba(255, 255, 255, 0.25)'
+                        : mode === 'dark'
+                        ? 'rgba(255, 255, 255, 0.08)'
+                        : 'rgba(0, 0, 0, 0.06)',
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.tabBadgeText,
+                      {
+                        color: isActive ? '#FFF' : colors.textMuted,
+                        fontWeight: isActive ? '700' : '600',
+                      },
+                    ]}
+                  >
+                    {tab.count}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* TAB 1: DIRECTORY */}
@@ -836,36 +905,35 @@ export default function TeamScreen() {
                     </View>
                   </View>
 
-                  {/* Performance stats row */}
-                  <View style={[styles.statsBarRow, { backgroundColor: colors.background }]}>
-                    <View style={styles.statCol}>
-                      <Text variant="caption" color={colors.textMuted} style={{ fontSize: 9 }}>
-                        TASKS COMPLETED
-                      </Text>
-                      <Text variant="caption" weight="bold" color={colors.primary} style={{ fontSize: 11 }}>
-                        {member.tasksCompleted} Tasks
-                      </Text>
-                    </View>
-
-                    <View style={styles.statDivider} />
-
-                    <View style={styles.statCol}>
-                      <Text variant="caption" color={colors.textMuted} style={{ fontSize: 9 }}>
-                        AVG RESPONSE TIME
-                      </Text>
-                      <Text variant="caption" weight="bold" color={colors.success} style={{ fontSize: 11 }}>
-                        {member.avgResponseTime}
+                  {/* Clean lightweight performance metrics */}
+                  <View style={styles.memberMetricsRow}>
+                    <View
+                      style={[
+                        styles.metricChip,
+                        {
+                          backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F8FAFC',
+                          borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0',
+                        },
+                      ]}
+                    >
+                      <CheckSquare size={12} color={colors.primary} />
+                      <Text variant="caption" weight="bold" color={colors.textPrimary} style={{ fontSize: 11 }}>
+                        {member.tasksCompleted} Tasks Done
                       </Text>
                     </View>
 
-                    <View style={styles.statDivider} />
-
-                    <View style={styles.statCol}>
-                      <Text variant="caption" color={colors.textMuted} style={{ fontSize: 9 }}>
-                        AVAILABILITY
-                      </Text>
-                      <Text variant="caption" weight="bold" color={member.status === 'ACTIVE' ? colors.success : colors.warning} style={{ fontSize: 11 }}>
-                        ● {member.status}
+                    <View
+                      style={[
+                        styles.metricChip,
+                        {
+                          backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F8FAFC',
+                          borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0',
+                        },
+                      ]}
+                    >
+                      <Clock size={12} color="#0284C7" />
+                      <Text variant="caption" weight="medium" color={colors.textSecondary} style={{ fontSize: 11 }}>
+                        Avg: <Text weight="bold" color={colors.textPrimary}>{member.avgResponseTime}</Text>
                       </Text>
                     </View>
                   </View>
@@ -873,24 +941,38 @@ export default function TeamScreen() {
                   {/* Card Action Buttons */}
                   <View style={styles.memberCardActionsRow}>
                     <TouchableOpacity
-                      style={[styles.memberActionBtn, { backgroundColor: '#EEF2FF', borderColor: '#C7D2FE' }]}
+                      activeOpacity={0.75}
+                      style={[
+                        styles.memberActionBtn,
+                        {
+                          backgroundColor: mode === 'dark' ? 'rgba(99, 102, 241, 0.12)' : '#EEF2FF',
+                          borderColor: mode === 'dark' ? 'rgba(99, 102, 241, 0.25)' : '#E0E7FF',
+                        },
+                      ]}
                       onPress={() => router.push('/inbox')}
                     >
-                      <Mail size={12} color="#4F46E5" />
-                      <Text variant="caption" weight="bold" color="#4F46E5">
+                      <Mail size={13} color="#4F46E5" />
+                      <Text variant="caption" weight="bold" color="#4F46E5" style={{ fontSize: 12 }}>
                         Message
                       </Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                      style={[styles.memberActionBtn, { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' }]}
+                      activeOpacity={0.75}
+                      style={[
+                        styles.memberActionBtn,
+                        {
+                          backgroundColor: mode === 'dark' ? 'rgba(16, 185, 129, 0.12)' : '#ECFDF5',
+                          borderColor: mode === 'dark' ? 'rgba(16, 185, 129, 0.25)' : '#D1FAE5',
+                        },
+                      ]}
                       onPress={() => {
                         setTaskAssignee(member.name);
                         setShowCreateTaskModal(true);
                       }}
                     >
-                      <CheckSquare size={12} color="#059669" />
-                      <Text variant="caption" weight="bold" color="#059669">
+                      <Plus size={13} color={colors.primary} />
+                      <Text variant="caption" weight="bold" color={colors.primary} style={{ fontSize: 12 }}>
                         Assign Task
                       </Text>
                     </TouchableOpacity>
@@ -1526,12 +1608,13 @@ const styles = StyleSheet.create({
   heroCard: {
     marginBottom: 14,
     padding: 16,
+    borderRadius: 16,
   },
   heroCardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 4,
   },
   heroTitleGroup: {
     flex: 1,
@@ -1539,12 +1622,51 @@ const styles = StyleSheet.create({
   heroBadgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
+  },
+  heroIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
   heroSubtitle: {
     fontSize: 11,
     lineHeight: 16,
+    marginTop: 3,
+  },
+  quickActionsContainer: {
+    gap: 8,
+    marginTop: 14,
+  },
+  actionGridRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  quickActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  quickActionPrimary: {
+    borderWidth: 0,
+    shadowColor: '#059669',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.22,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  actionBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.1,
   },
   actionPillsScroll: {
     gap: 8,
@@ -1567,6 +1689,43 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     marginBottom: 14,
+  },
+  tabSegmentContainer: {
+    flexDirection: 'row',
+    padding: 4,
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 4,
+    marginBottom: 14,
+  },
+  tabSegmentItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 9,
+    borderRadius: 10,
+  },
+  tabSegmentItemActive: {
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  tabLabel: {
+    fontSize: 12,
+  },
+  tabBadgePill: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    minWidth: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabBadgeText: {
+    fontSize: 11,
   },
   tabNavRow: {
     flexDirection: 'row',
@@ -1610,53 +1769,52 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   memberCard: {
-    marginBottom: 10,
-    padding: 14,
+    marginBottom: 12,
+    padding: 16,
+    borderRadius: 16,
   },
   memberCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   memberAvatarGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
     flex: 1,
   },
   memberTextGroup: {
     flex: 1,
   },
-  statsBarRow: {
+  memberMetricsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    marginBottom: 10,
+    gap: 8,
+    marginBottom: 14,
   },
-  statCol: {
+  metricChip: {
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  statDivider: {
-    width: 1,
-    height: 20,
-    backgroundColor: '#E2E8F0',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
   },
   memberCardActionsRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
   },
   memberActionBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
-    paddingVertical: 6,
-    borderRadius: 6,
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: 10,
     borderWidth: 1,
   },
   emptyCard: {

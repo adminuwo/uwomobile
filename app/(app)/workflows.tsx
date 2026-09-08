@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   View, 
   StyleSheet, 
@@ -10,24 +10,15 @@ import {
   Modal, 
   ActivityIndicator,
   useWindowDimensions,
-  NativeModules
+  NativeModules,
+  PanResponder,
+  GestureResponderEvent
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import Svg, { Path, Circle, Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
 
-const getScreenOrientationModule = () => {
-  try {
-    const hasNativeModule = (NativeModules && NativeModules.ExpoScreenOrientation) || 
-      (typeof globalThis !== 'undefined' && (globalThis as any).ExpoModules?.ExpoScreenOrientation);
-    if (!hasNativeModule) {
-      return null;
-    }
-    return require('expo-screen-orientation');
-  } catch (e) {
-    return null;
-  }
-};
+import * as ScreenOrientation from 'expo-screen-orientation';
 import { Screen } from '../../src/components/Screen';
 import { Header } from '../../src/components/Header';
 import { Text } from '../../src/components/Text';
@@ -191,6 +182,60 @@ export default function WorkflowsScreen() {
   const [showWireGuideModal, setShowWireGuideModal] = useState(false);
   const [editingNode, setEditingNode] = useState<WorkflowNode | null>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(1);
+  const zoomLevelRef = useRef(zoomLevel);
+  zoomLevelRef.current = zoomLevel;
+
+  const [isPinching, setIsPinching] = useState(false);
+  const initialDistance = useRef<number>(0);
+  const pinchStartZoom = useRef<number>(1);
+  const lastTapTime = useRef<number>(0);
+
+  const panResponder = useMemo(() => PanResponder.create({
+    onStartShouldSetPanResponderCapture: (evt: GestureResponderEvent) => {
+      return evt.nativeEvent.touches.length >= 2;
+    },
+    onMoveShouldSetPanResponderCapture: (evt: GestureResponderEvent) => {
+      return evt.nativeEvent.touches.length >= 2;
+    },
+    onPanResponderGrant: (evt: GestureResponderEvent) => {
+      if (evt.nativeEvent.touches.length >= 2) {
+        setIsPinching(true);
+        const [t1, t2] = evt.nativeEvent.touches;
+        initialDistance.current = Math.hypot(t1.pageX - t2.pageX, t1.pageY - t2.pageY);
+        pinchStartZoom.current = zoomLevelRef.current;
+      }
+    },
+    onPanResponderMove: (evt: GestureResponderEvent) => {
+      if (evt.nativeEvent.touches.length >= 2 && initialDistance.current > 10) {
+        const [t1, t2] = evt.nativeEvent.touches;
+        const currentDist = Math.hypot(t1.pageX - t2.pageX, t1.pageY - t2.pageY);
+        if (currentDist > 10) {
+          const factor = currentDist / initialDistance.current;
+          const next = Math.max(0.4, Math.min(2.0, Number((pinchStartZoom.current * factor).toFixed(2))));
+          setZoomLevel(next);
+        }
+      }
+    },
+    onPanResponderRelease: () => {
+      setIsPinching(false);
+      initialDistance.current = 0;
+    },
+    onPanResponderTerminate: () => {
+      setIsPinching(false);
+      initialDistance.current = 0;
+    },
+    onPanResponderTerminationRequest: () => false,
+  }), []);
+
+  const handleCanvasBackgroundPress = () => {
+    const now = Date.now();
+    if (now - lastTapTime.current < 300) {
+      setZoomLevel(prev => prev === 1 ? 1.4 : 1);
+      lastTapTime.current = 0;
+    } else {
+      lastTapTime.current = now;
+    }
+  };
   const [connectingSource, setConnectingSource] = useState<{ nodeId: string; handleId?: string; title: string } | null>(null);
   const [wireSuccessToast, setWireSuccessToast] = useState<string | null>(null);
   const [nodePositions, setNodePositions] = useState<Record<string, { x: number; y: number; width: number; height: number }>>({});
@@ -379,9 +424,8 @@ export default function WorkflowsScreen() {
 
   const lockLandscape = async () => {
     try {
-      const orientationMod = getScreenOrientationModule();
-      if (orientationMod && typeof orientationMod.lockAsync === 'function' && orientationMod.OrientationLock) {
-        await orientationMod.lockAsync(orientationMod.OrientationLock.LANDSCAPE);
+      if (ScreenOrientation && typeof ScreenOrientation.lockAsync === 'function') {
+        await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
       }
     } catch (e) {
       console.log('Screen orientation lock landscape error:', e);
@@ -390,9 +434,8 @@ export default function WorkflowsScreen() {
 
   const lockPortrait = async () => {
     try {
-      const orientationMod = getScreenOrientationModule();
-      if (orientationMod && typeof orientationMod.lockAsync === 'function' && orientationMod.OrientationLock) {
-        await orientationMod.lockAsync(orientationMod.OrientationLock.PORTRAIT_UP);
+      if (ScreenOrientation && typeof ScreenOrientation.lockAsync === 'function') {
+        await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
       }
     } catch (e) {
       console.log('Screen orientation lock portrait error:', e);
@@ -819,9 +862,11 @@ export default function WorkflowsScreen() {
     );
   };
 
-  const requestOpenBuilderInLandscape = (flow: WorkflowItem) => {
-    setPendingWorkflowToBuild(flow);
-    setIsLandscapeConfirmOpen(true);
+  const requestOpenBuilderInLandscape = async (flow: WorkflowItem) => {
+    setSelectedWorkflow(flow);
+    setForceLandscapeLayout(true);
+    await lockLandscape();
+    setIsBuilderModalOpen(true);
   };
 
   const closeWorkflowBuilder = async () => {
@@ -1021,8 +1066,7 @@ export default function WorkflowsScreen() {
     <Screen safeAreaEdges={['top', 'left', 'right']}>
       <Header 
         title="Workflows" 
-        showBack 
-        onBackPress={() => router.back()} 
+        showMenu={true}
         rightElement={
           <TouchableOpacity 
             style={[styles.addFlowBtn, { backgroundColor: colors.primary }]}
@@ -1532,6 +1576,7 @@ export default function WorkflowsScreen() {
       <Modal
         visible={isBuilderModalOpen}
         animationType="slide"
+        supportedOrientations={['landscape', 'landscape-left', 'landscape-right']}
         onRequestClose={closeWorkflowBuilder}
       >
         {selectedWorkflow && (
@@ -1774,65 +1819,93 @@ export default function WorkflowsScreen() {
               )}
 
               {/* Center Canvas Area (React Flow Dotted Canvas with SVG Bezier Wires) */}
-              <View style={styles.centerCanvasContainer}>
+              <View 
+                style={styles.centerCanvasContainer} 
+                collapsable={false}
+                {...panResponder.panHandlers}
+              >
+                {/* Floating Top Wiring Instruction & Mode Banner */}
+                {connectingSource ? (
+                  <View style={[styles.wiringBannerBar, { position: 'absolute', top: 8, left: 16, right: 16, alignSelf: 'center', zIndex: 90, backgroundColor: '#2563EB', borderColor: '#3B82F6', paddingVertical: 8, maxWidth: 680 }]}>
+                    <Zap size={16} color="#FFF" />
+                    <View style={{ flex: 1 }}>
+                      <Text variant="caption" weight="bold" color="#FFF" style={{ fontSize: 10 }}>
+                        🔌 STEP 2 OF 2: NOW TAP ON TARGET BLOCK CARD!
+                      </Text>
+                      <Text variant="caption" color="#DBEAFE" style={{ fontSize: 9, marginTop: 1 }}>
+                        Source: "{connectingSource.title}" ➔ Ab target block par tap karein!
+                      </Text>
+                    </View>
+                    <TouchableOpacity onPress={() => setConnectingSource(null)} style={{ padding: 6, backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 6 }}>
+                      <X size={14} color="#FFF" strokeWidth={3} />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={[styles.wiringBannerBar, { position: 'absolute', top: 8, left: 16, right: 16, alignSelf: 'center', zIndex: 90, backgroundColor: '#0F172A', borderColor: '#1E293B', paddingVertical: 6, maxWidth: 680 }]}>
+                    <Sparkles size={14} color="#10B981" />
+                    <View style={{ flex: 1 }}>
+                      <Text variant="caption" weight="bold" color="#34D399" style={{ fontSize: 10 }}>
+                        🔌 HOW TO CONNECT WIRES (2 EASY STEPS):
+                      </Text>
+                      <Text variant="caption" color="#CBD5E1" style={{ fontSize: 9, marginTop: 1 }}>
+                        1️⃣ Block ke niche <Text weight="bold" color="#60A5FA">"🔌 CONNECT WIRE"</Text> tap karein ➔ 2️⃣ Target Block par tap karein!
+                      </Text>
+                    </View>
+                    <TouchableOpacity 
+                      style={{ backgroundColor: '#1E293B', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, borderWidth: 1, borderColor: '#38BDF8' }}
+                      onPress={() => setShowWireGuideModal(true)}
+                    >
+                      <Text variant="caption" weight="bold" color="#38BDF8" style={{ fontSize: 9 }}>
+                        ❓ Wire Guide
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {wireSuccessToast && (
+                  <View style={[styles.wireToastBar, { position: 'absolute', top: 56, alignSelf: 'center', zIndex: 90 }]}>
+                    <CheckCircle2 size={14} color="#FFF" />
+                    <Text variant="caption" weight="bold" color="#FFF" style={{ fontSize: 10 }}>
+                      {wireSuccessToast}
+                    </Text>
+                  </View>
+                )}
+
                 <ScrollView 
                   horizontal 
+                  scrollEnabled={!isPinching}
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={{ flexGrow: 1 }}
                 >
                   <ScrollView 
+                    scrollEnabled={!isPinching}
                     showsVerticalScrollIndicator={false}
-                    contentContainerStyle={[styles.canvasDotGrid, { padding: 30, minWidth: 950, transform: [{ scale: zoomLevel }] }]}
+                    contentContainerStyle={[styles.canvasDotGrid, { padding: 30, paddingTop: 60, minWidth: 950 }]}
                   >
-                    {/* Wiring Instruction & Mode Banner */}
-                    {connectingSource ? (
-                      <View style={[styles.wiringBannerBar, { backgroundColor: '#2563EB', borderColor: '#3B82F6', paddingVertical: 10, maxWidth: 750 }]}>
-                        <Zap size={16} color="#FFF" />
-                        <View style={{ flex: 1 }}>
-                          <Text variant="caption" weight="bold" color="#FFF" style={{ fontSize: 11 }}>
-                            🔌 STEP 2 OF 2: NOW TAP ON TARGET BLOCK CARD!
-                          </Text>
-                          <Text variant="caption" color="#DBEAFE" style={{ fontSize: 9, marginTop: 1 }}>
-                            Source selected: "{connectingSource.title}" ➔ Ab jis block se wire connect karni hai, us block card par tap karein!
-                          </Text>
-                        </View>
-                        <TouchableOpacity onPress={() => setConnectingSource(null)} style={{ padding: 6, backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 6 }}>
-                          <X size={14} color="#FFF" strokeWidth={3} />
-                        </TouchableOpacity>
-                      </View>
-                    ) : (
-                      <View style={[styles.wiringBannerBar, { backgroundColor: '#0F172A', borderColor: '#1E293B', paddingVertical: 8, maxWidth: 750 }]}>
-                        <Sparkles size={14} color="#10B981" />
-                        <View style={{ flex: 1 }}>
-                          <Text variant="caption" weight="bold" color="#34D399" style={{ fontSize: 10 }}>
-                            🔌 HOW TO CONNECT WIRES (2 EASY STEPS):
-                          </Text>
-                          <Text variant="caption" color="#CBD5E1" style={{ fontSize: 9, marginTop: 2 }}>
-                            1️⃣ Block ke bottom me <Text weight="bold" color="#60A5FA">"🔌 CONNECT WIRE"</Text> tap karein ➔ 2️⃣ Target Block par tap karein!
-                          </Text>
-                        </View>
-                        <TouchableOpacity 
-                          style={{ backgroundColor: '#1E293B', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, borderWidth: 1, borderColor: '#38BDF8' }}
-                          onPress={() => setShowWireGuideModal(true)}
-                        >
-                          <Text variant="caption" weight="bold" color="#38BDF8" style={{ fontSize: 9 }}>
-                            ❓ Wire Guide
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    )}
 
-                    {wireSuccessToast && (
-                      <View style={styles.wireToastBar}>
-                        <CheckCircle2 size={14} color="#FFF" />
-                        <Text variant="caption" weight="bold" color="#FFF" style={{ fontSize: 10 }}>
-                          {wireSuccessToast}
-                        </Text>
-                      </View>
-                    )}
-
-                    {/* Canvas Relative Container for SVG Overlay + Cards */}
-                    <View style={{ position: 'relative', width: 1400, height: 1300 }}>
+                    {/* Canvas Scalable Container */}
+                    <View 
+                      onTouchEnd={handleCanvasBackgroundPress}
+                      style={{ 
+                        width: Math.max(950, 1400 * zoomLevel), 
+                        height: Math.max(750, 1300 * zoomLevel), 
+                        position: 'relative' 
+                      }}
+                    >
+                      <View 
+                        style={{ 
+                          width: 1400, 
+                          height: 1300, 
+                          position: 'absolute',
+                          left: 0,
+                          top: 0,
+                          transform: [
+                            { translateX: -700 * (1 - zoomLevel) },
+                            { translateY: -650 * (1 - zoomLevel) },
+                            { scale: zoomLevel },
+                          ]
+                        }}
+                      >
                       {/* SVG Canvas Wires Overlay Layer */}
                       <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
                         {(selectedWorkflow.edges || []).map((edge) => {
@@ -2078,20 +2151,84 @@ export default function WorkflowsScreen() {
                           </View>
                         );
                       })}
+                      </View>
                     </View>
                   </ScrollView>
                 </ScrollView>
 
                 {/* Bottom Left Floating Canvas Controls */}
                 <View style={styles.bottomLeftControlsBar}>
-                  <TouchableOpacity style={styles.canvasControlBtn} onPress={() => setZoomLevel(Math.min(zoomLevel + 0.1, 1.3))}>
-                    <ZoomIn size={13} color="#64748B" />
+                  <TouchableOpacity 
+                    style={styles.canvasControlBtn} 
+                    onPress={() => setZoomLevel((z) => Math.max(0.4, Number((z - 0.15).toFixed(2))))}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <ZoomOut size={16} color="#334155" />
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.canvasControlBtn} onPress={() => setZoomLevel(Math.max(zoomLevel - 0.1, 0.7))}>
-                    <ZoomOut size={13} color="#64748B" />
+
+                  <TouchableOpacity 
+                    style={styles.zoomPercentBadge}
+                    onPress={() => setZoomLevel(1)}
+                  >
+                    <Text variant="caption" weight="bold" color="#2563EB" style={{ fontSize: 11 }}>
+                      {Math.round(zoomLevel * 100)}%
+                    </Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.canvasControlBtn} onPress={() => setZoomLevel(1)}>
-                    <RotateCcw size={13} color="#64748B" />
+
+                  <TouchableOpacity 
+                    style={styles.canvasControlBtn} 
+                    onPress={() => setZoomLevel((z) => Math.min(2.0, Number((z + 0.15).toFixed(2))))}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <ZoomIn size={16} color="#334155" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={styles.canvasControlBtn} 
+                    onPress={() => setZoomLevel(1)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <RotateCcw size={15} color="#64748B" />
+                  </TouchableOpacity>
+
+                  <View style={{ width: 1, height: 16, backgroundColor: '#CBD5E1', marginHorizontal: 2 }} />
+
+                  <TouchableOpacity 
+                    style={styles.zoomPresetBtn} 
+                    onPress={() => setZoomLevel(0.6)}
+                  >
+                    <Text variant="caption" weight="bold" color="#64748B" style={{ fontSize: 10 }}>
+                      60%
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={styles.zoomPresetBtn} 
+                    onPress={() => setZoomLevel(1)}
+                  >
+                    <Text variant="caption" weight="bold" color="#64748B" style={{ fontSize: 10 }}>
+                      100%
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={styles.zoomPresetBtn} 
+                    onPress={() => setZoomLevel(1.4)}
+                  >
+                    <Text variant="caption" weight="bold" color="#64748B" style={{ fontSize: 10 }}>
+                      140%
+                    </Text>
+                  </TouchableOpacity>
+
+                  <View style={{ width: 1, height: 16, backgroundColor: '#CBD5E1', marginHorizontal: 2 }} />
+
+                  <TouchableOpacity 
+                    style={[styles.zoomPresetBtn, { backgroundColor: '#EFF6FF', borderColor: '#38BDF8', borderWidth: 1 }]} 
+                    onPress={() => setShowWireGuideModal(true)}
+                  >
+                    <Text variant="caption" weight="bold" color="#0284C7" style={{ fontSize: 10 }}>
+                      ❓ Guide
+                    </Text>
                   </TouchableOpacity>
                 </View>
 
@@ -2312,7 +2449,7 @@ export default function WorkflowsScreen() {
                 onRequestClose={() => setShowWireGuideModal(false)}
               >
                 <View style={styles.modalOverlay}>
-                  <View style={[styles.nodeInspectorCard, { backgroundColor: '#FFFFFF', maxWidth: 440 }]}>
+                  <View style={[styles.nodeInspectorCard, { backgroundColor: '#FFFFFF', maxWidth: 440, maxHeight: '94%' }]}>
                     <View style={[styles.inspectorHeaderBar, { backgroundColor: '#0F172A' }]}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         <Sparkles size={16} color="#10B981" />
@@ -2325,7 +2462,7 @@ export default function WorkflowsScreen() {
                       </TouchableOpacity>
                     </View>
 
-                    <ScrollView style={{ padding: 16 }} showsVerticalScrollIndicator={false}>
+                    <ScrollView style={{ padding: 16, flexShrink: 1 }} contentContainerStyle={{ paddingBottom: 8 }} showsVerticalScrollIndicator={false}>
                       <Text variant="body" weight="bold" color="#0F172A" style={{ marginBottom: 10, fontSize: 13 }}>
                         Wires (Lines) connect karne ke 2 aasan tareeqe:
                       </Text>
@@ -2353,7 +2490,7 @@ export default function WorkflowsScreen() {
                       </View>
 
                       {/* Disconnect Wire */}
-                      <View style={{ backgroundColor: '#FEF2F2', borderRadius: 10, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: '#FECACA' }}>
+                      <View style={{ backgroundColor: '#FEF2F2', borderRadius: 10, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: '#FECACA' }}>
                         <Text variant="caption" weight="bold" color="#B91C1C" style={{ fontSize: 11, marginBottom: 6 }}>
                           ❌ Wire Kaatne / Hatane Ka Tareeqa:
                         </Text>
@@ -2361,7 +2498,9 @@ export default function WorkflowsScreen() {
                           Har wire ke beech me chhota <Text weight="bold" color="#B91C1C">(X)</Text> button hai. Us <Text weight="bold" color="#B91C1C">(X)</Text> par tap karte hi wire hat jayegi.
                         </Text>
                       </View>
+                    </ScrollView>
 
+                    <View style={{ paddingHorizontal: 16, paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#E2E8F0', backgroundColor: '#F8FAFC' }}>
                       <TouchableOpacity
                         style={{ backgroundColor: '#059669', paddingVertical: 10, borderRadius: 8, alignItems: 'center' }}
                         onPress={() => setShowWireGuideModal(false)}
@@ -2370,7 +2509,7 @@ export default function WorkflowsScreen() {
                           SAMAJH GAYE, SHURU KAREIN ➔
                         </Text>
                       </TouchableOpacity>
-                    </ScrollView>
+                    </View>
                   </View>
                 </View>
               </Modal>
@@ -3045,17 +3184,48 @@ const styles = StyleSheet.create({
     bottom: 12,
     left: 12,
     flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 6,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 2,
-    gap: 2,
+    borderColor: '#CBD5E1',
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+    gap: 4,
+    elevation: 6,
+    zIndex: 40,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
   },
   canvasControlBtn: {
-    padding: 5,
-    borderRadius: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  zoomPercentBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 6,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  zoomPresetBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 5,
+    borderRadius: 5,
     backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   wiringBannerBar: {
     backgroundColor: '#3B82F6',

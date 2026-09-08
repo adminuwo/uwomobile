@@ -9,15 +9,8 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  Linking,
 } from 'react-native';
-// Document Picker helper
-const getDocumentPicker = () => {
-  try {
-    return require('expo-document-picker');
-  } catch (e) {
-    return null;
-  }
-};
 import { Screen } from '../../src/components/Screen';
 import { Header } from '../../src/components/Header';
 import { Text } from '../../src/components/Text';
@@ -28,7 +21,8 @@ import { Modal } from '../../src/components/Modal';
 import { Input } from '../../src/components/Input';
 import { useTheme } from '../../src/theme';
 import { apiClient } from '../../src/api/client';
-import { Brain, Plus, Upload, Globe, FileText, Trash2, CheckCircle2 } from 'lucide-react-native';
+import { downloadFile, shareFile } from '../../src/services/fileDownload';
+import { Brain, Plus, Upload, Globe, FileText, Trash2, CheckCircle2, Download, ExternalLink, Share2 } from 'lucide-react-native';
 
 export interface KnowledgeItem {
   id: string;
@@ -79,12 +73,8 @@ export default function KnowledgeScreen() {
 
   const handlePickDocument = async () => {
     try {
-      const picker = getDocumentPicker();
-      if (!picker) {
-        Alert.alert('File Picker', 'Document selection demo mode. Enter Document Title below.');
-        return;
-      }
-      const result = await picker.getDocumentAsync({
+      const DocumentPicker = require('expo-document-picker');
+      const result = await DocumentPicker.getDocumentAsync({
         type: ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'],
         copyToCacheDirectory: true,
       });
@@ -93,8 +83,8 @@ export default function KnowledgeScreen() {
         setPickedFile(result.assets[0]);
         if (!title) setTitle(result.assets[0].name);
       }
-    } catch {
-      Alert.alert('Error', 'Failed to pick file.');
+    } catch (err: any) {
+      Alert.alert('File Picker', 'Document Picker requires a rebuild of the native development build or manual title entry.');
     }
   };
 
@@ -140,6 +130,70 @@ export default function KnowledgeScreen() {
       Alert.alert('Upload Error', err.message || 'Failed to index knowledge item.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDownloadFile = async (item: KnowledgeItem) => {
+    if (item.website_url) {
+      Linking.openURL(item.website_url).catch(() => {
+        Alert.alert('Error', 'Unable to open URL: ' + item.website_url);
+      });
+      return;
+    }
+
+    if (!item.file_url) {
+      if (item.content_snippet) {
+        Alert.alert(item.title, item.content_snippet);
+      } else {
+        Alert.alert('No File', 'This entry does not have an attached file.');
+      }
+      return;
+    }
+
+    try {
+      const ext = item.doc_type === 'PDF' ? 'pdf' : (item.doc_type === 'DOCX' ? 'docx' : 'txt');
+      const filename = `${item.title.replace(/[^a-zA-Z0-9_-]/g, '_')}.${ext}`;
+      const res = await downloadFile({
+        filename,
+        url: item.file_url,
+        mimeType: item.doc_type === 'PDF' ? 'application/pdf' : 'application/octet-stream',
+      });
+
+      if (res.success) {
+        Alert.alert('Download Complete', `File saved to device storage:\n${filename}`);
+      } else {
+        Alert.alert('Download Failed', res.message || 'Unable to download file.');
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Download failed');
+    }
+  };
+
+  const handleShareItem = async (item: KnowledgeItem) => {
+    if (item.website_url) {
+      shareFile({
+        filename: `${item.title}.txt`,
+        content: `Knowledge URL: ${item.website_url}`,
+        dialogTitle: item.title,
+      });
+      return;
+    }
+
+    if (item.file_url) {
+      const ext = item.doc_type === 'PDF' ? 'pdf' : 'docx';
+      const filename = `${item.title.replace(/[^a-zA-Z0-9_-]/g, '_')}.${ext}`;
+      shareFile({
+        filename,
+        url: item.file_url,
+        mimeType: item.doc_type === 'PDF' ? 'application/pdf' : 'application/octet-stream',
+        dialogTitle: `Share ${item.title}`,
+      });
+    } else if (item.content_snippet) {
+      shareFile({
+        filename: `${item.title}.txt`,
+        content: item.content_snippet,
+        dialogTitle: item.title,
+      });
     }
   };
 
@@ -202,9 +256,32 @@ export default function KnowledgeScreen() {
                   {item.title}
                 </Text>
               </View>
-              <TouchableOpacity onPress={() => handleDelete(item.id)}>
-                <Trash2 size={16} color="#ef4444" />
-              </TouchableOpacity>
+              <View style={styles.actionsRow}>
+                {(item.file_url || item.website_url) && (
+                  <TouchableOpacity
+                    style={styles.iconBtn}
+                    onPress={() => handleDownloadFile(item)}
+                  >
+                    {item.website_url ? (
+                      <ExternalLink size={16} color={colors.info} />
+                    ) : (
+                      <Download size={16} color={colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={styles.iconBtn}
+                  onPress={() => handleShareItem(item)}
+                >
+                  <Share2 size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.iconBtn}
+                  onPress={() => handleDelete(item.id)}
+                >
+                  <Trash2 size={16} color="#ef4444" />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <View style={styles.metaRow}>
@@ -355,5 +432,14 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderColor: '#10B981',
     borderRadius: 12,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  iconBtn: {
+    padding: 6,
+    borderRadius: 6,
   },
 });

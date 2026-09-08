@@ -199,7 +199,7 @@ export default function HomeScreen() {
           <TouchableOpacity 
             activeOpacity={0.7} 
             style={styles.gridCardTouch}
-            onPress={() => router.push('/more')}
+            onPress={() => router.push('/knowledge' as any)}
           >
             <Card style={styles.gridCard}>
               <View style={[styles.cardIconBox, { backgroundColor: colors.surface }]}>
@@ -263,7 +263,7 @@ export default function HomeScreen() {
           <TouchableOpacity 
             activeOpacity={0.7} 
             style={styles.gridCardTouch}
-            onPress={() => router.push('/more')}
+            onPress={() => router.push('/automations' as any)}
           >
             <Card style={styles.gridCard}>
               <View style={[styles.cardIconBox, { backgroundColor: colors.surface }]}>

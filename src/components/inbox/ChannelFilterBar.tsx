@@ -4,7 +4,7 @@ import { useTheme } from '../../theme';
 
 import { getChannelColor } from './ChannelBadge';
 
-export type ChannelFilter = 'ALL' | 'WHATSAPP' | 'INSTAGRAM' | 'FACEBOOK' | 'YOUTUBE';
+export type ChannelFilter = 'ALL' | 'WHATSAPP' | 'INSTAGRAM' | 'FACEBOOK';
 
 interface ChannelFilterBarProps {
   selectedChannel: ChannelFilter;
@@ -16,7 +16,6 @@ const CHANNELS: { id: ChannelFilter; label: string }[] = [
   { id: 'WHATSAPP', label: 'WhatsApp' },
   { id: 'INSTAGRAM', label: 'Instagram' },
   { id: 'FACEBOOK', label: 'Facebook' },
-  { id: 'YOUTUBE', label: 'YouTube' },
 ];
 
 export const ChannelFilterBar: React.FC<ChannelFilterBarProps> = ({ selectedChannel, onSelectChannel }) => {

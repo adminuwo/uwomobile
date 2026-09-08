@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
   leftContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    flexShrink: 1,
     paddingRight: 8,
   },
   iconButton: {
@@ -125,7 +125,6 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   brandTitleText: {
-    flex: 1,
     fontSize: 16,
     lineHeight: 22,
   },

@@ -1,5 +1,6 @@
 import { Platform, Share } from 'react-native';
 import * as FileSystem from 'expo-file-system';
+import { env } from '../config/env';
 
 export interface DownloadOptions {
   filename: string;
@@ -16,30 +17,106 @@ export interface DownloadResult {
   permissionDenied?: boolean;
 }
 
+const getFullUrl = (url?: string): string | undefined => {
+  if (!url) return undefined;
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('file://')) {
+    return url;
+  }
+  return `${env.API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+};
+
 /**
- * Centralized service to download/save files directly to mobile device internal app storage.
- * Saves directly into FileSystem.documentDirectory without launching native activity pickers,
- * avoiding Expo Dev Client activity lifecycle crashes while ensuring robust file persistence.
+ * Centralized service to download/save files directly to mobile device storage.
+ * On Android: Uses StorageAccessFramework to prompt the official OS Storage Permission dialog
+ * ("Allow access to folder") and writes the file directly to the user-selected public directory (Downloads/Documents).
+ * On iOS / Fallback: Prompts native system save/open sheet.
  */
 export async function downloadFile(options: DownloadOptions): Promise<DownloadResult> {
   const {
     filename,
     content,
     url,
+    mimeType = filename.endsWith('.pdf') ? 'application/pdf' : filename.endsWith('.csv') ? 'text/csv' : 'application/octet-stream',
+    dialogTitle,
   } = options;
 
   try {
-    const targetUri = `${FileSystem.documentDirectory}${filename}`;
+    const resolvedUrl = getFullUrl(url);
 
+    // Android: Request explicit folder permission (SAF) to save into public Downloads / chosen directory
+    if (Platform.OS === 'android') {
+      try {
+        const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+        
+        if (!permissions.granted) {
+          return {
+            success: false,
+            permissionDenied: true,
+            message: 'Storage permission was denied by user.',
+          };
+        }
+
+        // Create file inside user's granted folder
+        const safFileUri = await FileSystem.StorageAccessFramework.createFileAsync(
+          permissions.directoryUri,
+          filename,
+          mimeType
+        );
+
+        if (content !== undefined) {
+          await FileSystem.writeAsStringAsync(safFileUri, content, {
+            encoding: FileSystem.EncodingType.UTF8,
+          });
+        } else if (resolvedUrl) {
+          let sourceUri = resolvedUrl;
+          if (!resolvedUrl.startsWith('file://')) {
+            const tempUri = `${FileSystem.cacheDirectory}${filename}`;
+            const downloadRes = await FileSystem.downloadAsync(resolvedUrl, tempUri);
+            sourceUri = downloadRes.uri;
+          }
+
+          const base64Data = await FileSystem.readAsStringAsync(sourceUri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          await FileSystem.writeAsStringAsync(safFileUri, base64Data, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+        }
+
+        console.log('[FileDownload] File saved via SAF to:', safFileUri);
+        return {
+          success: true,
+          uri: safFileUri,
+          message: `${filename} saved successfully to your selected storage folder.`,
+        };
+      } catch (safError: any) {
+        console.warn('[FileDownload] SAF permission/save failed, trying fallback:', safError);
+      }
+    }
+
+    // iOS or Fallback
+    let targetUri = `${FileSystem.documentDirectory}${filename}`;
     if (content !== undefined) {
       await FileSystem.writeAsStringAsync(targetUri, content, {
         encoding: FileSystem.EncodingType.UTF8,
       });
-    } else if (url) {
-      await FileSystem.downloadAsync(url, targetUri);
+    } else if (resolvedUrl) {
+      const downloadRes = await FileSystem.downloadAsync(resolvedUrl, targetUri);
+      targetUri = downloadRes.uri;
     }
 
-    console.log('[FileDownload] File saved successfully to:', targetUri);
+    try {
+      const ExpoSharing = require('expo-sharing');
+      if (ExpoSharing && typeof ExpoSharing.shareAsync === 'function') {
+        const isAvailable = await ExpoSharing.isAvailableAsync();
+        if (isAvailable) {
+          await ExpoSharing.shareAsync(targetUri, {
+            mimeType,
+            dialogTitle: dialogTitle || `Save ${filename}`,
+          });
+        }
+      }
+    } catch (_e) {}
 
     return {
       success: true,
@@ -65,12 +142,14 @@ export async function shareFile(options: DownloadOptions): Promise<DownloadResul
   try {
     let fileUri = `${FileSystem.cacheDirectory}${filename}`;
 
+    const resolvedUrl = getFullUrl(url);
+
     if (content !== undefined) {
       await FileSystem.writeAsStringAsync(fileUri, content, {
         encoding: FileSystem.EncodingType.UTF8,
       });
-    } else if (url) {
-      const downloadRes = await FileSystem.downloadAsync(url, fileUri);
+    } else if (resolvedUrl) {
+      const downloadRes = await FileSystem.downloadAsync(resolvedUrl, fileUri);
       fileUri = downloadRes.uri;
     }
 
@@ -98,7 +177,7 @@ export async function shareFile(options: DownloadOptions): Promise<DownloadResul
       await Share.share(
         Platform.OS === 'ios'
           ? { url: fileUri, title: dialogTitle || filename }
-          : { title: dialogTitle || filename, message: `File saved to ${fileUri}\n\n${content || ''}` }
+          : { title: dialogTitle || filename, message: `File ready at ${fileUri}\n\n${content || ''}` }
       );
     }
 
@@ -114,5 +193,52 @@ export async function shareFile(options: DownloadOptions): Promise<DownloadResul
     };
   }
 }
+
+/**
+ * Opens a local or cached file directly in the system's default viewer (PDF viewer, browser, etc.)
+ */
+export async function openFile(uri: string, mimeType = 'application/pdf', title = 'Open File'): Promise<boolean> {
+  try {
+    let localUri = uri;
+
+    // Ensure valid file:// URI for ExpoSharing
+    if (uri.startsWith('content://') && !uri.startsWith('content://com.uwo.uwoconnect')) {
+      try {
+        const ext = mimeType === 'application/pdf' ? 'pdf' : mimeType === 'text/csv' ? 'csv' : 'html';
+        const tempPath = `${FileSystem.cacheDirectory}view_${Date.now()}.${ext}`;
+        await FileSystem.copyAsync({ from: uri, to: tempPath });
+        localUri = tempPath;
+      } catch (_e) {
+        localUri = uri;
+      }
+    }
+
+    const ExpoSharing = require('expo-sharing');
+    if (ExpoSharing && typeof ExpoSharing.shareAsync === 'function') {
+      const isAvailable = await ExpoSharing.isAvailableAsync();
+      if (isAvailable) {
+        await ExpoSharing.shareAsync(localUri, {
+          mimeType,
+          dialogTitle: title,
+          UTI: mimeType === 'text/csv' ? 'public.comma-separated-values-text' : undefined,
+        });
+        return true;
+      }
+    }
+  } catch (e) {
+    console.warn('[FileDownload] Error opening file with Sharing:', e);
+  }
+
+  try {
+    const { Linking } = require('react-native');
+    await Linking.openURL(uri);
+    return true;
+  } catch (e) {
+    console.warn('[FileDownload] Error opening file with Linking:', e);
+  }
+
+  return false;
+}
+
 
 

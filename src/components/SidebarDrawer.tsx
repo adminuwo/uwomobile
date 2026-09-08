@@ -29,6 +29,10 @@ import {
   ChevronRight,
   ShieldCheck,
   QrCode,
+  Mail,
+  Megaphone,
+  Youtube,
+  Newspaper,
 } from 'lucide-react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -64,11 +68,16 @@ export const SidebarDrawer: React.FC = () => {
   const mainMenuItems: MenuItem[] = [
     { id: 'home', label: 'Home Dashboard', icon: Home, route: '/(app)/home' },
     { id: 'inbox', label: 'Inbox', icon: MessageSquare, route: '/(app)/inbox' },
+    { id: 'gmail', label: 'Gmail', icon: Mail, route: '/(app)/gmail' },
+    { id: 'email', label: 'Email (Outlook)', icon: Mail, route: '/(app)/email' },
+    { id: 'youtube', label: 'YouTube Studio', icon: Youtube, route: '/(app)/youtube' },
+    { id: 'google-news', label: 'Google News Hub', icon: Newspaper, route: '/(app)/google-news', badge: 'LIVE' },
     { id: 'crm', label: 'CRM & Contacts', icon: Users, route: '/(app)/crm' },
     { id: 'team', label: 'Team Hub & QR Invites', icon: UserCheck, route: '/(app)/team', badge: 'QR' },
   ];
 
   const automationItems: MenuItem[] = [
+    { id: 'broadcasts', label: 'Broadcasts', icon: Megaphone, route: '/(app)/broadcasts' },
     { id: 'workflows', label: 'Workflows & Bots', icon: Zap, route: '/(app)/workflows' },
     { id: 'connectors', label: 'Integrations & Apps', icon: Layers, route: '/(app)/connectors' },
     { id: 'products', label: 'Products & Sales', icon: Package, route: '/(app)/sales/products' },

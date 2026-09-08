@@ -10,7 +10,7 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
 import { Header } from '../../src/components/Header';
@@ -36,6 +36,7 @@ import {
 
 export default function AutomationsScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { colors } = useTheme();
   const [search, setSearch] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
@@ -78,10 +79,19 @@ export default function AutomationsScreen() {
   };
 
   const handleToggle = async (rule: AutomationRule) => {
+    const newEnabled = !rule.enabled;
+    // Optimistic cache update
+    queryClient.setQueryData<AutomationRule[]>(['automations'], (old) =>
+      old ? old.map((r) => (r.id === rule.id ? { ...r, enabled: newEnabled } : r)) : []
+    );
+
     try {
-      await automationsApi.updateAutomation(rule.id, { enabled: !rule.enabled });
-      refetch();
+      await automationsApi.updateAutomation(rule.id, { enabled: newEnabled });
     } catch (err: any) {
+      // Revert if error
+      queryClient.setQueryData<AutomationRule[]>(['automations'], (old) =>
+        old ? old.map((r) => (r.id === rule.id ? { ...r, enabled: rule.enabled } : r)) : []
+      );
       Alert.alert('Error', err.message || 'Failed to toggle rule');
     }
   };
@@ -93,10 +103,15 @@ export default function AutomationsScreen() {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
+          const prevRules = queryClient.getQueryData<AutomationRule[]>(['automations']);
+          queryClient.setQueryData<AutomationRule[]>(['automations'], (old) =>
+            old ? old.filter((r) => r.id !== id) : []
+          );
+
           try {
             await automationsApi.deleteAutomation(id);
-            refetch();
           } catch (err: any) {
+            if (prevRules) queryClient.setQueryData(['automations'], prevRules);
             Alert.alert('Error', err.message || 'Failed to delete rule');
           }
         },
@@ -153,8 +168,7 @@ export default function AutomationsScreen() {
     <Screen safeAreaEdges={['top', 'left', 'right']}>
       <Header
         title="Keyword Auto-Replies"
-        showBack
-        onBackPress={() => router.back()}
+        showMenu={true}
         rightElement={
           <TouchableOpacity
             style={[styles.addHeaderBtn, { backgroundColor: colors.primary }]}
@@ -204,7 +218,14 @@ export default function AutomationsScreen() {
               <View style={styles.cardHeader}>
                 <View style={styles.titleRow}>
                   <Bot size={20} color={colors.primary} />
-                  <Text variant="h3" weight="bold" color={colors.textPrimary}>
+                  <Text
+                    variant="h3"
+                    weight="bold"
+                    color={colors.textPrimary}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                    style={{ flex: 1 }}
+                  >
                     {item.name}
                   </Text>
                 </View>
@@ -370,14 +391,17 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   titleRow: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    marginRight: 8,
   },
   actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
+    flexShrink: 0,
   },
   iconBtn: {
     padding: 4,
