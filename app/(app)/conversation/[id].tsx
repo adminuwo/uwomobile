@@ -184,10 +184,11 @@ export default function ConversationDetailScreen() {
     // Broadcast viewing status and mark messages as read
     inboxWebSocket.send({
       type: 'view_conversation',
-      conversation_id: convoId,
+      conversation_id: convoId || targetAddress,
     });
-    if (convoId) {
-      inboxApi.markAsRead(convoId);
+    const readTarget = convoId || targetAddress;
+    if (readTarget) {
+      inboxApi.markAsRead(readTarget);
     }
 
     return () => {
@@ -448,9 +449,21 @@ export default function ConversationDetailScreen() {
             ref={flatListRef}
             data={filteredMessages}
             keyExtractor={(item, index) => (item.id ? `${item.id}_${index}` : `msg_${index}`)}
-            renderItem={({ item }) => (
-              <MessageBubble message={item} contactName={contactName} channelColor={channelColor} />
-            )}
+            renderItem={({ item, index }) => {
+              let effectiveStatus = (item.status || '').toUpperCase();
+              if (item.message_type === 'OUTGOING' && effectiveStatus !== 'READ') {
+                const hasSubsequentIncoming = filteredMessages.slice(index + 1).some(
+                  (laterMsg) => laterMsg.message_type === 'INCOMING'
+                );
+                if (hasSubsequentIncoming) {
+                  effectiveStatus = 'READ';
+                }
+              }
+              const displayMsg = effectiveStatus !== (item.status || '').toUpperCase() ? { ...item, status: effectiveStatus } : item;
+              return (
+                <MessageBubble message={displayMsg} contactName={contactName} channelColor={channelColor} />
+              );
+            }}
             ListHeaderComponent={
               activeTab === 'NOTES' ? (
                 <View style={styles.notesSectionBanner}>

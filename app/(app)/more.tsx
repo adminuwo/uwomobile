@@ -107,6 +107,13 @@ export default function MoreScreen() {
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <MenuItem 
             icon={<FileText size={20} color={colors.primary} />} 
+            title="Proposals" 
+            subtitle="Client pitches & proposals"
+            onPress={() => router.push('/sales/proposals' as any)} 
+          />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <MenuItem 
+            icon={<FileText size={20} color={colors.primary} />} 
             title="Quotations" 
             onPress={() => router.push('/sales/quotations' as any)} 
           />
@@ -115,6 +122,13 @@ export default function MoreScreen() {
             icon={<Receipt size={20} color={colors.primary} />} 
             title="GST Invoices" 
             onPress={() => router.push('/sales/invoices' as any)} 
+          />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <MenuItem 
+            icon={<Receipt size={20} color={colors.primary} />} 
+            title="Orders & Sales" 
+            subtitle="Catalog and checkout orders"
+            onPress={() => router.push('/sales/orders' as any)} 
           />
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <MenuItem 
@@ -167,6 +181,13 @@ export default function MoreScreen() {
             subtitle="Active routing flows & node canvas"
             onPress={() => router.push('/workflows' as any)} 
           />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <MenuItem 
+            icon={<HelpCircle size={20} color={colors.primary} />} 
+            title="Learning Center & Guides" 
+            subtitle="Step-by-step documentation & tutorials"
+            onPress={() => router.push('/guides' as any)} 
+          />
         </Card>
 
         <Text variant="label" style={styles.sectionLabel}>Account</Text>
@@ -179,8 +200,9 @@ export default function MoreScreen() {
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <MenuItem 
             icon={<Settings size={20} color={colors.textPrimary} />} 
-            title="Settings" 
-            onPress={() => {}} 
+            title="Settings & Profile" 
+            subtitle="Organization details & brand settings"
+            onPress={() => router.push('/settings' as any)} 
           />
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <MenuItem 

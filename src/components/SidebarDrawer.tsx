@@ -33,6 +33,9 @@ import {
   Megaphone,
   Youtube,
   Newspaper,
+  FileText,
+  ShoppingBag,
+  BookOpen,
 } from 'lucide-react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -80,7 +83,10 @@ export const SidebarDrawer: React.FC = () => {
     { id: 'broadcasts', label: 'Broadcasts', icon: Megaphone, route: '/(app)/broadcasts' },
     { id: 'workflows', label: 'Workflows & Bots', icon: Zap, route: '/(app)/workflows' },
     { id: 'connectors', label: 'Integrations & Apps', icon: Layers, route: '/(app)/connectors' },
+    { id: 'proposals', label: 'Proposals', icon: FileText, route: '/(app)/sales/proposals' },
     { id: 'products', label: 'Products & Sales', icon: Package, route: '/(app)/sales/products' },
+    { id: 'orders', label: 'Orders & Sales', icon: ShoppingBag, route: '/(app)/sales/orders' },
+    { id: 'guides', label: 'Learning Center & Guides', icon: BookOpen, route: '/(app)/guides' },
   ];
 
   const systemItems: MenuItem[] = [
