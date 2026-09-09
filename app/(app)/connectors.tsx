@@ -584,7 +584,7 @@ export default function ConnectorsScreen() {
 
     if (item.id === 'whatsapp') {
       setFormFields({
-        displayName: client?.business_name || client?.company_name || 'Unified Web Options Pvt Ltd',
+        displayName: client?.business_name || client?.company_name || 'Workspace',
         wabaId: '947532301669617',
         phoneId: client?.whatsapp_phone_number_id || '1144355915438778',
         phoneNumber: client?.phone || '8358990909',

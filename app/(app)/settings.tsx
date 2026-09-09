@@ -126,7 +126,7 @@ export default function SettingsScreen() {
                 style={[styles.input, { backgroundColor: colors.surface, color: colors.textPrimary, borderColor: colors.border }]}
                 value={businessName}
                 onChangeText={setBusinessName}
-                placeholder="e.g. Unified Web Options"
+                placeholder="e.g. Acme Corp / Your Workspace"
                 placeholderTextColor={colors.textMuted}
               />
             </View>

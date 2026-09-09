@@ -15,6 +15,7 @@ import { Button } from '../Button';
 import { Input } from '../Input';
 import { useTheme } from '../../theme';
 import { salesDocumentsApi, DocumentType, SalesDocumentItem } from '../../api/salesDocuments';
+import { useTenantBranding } from '../../hooks/useTenantBranding';
 import { X, Plus, Trash2, FileText, Share2, Calculator } from 'lucide-react-native';
 
 interface SalesDocumentModalProps {
@@ -31,6 +32,7 @@ export const SalesDocumentModal: React.FC<SalesDocumentModalProps> = ({
   onSuccess,
 }) => {
   const { colors } = useTheme();
+  const { clientName } = useTenantBranding();
   const [customerName, setCustomerName] = useState('');
   const [items, setItems] = useState<SalesDocumentItem[]>([
     { description: 'Service / Product Item 1', quantity: 1, unit_price: 1000, tax_rate: 18 },
@@ -97,7 +99,7 @@ export const SalesDocumentModal: React.FC<SalesDocumentModalProps> = ({
             text: 'Share PDF Link',
             onPress: () =>
               Share.share({
-                message: `View your ${documentType} from Unified Web Options: https://uwoconnect.aisa24.com/public/${documentType.toLowerCase()}/${doc.id}`,
+                message: `View your ${documentType} from ${clientName || 'Unified Web Options'}: https://uwoconnect.aisa24.com/public/${documentType.toLowerCase()}/${doc.id}`,
               }),
           },
           { text: 'OK' },

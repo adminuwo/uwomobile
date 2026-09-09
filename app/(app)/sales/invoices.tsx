@@ -11,11 +11,13 @@ import { SearchBar } from '../../../src/components/SearchBar';
 import { useTheme } from '../../../src/theme';
 import { salesDocumentsApi, SalesDocument } from '../../../src/api/salesDocuments';
 import { SalesDocumentModal } from '../../../src/components/sales/SalesDocumentModal';
+import { useTenantBranding } from '../../../src/hooks/useTenantBranding';
 import { Receipt, Plus, Share2, TrendingUp, CheckCircle, Clock } from 'lucide-react-native';
 
 export default function InvoicesScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { clientName } = useTenantBranding();
   const [modalVisible, setModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
@@ -37,7 +39,7 @@ export default function InvoicesScreen() {
 
   const handleShare = (id: string, num: string) => {
     Share.share({
-      message: `View Invoice #${num} from Unified Web Options: https://uwoconnect.aisa24.com/public/invoice/${id}`,
+      message: `View Invoice #${num} from ${clientName || 'Workspace'}: https://uwoconnect.aisa24.com/public/invoice/${id}`,
     });
   };
 
