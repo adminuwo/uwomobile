@@ -14,6 +14,8 @@ interface PipelineViewProps {
 
 const STAGES: { id: LeadStage; title: string }[] = [
   { id: 'NEW', title: 'New Lead' },
+  { id: 'QUALIFIED', title: 'Qualified Lead' },
+  { id: 'HOT_LEAD', title: '🔥 Hot Lead' },
   { id: 'FOLLOWUP', title: 'Follow Up' },
   { id: 'NEGOTIATION', title: 'Negotiation' },
   { id: 'WON', title: 'Closed Won' },

@@ -13,6 +13,10 @@ export const LeadStageBadge: React.FC<LeadStageBadgeProps> = ({ stage, size = 's
     switch (st) {
       case 'NEW':
         return { label: 'New Lead', color: '#3B82F6', bgColor: 'rgba(59, 130, 246, 0.15)' };
+      case 'QUALIFIED':
+        return { label: 'Qualified Lead', color: '#06B6D4', bgColor: 'rgba(6, 182, 212, 0.15)' };
+      case 'HOT_LEAD':
+        return { label: '🔥 Hot Lead', color: '#EF4444', bgColor: 'rgba(239, 68, 68, 0.18)' };
       case 'FOLLOWUP':
         return { label: 'Follow Up', color: '#EAB308', bgColor: 'rgba(234, 179, 8, 0.15)' };
       case 'NEGOTIATION':

@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
 import { Header } from '../../src/components/Header';
 import { SearchBar } from '../../src/components/SearchBar';
 import { ChannelFilterBar, ChannelFilter } from '../../src/components/inbox/ChannelFilterBar';
 import { ConversationList } from '../../src/components/inbox/ConversationList';
-import { inboxApi, Conversation } from '../../src/api/inbox';
+import { inboxApi, Conversation, resolveChannel } from '../../src/api/inbox';
 import { inboxWebSocket } from '../../src/services/inboxWebSocket';
+import { useTranslation } from '../../src/i18n';
 
 export default function InboxScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [selectedChannel, setSelectedChannel] = useState<ChannelFilter>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -22,7 +24,7 @@ export default function InboxScreen() {
     try {
       if (isRefresh) {
         setRefreshing(true);
-      } else if (conversations.length === 0) {
+      } else {
         setLoading(true);
       }
       setError(null);
@@ -34,18 +36,24 @@ export default function InboxScreen() {
         offset: 0,
       });
 
+      console.log('[InboxScreen] Got conversations:', res?.conversations?.length);
       setConversations(res.conversations);
     } catch (err: any) {
+      console.warn('[InboxScreen] Load error:', err);
       setError(err.message || 'Failed to load conversations');
+
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [selectedChannel, searchQuery, conversations.length]);
+  }, [selectedChannel, searchQuery]);
 
-  useEffect(() => {
-    loadConversations();
-  }, [loadConversations]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadConversations();
+    }, [loadConversations])
+  );
 
   // Instant reactive client-side filtering for 0ms response time
   const filteredConversations = useMemo(() => {
@@ -97,7 +105,7 @@ export default function InboxScreen() {
               lastMessage: msg.body || 'New message',
               time: msg.created_at || new Date().toISOString(),
               unread: 1,
-              channel: (msg.channel || 'WHATSAPP').toUpperCase(),
+              channel: resolveChannel(msg.channel, msg.sender_name, String(contactAddr)),
               status: 'OPEN',
             };
             return [newItem, ...prev];
@@ -128,13 +136,13 @@ export default function InboxScreen() {
 
   return (
     <Screen safeAreaEdges={['top', 'left', 'right']}>
-      <Header title="Unified Inbox" />
+      <Header title={t('inbox.title')} />
 
       <View style={styles.searchContainer}>
         <SearchBar
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholder="Search messages, numbers, or contacts..."
+          placeholder={t('inbox.searchPlaceholder')}
         />
       </View>
 

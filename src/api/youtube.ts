@@ -216,20 +216,38 @@ export const youtubeApi = {
       const res = await client.get<any>('/api/youtube/analytics');
       if (res && !res.error) {
         return {
-          channel_id: res.channel_id || 'UC_uwo',
+          channel_id: res.channel_id || '',
           channel_name: res.channel_name || 'My YouTube Channel',
           channel_thumbnail: res.channel_thumbnail || null,
           channel_description: res.channel_description || '',
           subscribers: res.subscribers ?? 0,
           total_views: res.total_views ?? 0,
           video_count: res.video_count ?? 0,
-          is_connected: true,
+          is_connected: Boolean(res.is_connected),
         };
       }
-      return FALLBACK_YT_STATS;
+      return {
+        channel_id: '',
+        channel_name: 'YouTube Channel',
+        channel_thumbnail: null,
+        channel_description: '',
+        subscribers: 0,
+        total_views: 0,
+        video_count: 0,
+        is_connected: false,
+      };
     } catch (err) {
-      console.log('[youtubeApi.getAnalytics] Using fallback:', err);
-      return FALLBACK_YT_STATS;
+      console.log('[youtubeApi.getAnalytics] Error:', err);
+      return {
+        channel_id: '',
+        channel_name: 'YouTube Channel',
+        channel_thumbnail: null,
+        channel_description: '',
+        subscribers: 0,
+        total_views: 0,
+        video_count: 0,
+        is_connected: false,
+      };
     }
   },
 
@@ -244,7 +262,7 @@ export const youtubeApi = {
             id: String(v.id),
             title: v.title || '(Untitled Video)',
             description: v.description || '',
-            thumbnail: v.thumbnail || 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=600&q=80',
+            thumbnail: v.thumbnail || '',
             url: v.url || `https://www.youtube.com/watch?v=${v.id}`,
             views: Number(v.views) || 0,
             likes: Number(v.likes) || 0,
@@ -252,11 +270,10 @@ export const youtubeApi = {
             published_at: v.published_at || 'Recently',
           }));
       }
-      return FALLBACK_YT_VIDEOS.filter((v) => !deletedIds.includes(v.id));
+      return [];
     } catch (err) {
-      console.log('[youtubeApi.getVideos] Using fallback:', err);
-      const deletedIds = await getDeletedVideoIds();
-      return FALLBACK_YT_VIDEOS.filter((v) => !deletedIds.includes(v.id));
+      console.log('[youtubeApi.getVideos] Error:', err);
+      return [];
     }
   },
 
@@ -266,16 +283,28 @@ export const youtubeApi = {
       if (res && !res.error) {
         return {
           broadcast_enabled: Boolean(res.broadcast_enabled),
-          broadcast_template: res.broadcast_template || FALLBACK_YT_SETTINGS.broadcast_template,
+          broadcast_template: res.broadcast_template || '🎬 New Video Alert: {{video_title}} - Watch now!',
           bot_enabled: Boolean(res.bot_enabled),
           bot_behavior: res.bot_behavior || 'friendly',
-          keyword_rules: Array.isArray(res.keyword_rules) ? res.keyword_rules : FALLBACK_YT_SETTINGS.keyword_rules,
+          keyword_rules: Array.isArray(res.keyword_rules) ? res.keyword_rules : [],
         };
       }
-      return FALLBACK_YT_SETTINGS;
+      return {
+        broadcast_enabled: false,
+        broadcast_template: '🎬 New Video Alert: {{video_title}} - Watch now!',
+        bot_enabled: false,
+        bot_behavior: 'friendly',
+        keyword_rules: [],
+      };
     } catch (err) {
-      console.log('[youtubeApi.getSettings] Using fallback:', err);
-      return FALLBACK_YT_SETTINGS;
+      console.log('[youtubeApi.getSettings] Error:', err);
+      return {
+        broadcast_enabled: false,
+        broadcast_template: '🎬 New Video Alert: {{video_title}} - Watch now!',
+        bot_enabled: false,
+        bot_behavior: 'friendly',
+        keyword_rules: [],
+      };
     }
   },
 
@@ -303,10 +332,10 @@ export const youtubeApi = {
           })),
         }));
       }
-      return FALLBACK_YT_COMMENTS;
+      return [];
     } catch (err) {
-      console.log('[youtubeApi.getComments] Using fallback:', err);
-      return FALLBACK_YT_COMMENTS;
+      console.log('[youtubeApi.getComments] Error:', err);
+      return [];
     }
   },
 

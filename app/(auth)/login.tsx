@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
 import { Input } from '../../src/components/Input';
+import { resolveValidImageUri } from '../../src/utils/imageUri';
 import { Button } from '../../src/components/Button';
 import { useSessionStore } from '../../src/stores/sessionStore';
 import { useBrandStore } from '../../src/stores/brandStore';
@@ -56,10 +57,17 @@ export default function LoginScreen() {
           {/* Header Brand Section */}
           <View style={styles.brandHeader}>
             <View style={[styles.logoBadge, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Image
-                source={brand.logo_url ? { uri: brand.logo_url } : require('../../assets/icon.png')}
-                style={styles.logoImage}
-              />
+              {resolveValidImageUri(brand.logo_url) ? (
+                <Image
+                  source={{ uri: resolveValidImageUri(brand.logo_url)! }}
+                  style={styles.logoImage}
+                />
+              ) : (
+                <Image
+                  source={require('../../assets/icon.png')}
+                  style={styles.logoImage}
+                />
+              )}
             </View>
             <Text variant="h1" weight="bold" align="center" style={styles.brandTitle}>
               {brand.brand_name || 'UwoConnect'}

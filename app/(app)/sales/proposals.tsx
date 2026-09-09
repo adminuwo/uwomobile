@@ -46,11 +46,15 @@ export default function ProposalsScreen() {
 
   // Pipeline metrics
   const totalValue = useMemo(() => {
-    return allProposals.reduce((sum, p) => sum + (p.total_amount || 0), 0);
+    return allProposals.reduce((sum, p) => {
+      const raw = p.total_amount ?? p.grand_total ?? 0;
+      const num = typeof raw === 'number' ? raw : parseFloat(String(raw).replace(/[^0-9.-]/g, '')) || 0;
+      return sum + num;
+    }, 0);
   }, [allProposals]);
 
   const acceptedCount = useMemo(() => {
-    return allProposals.filter((p) => p.status?.toUpperCase() === 'ACCEPTED').length;
+    return allProposals.filter((p) => (p.status || '').toUpperCase() === 'ACCEPTED').length;
   }, [allProposals]);
 
   // Filtered list
@@ -67,6 +71,12 @@ export default function ProposalsScreen() {
   }, [allProposals, searchQuery, selectedStatus]);
 
   const statusFilters = ['ALL', 'DRAFT', 'SENT', 'ACCEPTED', 'REJECTED'];
+
+  const formatCurrency = (val: number) => {
+    if (val >= 10000000) return `₹${(val / 10000000).toFixed(2)} Cr`;
+    if (val >= 100000) return `₹${(val / 100000).toFixed(2)} L`;
+    return `₹${val.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+  };
 
   return (
     <Screen safeAreaEdges={['top', 'left', 'right']}>
@@ -93,7 +103,7 @@ export default function ProposalsScreen() {
           <View style={styles.metricsRow}>
             <View style={styles.metricCol}>
               <View style={styles.metricHeader}>
-                <FileText size={14} color={colors.primary} />
+                <FileText size={13} color={colors.primary} />
                 <Text variant="caption" color={colors.textMuted}>Total</Text>
               </View>
               <Text variant="h3" weight="bold" style={styles.metricVal}>
@@ -103,13 +113,20 @@ export default function ProposalsScreen() {
 
             <View style={[styles.metricDivider, { backgroundColor: colors.border }]} />
 
-            <View style={styles.metricCol}>
+            <View style={[styles.metricCol, { flex: 1.4 }]}>
               <View style={styles.metricHeader}>
-                <TrendingUp size={14} color={colors.success} />
+                <TrendingUp size={13} color={colors.success} />
                 <Text variant="caption" color={colors.textMuted}>Pipeline Value</Text>
               </View>
-              <Text variant="h3" weight="bold" color={colors.success} style={styles.metricVal}>
-                ₹{totalValue.toLocaleString('en-IN')}
+              <Text 
+                variant="h3" 
+                weight="bold" 
+                color={colors.success} 
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                style={styles.metricVal}
+              >
+                {formatCurrency(totalValue)}
               </Text>
             </View>
 
@@ -117,7 +134,7 @@ export default function ProposalsScreen() {
 
             <View style={styles.metricCol}>
               <View style={styles.metricHeader}>
-                <CheckCircle size={14} color="#3B82F6" />
+                <CheckCircle size={13} color="#3B82F6" />
                 <Text variant="caption" color={colors.textMuted}>Accepted</Text>
               </View>
               <Text variant="h3" weight="bold" color="#3B82F6" style={styles.metricVal}>
@@ -211,7 +228,7 @@ export default function ProposalsScreen() {
                 </View>
                 <View style={styles.rightContent}>
                   <Text variant="h3" color={colors.primary} weight="bold">
-                    ₹{item.total_amount?.toLocaleString('en-IN') || 0}
+                    ₹{Number(item.total_amount ?? item.grand_total ?? 0).toLocaleString('en-IN')}
                   </Text>
                   <TouchableOpacity
                     style={styles.shareRow}

@@ -5,7 +5,7 @@ import { Stack } from 'expo-router';
 import { QueryClientProvider } from '@tanstack/react-query';
 import * as SplashScreen from 'expo-splash-screen';
 import { queryClient } from '../src/config/queryClient';
-import { ThemeProvider } from '../src/theme';
+import { ThemeProvider, useTheme } from '../src/theme';
 import { useSessionStore } from '../src/stores/sessionStore';
 import { useBrandStore } from '../src/stores/brandStore';
 
@@ -14,7 +14,21 @@ LogBox.ignoreLogs([
   'WebSocket error:',
   'Cannot connect to Metro',
   'Software caused connection abort',
+  'Failed to fetch contacts:',
+  'failed to fetch contacts:',
+  /fetch contacts/i,
+  /Authentication credentials/i,
+  /Session expired/i,
+  /HTTP_401/i,
+  /AxiosError/i,
+  /Network connection lost/i,
+  /Network request failed/i,
+  /Possible unhandled promise rejection/i,
+  /inboxApi/i,
+  /ReactImageView/i,
+  /doesn't exist/i,
 ]);
+
 
 // Hide native splash screen quickly so JS white splash screen is shown
 SplashScreen.hideAsync().catch(() => {});
@@ -56,9 +70,13 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
   }
 }
 
+import { I18nProvider, useTranslation } from '../src/i18n';
+
 function RootLayoutNav() {
   const { initialize, status } = useSessionStore();
   const { fetchBrandConfig } = useBrandStore();
+  const { syncWithServer: syncTheme } = useTheme();
+  const { syncWithServer: syncI18n } = useTranslation();
 
   useEffect(() => {
     // Ensure native splash screen is hidden immediately so white JS screen displays
@@ -71,7 +89,11 @@ function RootLayoutNav() {
     if (status !== 'initializing') {
       SplashScreen.hideAsync().catch(() => {});
     }
-  }, [status]);
+    if (status === 'authenticated') {
+      syncTheme().catch(() => {});
+      syncI18n().catch(() => {});
+    }
+  }, [status, syncTheme, syncI18n]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
@@ -90,7 +112,9 @@ export default function RootLayout() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
-            <RootLayoutNav />
+            <I18nProvider>
+              <RootLayoutNav />
+            </I18nProvider>
           </ThemeProvider>
         </QueryClientProvider>
       </ErrorBoundary>

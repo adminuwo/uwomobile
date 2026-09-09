@@ -3,7 +3,7 @@ export const APP_CONFIG = {
   tagline: 'Unified Communication & Business Automation',
   defaultTenantName: 'UwoConnect',
   supportEmail: 'support@uwoconnect.com',
-  apiTimeout: 15000, // 15 seconds
+  apiTimeout: 30000, // 30 seconds
   tokenStorageKey: 'uwo_mobile_access_token',
   refreshTokenStorageKey: 'uwo_mobile_refresh_token',
   userStorageKey: 'uwo_mobile_user_data',

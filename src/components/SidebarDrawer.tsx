@@ -11,6 +11,7 @@ import {
 import { useRouter, usePathname } from 'expo-router';
 import { useTheme } from '../theme';
 import { Text } from './Text';
+import { useTranslation } from '../i18n';
 import { useDrawerStore } from '../stores/drawerStore';
 import { useSessionStore } from '../stores/sessionStore';
 import { useTenantBranding } from '../hooks/useTenantBranding';
@@ -42,6 +43,10 @@ import {
   FileSpreadsheet,
   HelpCircle,
   Bot,
+  PhoneCall,
+  CreditCard,
+  Building2,
+  Laptop,
 } from 'lucide-react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -59,6 +64,7 @@ export const SidebarDrawer: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { isOpen, closeDrawer } = useDrawerStore();
   const { user, logout } = useSessionStore();
   const { clientName, logoUri, initial, isLoading } = useTenantBranding();
@@ -75,40 +81,44 @@ export const SidebarDrawer: React.FC = () => {
   };
 
   const channelItems: MenuItem[] = [
-    { id: 'home', label: 'Home Dashboard', icon: Home, route: '/(app)/home' },
-    { id: 'inbox', label: 'Inbox', icon: MessageSquare, route: '/(app)/inbox' },
-    { id: 'gmail', label: 'Gmail', icon: Mail, route: '/(app)/gmail' },
-    { id: 'email', label: 'Email (Outlook)', icon: Mail, route: '/(app)/email' },
-    { id: 'youtube', label: 'YouTube Studio', icon: Youtube, route: '/(app)/youtube' },
-    { id: 'google-news', label: 'Google News Hub', icon: Newspaper, route: '/(app)/google-news', badge: 'LIVE' },
-    { id: 'team', label: 'Team Hub & QR Invites', icon: UserCheck, route: '/(app)/team', badge: 'QR' },
-    { id: 'team-chat', label: 'Team Workspace Chat', icon: MessageSquare, route: '/(app)/team-chat' },
+    { id: 'home', label: t('drawer.homeDashboard'), icon: Home, route: '/(app)/home' },
+    { id: 'inbox', label: t('drawer.inbox'), icon: MessageSquare, route: '/(app)/inbox' },
+    { id: 'gmail', label: t('drawer.gmail'), icon: Mail, route: '/(app)/gmail' },
+    { id: 'email', label: t('drawer.emailOutlook'), icon: Mail, route: '/(app)/email' },
+    { id: 'youtube', label: t('drawer.youtubeStudio'), icon: Youtube, route: '/(app)/youtube' },
+    { id: 'google-news', label: t('drawer.googleNewsHub'), icon: Newspaper, route: '/(app)/google-news', badge: 'LIVE' },
+    { id: 'team', label: t('drawer.teamHub'), icon: UserCheck, route: '/(app)/team', badge: 'QR' },
+    { id: 'team-chat', label: t('drawer.teamWorkspaceChat'), icon: MessageSquare, route: '/(app)/team-chat' },
+    { id: 'calls', label: t('drawer.voiceVideoCalls'), icon: PhoneCall, route: '/(app)/calls' },
+    { id: 'agency', label: t('drawer.agencyCommandHub'), icon: Building2, route: '/(app)/agency' },
   ];
 
   const automationItems: MenuItem[] = [
-    { id: 'broadcasts', label: 'Broadcast Campaigns', icon: Megaphone, route: '/(app)/broadcasts' },
-    { id: 'workflows', label: 'Workflows & Bots', icon: Zap, route: '/(app)/workflows' },
-    { id: 'automations', label: 'Keyword Auto-Replies', icon: Bot, route: '/(app)/automations' },
-    { id: 'knowledge', label: 'AI Knowledge Base', icon: Brain, route: '/(app)/knowledge' },
-    { id: 'connectors', label: 'Integrations & Apps', icon: Layers, route: '/(app)/connectors' },
+    { id: 'broadcasts', label: t('drawer.broadcastCampaigns'), icon: Megaphone, route: '/(app)/broadcasts' },
+    { id: 'workflows', label: t('drawer.workflowsBots'), icon: Zap, route: '/(app)/workflows' },
+    { id: 'automations', label: t('drawer.keywordAutoReplies'), icon: Bot, route: '/(app)/automations' },
+    { id: 'knowledge', label: t('drawer.aiKnowledgeBase'), icon: Brain, route: '/(app)/knowledge' },
+    { id: 'connectors', label: t('drawer.integrationsApps'), icon: Layers, route: '/(app)/connectors' },
   ];
 
   const salesItems: MenuItem[] = [
-    { id: 'proposals', label: 'Proposals', icon: FileText, route: '/(app)/sales/proposals', badge: 'NEW' },
-    { id: 'quotations', label: 'Quotations', icon: FileText, route: '/(app)/sales/quotations' },
-    { id: 'invoices', label: 'GST Invoices', icon: Receipt, route: '/(app)/sales/invoices' },
-    { id: 'products', label: 'Products & Services', icon: Package, route: '/(app)/sales/products' },
-    { id: 'orders', label: 'Orders & Sales', icon: ShoppingBag, route: '/(app)/sales/orders' },
-    { id: 'wallet', label: 'Wallet & Billing', icon: Wallet, route: '/(app)/sales/wallet' },
+    { id: 'proposals', label: t('drawer.proposals'), icon: FileText, route: '/(app)/sales/proposals', badge: 'NEW' },
+    { id: 'quotations', label: t('drawer.quotations'), icon: FileText, route: '/(app)/sales/quotations' },
+    { id: 'invoices', label: t('drawer.gstInvoices'), icon: Receipt, route: '/(app)/sales/invoices' },
+    { id: 'products', label: t('drawer.productsServices'), icon: Package, route: '/(app)/sales/products' },
+    { id: 'orders', label: t('drawer.ordersSales'), icon: ShoppingBag, route: '/(app)/sales/orders' },
+    { id: 'wallet', label: t('drawer.walletBilling'), icon: Wallet, route: '/(app)/sales/wallet' },
   ];
 
   const managementItems: MenuItem[] = [
-    { id: 'crm', label: 'CRM & Contacts', icon: Users, route: '/(app)/crm' },
-    { id: 'reports', label: 'Daily Work Reports', icon: FileSpreadsheet, route: '/(app)/reports' },
-    { id: 'support', label: 'Support Desk Tickets', icon: HelpCircle, route: '/(app)/support' },
-    { id: 'guides', label: 'Learning Center & Guides', icon: BookOpen, route: '/(app)/guides' },
-    { id: 'settings', label: 'Settings & Profile', icon: Settings, route: '/(app)/settings' },
-    { id: 'more', label: 'More Workspace Menu', icon: Settings, route: '/(app)/more' },
+    { id: 'crm', label: t('drawer.crmContacts'), icon: Users, route: '/(app)/crm' },
+    { id: 'linked-devices', label: t('drawer.linkedDevices'), icon: Laptop, route: '/(app)/linked-devices', badge: 'QR' },
+    { id: 'reports', label: t('drawer.dailyWorkReports'), icon: FileSpreadsheet, route: '/(app)/reports' },
+    { id: 'support', label: t('drawer.supportDesk'), icon: HelpCircle, route: '/(app)/support' },
+    { id: 'guides', label: t('drawer.learningCenter'), icon: BookOpen, route: '/(app)/guides' },
+    { id: 'settings', label: t('drawer.settingsProfile'), icon: Settings, route: '/(app)/settings' },
+    { id: 'plans', label: t('drawer.plansSubscription'), icon: CreditCard, route: '/(app)/plans' },
+    { id: 'more', label: t('drawer.moreWorkspaceMenu'), icon: Settings, route: '/(app)/more' },
   ];
 
   // Helper for initials
@@ -130,20 +140,20 @@ export const SidebarDrawer: React.FC = () => {
       </Text>
       {items.map((item) => {
         const IconComponent = item.icon;
-        const isActive = pathname.includes(item.id);
+        const isActive = pathname === item.route;
 
         return (
           <TouchableOpacity
             key={item.id}
+            activeOpacity={0.7}
             style={[
               styles.navItem,
               {
-                backgroundColor: isActive ? `${colors.primary}15` : 'transparent',
+                backgroundColor: isActive ? `${colors.primary}18` : 'transparent',
                 borderColor: isActive ? colors.primary : 'transparent',
               },
             ]}
             onPress={() => handleNavigation(item.route)}
-            activeOpacity={0.7}
           >
             <View style={styles.navItemLeft}>
               <View
@@ -167,7 +177,7 @@ export const SidebarDrawer: React.FC = () => {
             </View>
 
             {item.badge ? (
-              <View style={[styles.badgePill, { backgroundColor: colors.primary }]}>
+              <View style={[styles.badgePill, { backgroundColor: item.badge === 'LIVE' ? '#DC2626' : colors.primary }]}>
                 <Text variant="caption" weight="bold" color="#FFF" style={{ fontSize: 9 }}>
                   {item.badge}
                 </Text>
@@ -189,14 +199,12 @@ export const SidebarDrawer: React.FC = () => {
       onRequestClose={closeDrawer}
     >
       <View style={styles.overlay}>
-        {/* Backdrop overlay touch to close */}
         <TouchableOpacity
           style={styles.backdrop}
           activeOpacity={1}
           onPress={closeDrawer}
         />
 
-        {/* Drawer Content */}
         <SafeAreaView
           style={[
             styles.drawerContainer,
@@ -207,7 +215,6 @@ export const SidebarDrawer: React.FC = () => {
             },
           ]}
         >
-          {/* Header Bar with Tenant Branding */}
           <View style={[styles.drawerHeader, { borderBottomColor: colors.border }]}>
             <View style={styles.brandRow}>
               <ClientLogoBadge
@@ -240,7 +247,6 @@ export const SidebarDrawer: React.FC = () => {
             </TouchableOpacity>
           </View>
 
-          {/* User Profile Card */}
           <View style={[styles.profileCard, { backgroundColor: `${colors.primary}0D`, borderColor: `${colors.primary}25` }]}>
             <View style={styles.profileRow}>
               <View style={[styles.avatarCircle, { backgroundColor: colors.primary }]}>
@@ -272,23 +278,21 @@ export const SidebarDrawer: React.FC = () => {
             </View>
           </View>
 
-          {/* Navigation Links */}
           <ScrollView style={styles.menuScroll} showsVerticalScrollIndicator={false}>
-            {renderNavGroup('COMMUNICATION & CHANNELS', channelItems)}
-            {renderNavGroup('MARKETING & AUTOMATIONS', automationItems)}
-            {renderNavGroup('SALES & FINANCE', salesItems)}
-            {renderNavGroup('MANAGEMENT & SETTINGS', managementItems)}
+            {renderNavGroup(t('drawer.channelsWorkspace'), channelItems)}
+            {renderNavGroup(t('drawer.automationFlows'), automationItems)}
+            {renderNavGroup(t('drawer.salesCommerce'), salesItems)}
+            {renderNavGroup(t('drawer.managementSettings'), managementItems)}
           </ScrollView>
 
-          {/* Footer Actions */}
           <View style={[styles.drawerFooter, { borderTopColor: colors.border }]}>
             <TouchableOpacity
               style={[styles.footerBtn, { backgroundColor: `${colors.primary}12` }]}
-              onPress={() => handleNavigation('/(app)/team')}
+              onPress={() => handleNavigation('/(app)/linked-devices')}
             >
               <QrCode size={16} color={colors.primary} />
               <Text variant="caption" weight="bold" color={colors.primary}>
-                Connect Web via QR
+                {t('drawer.linkedDevices')}
               </Text>
             </TouchableOpacity>
 
@@ -298,7 +302,7 @@ export const SidebarDrawer: React.FC = () => {
             >
               <LogOut size={16} color="#EF4444" />
               <Text variant="caption" weight="bold" color="#EF4444">
-                Logout Session
+                {t('drawer.logout')}
               </Text>
             </TouchableOpacity>
           </View>

@@ -3,6 +3,8 @@ import { View, Image, StyleSheet, ViewStyle, ImageSourcePropType } from 'react-n
 import { useTheme } from '../theme';
 import { Text } from './Text';
 
+import { resolveValidImageUri } from '../utils/imageUri';
+
 export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
 interface AvatarProps {
@@ -23,6 +25,7 @@ export const Avatar: React.FC<AvatarProps> = ({
   style,
 }) => {
   const { colors, radius } = useTheme();
+  const validUri = resolveValidImageUri(uri);
 
   const getDimensions = (): number => {
     switch (size) {
@@ -53,9 +56,9 @@ export const Avatar: React.FC<AvatarProps> = ({
 
   return (
     <View style={[{ width: dim, height: dim }, styles.container, style]}>
-      {source || uri ? (
+      {source || validUri ? (
         <Image
-          source={source || { uri: uri as string }}
+          source={source || { uri: validUri! }}
           style={[styles.image, { width: dim, height: dim, borderRadius: dim / 2 }]}
         />
       ) : (

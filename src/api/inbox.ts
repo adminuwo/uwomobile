@@ -61,6 +61,35 @@ export interface FetchMessagesParams {
   offset?: number;
 }
 
+export const resolveChannel = (
+  rawChannel?: string,
+  name?: string,
+  platformId?: string
+): string => {
+  const ch = (rawChannel || '').toUpperCase().trim();
+  const n = (name || '').toUpperCase();
+  const pid = String(platformId || '').toLowerCase();
+
+  if (ch && ch !== 'WHATSAPP' && ch !== 'ALL') {
+    return ch;
+  }
+
+  if (n.includes('INSTAGRAM') || pid.includes('instagram') || pid.startsWith('ig_')) {
+    return 'INSTAGRAM';
+  }
+  if (n.includes('FACEBOOK') || pid.includes('facebook') || pid.startsWith('fb_')) {
+    return 'FACEBOOK';
+  }
+  if (n.includes('YOUTUBE') || pid.includes('youtube') || pid.startsWith('yt_')) {
+    return 'YOUTUBE';
+  }
+  if (pid.includes('@')) {
+    return 'GMAIL';
+  }
+
+  return ch || 'WHATSAPP';
+};
+
 export const inboxApi = {
   getConversations: async (params: FetchConversationsParams = {}): Promise<{ conversations: Conversation[]; hasMore: boolean }> => {
     const { channel = 'ALL', search = '', limit = 20, offset = 0 } = params;
@@ -86,7 +115,7 @@ export const inboxApi = {
           contact_name: ct.name || ct.phone_number || ct.platform_id || 'Customer',
           contact_platform_id: ct.platform_id || ct.phone_number || ct.id,
           contact_phone: ct.phone_number,
-          channel: (ct.preferred_channel || 'WHATSAPP').toUpperCase(),
+          channel: resolveChannel(ct.preferred_channel, ct.name, ct.platform_id),
           last_message_summary: 'Tap to view messages...',
           last_message_at: ct.updated_at || ct.created_at,
           unread_count_admin: 0,
@@ -96,14 +125,17 @@ export const inboxApi = {
 
       const formatted: Conversation[] = rawConvos.map((c: any) => {
         const rawAddr = c.contact_platform_id || c.contact_phone || c.id;
+        const nameStr = c.contact_name || c.contact_platform_id || c.contact_phone || 'Customer';
+        const dynamicChannel = resolveChannel(c.channel || c.preferred_channel, nameStr, rawAddr);
+
         return {
           id: String(c.id || rawAddr),
-          name: c.contact_name || c.contact_platform_id || c.contact_phone || 'Customer',
+          name: nameStr,
           rawAddress: String(rawAddr),
           lastMessage: c.last_message_summary || 'Recent conversation',
           time: c.last_message_at || c.updated_at || c.created_at || new Date().toISOString(),
           unread: c.unread_count_admin || c.unread_count_employee || 0,
-          channel: (c.channel || 'WHATSAPP').toUpperCase(),
+          channel: dynamicChannel,
           assignedTo: c.assigned_to || null,
           handlerName: c.assigned_to_name || c.locked_by_name || null,
           assignedToName: c.assigned_to_name || c.locked_by_name || null,
@@ -125,10 +157,13 @@ export const inboxApi = {
         conversations: formatted,
         hasMore: rawConvos.length >= limit,
       };
-    } catch (error) {
-      console.warn('Failed to fetch conversations:', error);
+    } catch (error: any) {
+      if (error?.status !== 401 && error?.code !== 'HTTP_401') {
+        console.warn('[inboxApi.getConversations] Warning:', error?.message || error);
+      }
       return { conversations: [], hasMore: false };
     }
+
   },
 
   getMessages: async (params: FetchMessagesParams): Promise<{ messages: Message[]; hasMore: boolean }> => {
@@ -151,10 +186,13 @@ export const inboxApi = {
         messages: fetchedMessages,
         hasMore: rawList.length >= limit,
       };
-    } catch (error) {
-      console.warn('Failed to fetch messages:', error);
+    } catch (error: any) {
+      if (error?.status !== 401 && error?.code !== 'HTTP_401') {
+        console.warn('[inboxApi.getMessages] Warning:', error?.message || error);
+      }
       return { messages: [], hasMore: false };
     }
+
   },
 
   sendMessage: async (payload: SendMessagePayload): Promise<Message> => {

@@ -48,10 +48,22 @@ export const ConversationList: React.FC<ConversationListProps> = ({
 
   if (!loading && conversations.length === 0) {
     return (
-      <EmptyState
-        icon={MessageSquare}
-        title="No Conversations Found"
-        description="Incoming messages from WhatsApp, Instagram, Facebook, and YouTube will appear here."
+      <FlatList
+        data={[]}
+        renderItem={null}
+        ListEmptyComponent={
+          <EmptyState
+            icon={MessageSquare}
+            title="No Conversations Found"
+            description="Incoming messages from WhatsApp, Instagram, Facebook, and YouTube will appear here."
+            actionTitle="Refresh"
+            onAction={onRefresh}
+          />
+        }
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#10B981" />
+        }
+        contentContainerStyle={{ flexGrow: 1 }}
       />
     );
   }

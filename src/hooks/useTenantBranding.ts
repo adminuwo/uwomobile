@@ -1,6 +1,6 @@
 import { useSessionStore } from '../stores/sessionStore';
 import { useBrandStore } from '../stores/brandStore';
-import { env } from '../config/env';
+import { resolveValidImageUri } from '../utils/imageUri';
 
 export interface TenantBranding {
   clientName: string;
@@ -37,21 +37,7 @@ export function useTenantBranding(): TenantBranding {
     user?.company_logo ||
     (brand?.is_whitelabel && brand?.logo_url ? brand.logo_url : null);
 
-  const formatLogoUri = (url: string | null | undefined): string | null => {
-    if (!url || typeof url !== 'string') return null;
-    const trimmed = url.trim();
-    if (!trimmed || trimmed.includes('download (3).gif')) return null;
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:')) {
-      return trimmed;
-    }
-    const baseUrl = env.API_BASE_URL || 'http://192.168.29.238:8000';
-    if (trimmed.startsWith('/')) {
-      return `${baseUrl}${trimmed}`;
-    }
-    return `${baseUrl}/${trimmed}`;
-  };
-
-  const logoUri = formatLogoUri(rawLogo);
+  const logoUri = resolveValidImageUri(rawLogo);
 
   // Initial for avatar fallback (e.g. "U" for "Unified Web Options Pvt Ltd")
   const initial = (resolvedClientName || 'W')

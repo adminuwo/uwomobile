@@ -26,10 +26,6 @@ import {
   YouTubeVideo,
   YouTubeComment,
   YouTubeSettings,
-  FALLBACK_YT_STATS,
-  FALLBACK_YT_VIDEOS,
-  FALLBACK_YT_COMMENTS,
-  FALLBACK_YT_SETTINGS,
 } from '../../api/youtube';
 import {
   Play,
@@ -62,11 +58,26 @@ export const YouTubeHubScreen: React.FC = () => {
   const { colors, mode } = useTheme();
 
   // Data states
-  const [stats, setStats] = useState<YouTubeChannelStats>(FALLBACK_YT_STATS);
-  const [videos, setVideos] = useState<YouTubeVideo[]>(FALLBACK_YT_VIDEOS);
-  const [settings, setSettings] = useState<YouTubeSettings>(FALLBACK_YT_SETTINGS);
-  const [selectedVideo, setSelectedVideo] = useState<YouTubeVideo | null>(FALLBACK_YT_VIDEOS[0]);
-  const [comments, setComments] = useState<YouTubeComment[]>(FALLBACK_YT_COMMENTS);
+  const [stats, setStats] = useState<YouTubeChannelStats>({
+    channel_id: '',
+    channel_name: 'YouTube Channel',
+    channel_thumbnail: null,
+    channel_description: '',
+    subscribers: 0,
+    total_views: 0,
+    video_count: 0,
+    is_connected: false,
+  });
+  const [videos, setVideos] = useState<YouTubeVideo[]>([]);
+  const [settings, setSettings] = useState<YouTubeSettings>({
+    broadcast_enabled: false,
+    broadcast_template: '🎬 New Video Alert: {{video_title}} - Watch now!',
+    bot_enabled: false,
+    bot_behavior: 'friendly',
+    keyword_rules: [],
+  });
+  const [selectedVideo, setSelectedVideo] = useState<YouTubeVideo | null>(null);
+  const [comments, setComments] = useState<YouTubeComment[]>([]);
 
   // Loading states
   const [loading, setLoading] = useState(false);
@@ -78,7 +89,7 @@ export const YouTubeHubScreen: React.FC = () => {
 
   // Forms / Modals
   const [isDescModalOpen, setIsDescModalOpen] = useState(false);
-  const [descInput, setDescInput] = useState(FALLBACK_YT_STATS.channel_description || '');
+  const [descInput, setDescInput] = useState('');
   const [savingDesc, setSavingDesc] = useState(false);
 
   // Keyword Section Collapsible
@@ -153,7 +164,7 @@ export const YouTubeHubScreen: React.FC = () => {
       const fetched = await youtubeApi.getComments(vid.id);
       setComments(fetched);
     } catch {
-      setComments(FALLBACK_YT_COMMENTS);
+      setComments([]);
     } finally {
       setLoadingComments(false);
     }

@@ -1,31 +1,18 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
 import { Header } from '../../src/components/Header';
 import { Text } from '../../src/components/Text';
 import { Card } from '../../src/components/Card';
 import { useTheme } from '../../src/theme';
+import { useTranslation } from '../../src/i18n';
 import { 
-  Package, 
-  FileText, 
-  Receipt, 
-  Wallet, 
-  Users, 
-  Link, 
-  GitBranch,
-  Bell, 
-  Settings, 
-  LogOut,
+  Bell,
   ChevronRight,
-  Moon,
-  Sun,
-  Send,
-  Zap,
-  Bot,
-  MessageSquare,
-  FileSpreadsheet,
-  HelpCircle
+  Palette,
+  Globe,
+  LogOut,
 } from 'lucide-react-native';
 import { useSessionStore } from '../../src/stores/sessionStore';
 
@@ -40,7 +27,7 @@ interface MenuItemProps {
 function MenuItem({ icon, title, subtitle, onPress, destructive }: MenuItemProps) {
   const { colors } = useTheme();
   return (
-    <TouchableOpacity style={styles.menuItem} onPress={onPress}>
+    <TouchableOpacity style={styles.menuItem} onPress={onPress} activeOpacity={0.7}>
       <View style={[styles.iconBox, { backgroundColor: destructive ? colors.error + '20' : colors.surface }]}>
         {icon}
       </View>
@@ -54,171 +41,72 @@ function MenuItem({ icon, title, subtitle, onPress, destructive }: MenuItemProps
           </Text>
         )}
       </View>
-      <ChevronRight size={20} color={colors.border} />
+      <ChevronRight size={18} color={colors.borderMuted} />
     </TouchableOpacity>
   );
 }
 
 export default function MoreScreen() {
-  const { colors, mode, toggleTheme } = useTheme();
+  const { colors, mode } = useTheme();
+  const { t, currentLanguageInfo } = useTranslation();
   const router = useRouter();
   const logout = useSessionStore((state) => state.logout);
 
   const handleLogout = () => {
-    logout();
+    Alert.alert(
+      t('account.logout'),
+      t('account.logoutConfirm'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('account.logout'), style: 'destructive', onPress: () => logout() }
+      ]
+    );
+  };
+
+  const getThemeSubtitle = () => {
+    if (mode === 'custom') return t('appearance.custom');
+    if (mode === 'dark') return t('appearance.dark');
+    return t('appearance.light');
   };
 
   return (
     <Screen safeAreaEdges={['top', 'left', 'right']}>
-      <Header title="Menu" />
+      <Header title={t('navigation.menu')} />
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
-        <Text variant="label" style={styles.sectionLabel}>Communication & Marketing</Text>
+        <Text variant="label" color={colors.textMuted} style={styles.sectionLabel}>
+          {t('account.sectionTitle')}
+        </Text>
         <Card style={styles.sectionCard}>
-          <MenuItem 
-            icon={<Send size={20} color={colors.primary} />} 
-            title="Mass Broadcast Campaigns" 
-            subtitle="WhatsApp & Email bulk messaging"
-            onPress={() => router.push('/broadcasts' as any)} 
+          <MenuItem
+            icon={<Bell size={20} color={colors.textPrimary} />}
+            title={t('account.notifications')}
+            subtitle={t('account.notificationsDesc')}
+            onPress={() => {
+              Alert.alert(t('account.notifications'), t('account.notificationsDesc'));
+            }}
           />
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <MenuItem 
-            icon={<Zap size={20} color={colors.warning} />} 
-            title="Keyword Auto-Replies" 
-            subtitle="Automatic bot response rules"
-            onPress={() => router.push('/automations' as any)} 
+          <View style={[styles.divider, { backgroundColor: colors.divider }]} />
+          <MenuItem
+            icon={<Palette size={20} color={colors.primary} />}
+            title={t('account.appearance')}
+            subtitle={getThemeSubtitle()}
+            onPress={() => router.push('/(app)/appearance')}
           />
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <MenuItem 
-            icon={<Bot size={20} color={colors.success} />} 
-            title="AI Knowledge Base" 
-            subtitle="PDF, DOCX, URL RAG indexing"
-            onPress={() => router.push('/knowledge' as any)} 
+          <View style={[styles.divider, { backgroundColor: colors.divider }]} />
+          <MenuItem
+            icon={<Globe size={20} color={colors.primary} />}
+            title={t('account.language')}
+            subtitle={`${currentLanguageInfo.name} (${currentLanguageInfo.nativeName})`}
+            onPress={() => router.push('/(app)/language')}
           />
-        </Card>
-
-        <Text variant="label" style={styles.sectionLabel}>Sales & Finance</Text>
-        <Card style={styles.sectionCard}>
-          <MenuItem 
-            icon={<Package size={20} color={colors.primary} />} 
-            title="Products & Services" 
-            onPress={() => router.push('/sales/products' as any)} 
-          />
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <MenuItem 
-            icon={<FileText size={20} color={colors.primary} />} 
-            title="Proposals" 
-            subtitle="Client pitches & proposals"
-            onPress={() => router.push('/sales/proposals' as any)} 
-          />
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <MenuItem 
-            icon={<FileText size={20} color={colors.primary} />} 
-            title="Quotations" 
-            onPress={() => router.push('/sales/quotations' as any)} 
-          />
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <MenuItem 
-            icon={<Receipt size={20} color={colors.primary} />} 
-            title="GST Invoices" 
-            onPress={() => router.push('/sales/invoices' as any)} 
-          />
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <MenuItem 
-            icon={<Receipt size={20} color={colors.primary} />} 
-            title="Orders & Sales" 
-            subtitle="Catalog and checkout orders"
-            onPress={() => router.push('/sales/orders' as any)} 
-          />
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <MenuItem 
-            icon={<Wallet size={20} color={colors.primary} />} 
-            title="Wallet & Payments" 
-            subtitle="Manage your usage wallet"
-            onPress={() => router.push('/sales/wallet' as any)} 
-          />
-        </Card>
-
-        <Text variant="label" style={styles.sectionLabel}>Workspace & Team</Text>
-        <Card style={styles.sectionCard}>
-          <MenuItem 
-            icon={<Users size={20} color={colors.secondary} />} 
-            title="Team Management & Directory" 
-            onPress={() => router.push('/team' as any)} 
-          />
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <MenuItem 
-            icon={<MessageSquare size={20} color={colors.secondary} />} 
-            title="Team Workspace Chat" 
-            subtitle="Internal real-time agent & supervisor chat"
-            onPress={() => router.push('/team-chat' as any)} 
-          />
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <MenuItem 
-            icon={<FileSpreadsheet size={20} color={colors.info} />} 
-            title="Daily Work Reports" 
-            subtitle="Agent submissions & Manager approvals"
-            onPress={() => router.push('/reports' as any)} 
-          />
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <MenuItem 
-            icon={<HelpCircle size={20} color={colors.warning} />} 
-            title="Support Desk Tickets" 
-            subtitle="Customer support tickets & issues"
-            onPress={() => router.push('/support' as any)} 
-          />
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <MenuItem 
-            icon={<Link size={20} color={colors.secondary} />} 
-            title="Connectors & Channels" 
-            subtitle="WhatsApp, Instagram, Gmail, Outlook & APIs"
-            onPress={() => router.push('/connectors' as any)} 
-          />
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <MenuItem 
-            icon={<GitBranch size={20} color={colors.info} />} 
-            title="AI Workflows & Visual Builder" 
-            subtitle="Active routing flows & node canvas"
-            onPress={() => router.push('/workflows' as any)} 
-          />
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <MenuItem 
-            icon={<HelpCircle size={20} color={colors.primary} />} 
-            title="Learning Center & Guides" 
-            subtitle="Step-by-step documentation & tutorials"
-            onPress={() => router.push('/guides' as any)} 
-          />
-        </Card>
-
-        <Text variant="label" style={styles.sectionLabel}>Account</Text>
-        <Card style={styles.sectionCard}>
-          <MenuItem 
-            icon={<Bell size={20} color={colors.textPrimary} />} 
-            title="Notifications" 
-            onPress={() => {}} 
-          />
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <MenuItem 
-            icon={<Settings size={20} color={colors.textPrimary} />} 
-            title="Settings & Profile" 
-            subtitle="Organization details & brand settings"
-            onPress={() => router.push('/settings' as any)} 
-          />
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <MenuItem 
-            icon={mode === 'dark' ? <Sun size={20} color={colors.textPrimary} /> : <Moon size={20} color={colors.textPrimary} />} 
-            title={mode === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"} 
-            onPress={toggleTheme} 
-          />
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <MenuItem 
-            icon={<LogOut size={20} color={colors.error} />} 
-            title="Logout" 
+          <View style={[styles.divider, { backgroundColor: colors.divider }]} />
+          <MenuItem
+            icon={<LogOut size={20} color={colors.error} />}
+            title={t('account.logout')}
             destructive
-            onPress={handleLogout} 
+            onPress={handleLogout}
           />
         </Card>
-
       </ScrollView>
     </Screen>
   );
@@ -245,9 +133,9 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   iconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
+    width: 38,
+    height: 38,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -260,6 +148,6 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    marginLeft: 64, // Align with text
+    marginLeft: 66,
   }
 });

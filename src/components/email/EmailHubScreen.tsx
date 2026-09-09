@@ -521,6 +521,9 @@ export const EmailHubScreen: React.FC<EmailHubScreenProps> = ({ provider }) => {
 
   // Compose Form
   const [composeTo, setComposeTo] = useState('');
+  const [composeCc, setComposeCc] = useState('');
+  const [composeBcc, setComposeBcc] = useState('');
+  const [showCcBcc, setShowCcBcc] = useState(false);
   const [composeSubject, setComposeSubject] = useState('');
   const [composeBody, setComposeBody] = useState('');
   const [isScheduleMode, setIsScheduleMode] = useState(false);
@@ -564,34 +567,24 @@ export const EmailHubScreen: React.FC<EmailHubScreenProps> = ({ provider }) => {
 
         // Filter strictly for this provider
         const strictlyProvider = (data.messages || []).filter((m) => m.provider === provider);
+        setMessages(strictlyProvider);
 
-        if (strictlyProvider.length > 0) {
-          setMessages(strictlyProvider);
-        } else {
-          // Dedicated provider fallback for the active folder
-          const fallbackForFolder = defaultEmails.filter((m) => m.folder === activeFolder);
-          setMessages(fallbackForFolder);
-        }
-
-        if (data.folder_counts && Object.values(data.folder_counts).some((c) => c > 0)) {
+        if (data.folder_counts) {
           setFolderCounts(data.folder_counts);
         } else {
-          // Calculate dynamic fallback counts for this provider
-          const fallbackCounts: FolderCounts = {
-            inbox: defaultEmails.filter((m) => m.folder === 'inbox').length,
-            sent: defaultEmails.filter((m) => m.folder === 'sent').length,
-            drafts: defaultEmails.filter((m) => m.folder === 'drafts').length,
-            scheduled: defaultEmails.filter((m) => m.folder === 'scheduled').length,
-            trash: defaultEmails.filter((m) => m.folder === 'trash').length,
-            spam: defaultEmails.filter((m) => m.folder === 'spam').length,
-            archive: defaultEmails.filter((m) => m.folder === 'archive').length,
-          };
-          setFolderCounts(fallbackCounts);
+          setFolderCounts({
+            inbox: 0,
+            sent: 0,
+            drafts: 0,
+            scheduled: 0,
+            trash: 0,
+            spam: 0,
+            archive: 0,
+          });
         }
       } catch (err) {
         console.log(`[${providerTitle}] Email fetch notice:`, err);
-        // Seamless fallback
-        setMessages(defaultEmails.filter((m) => m.folder === activeFolder));
+        setMessages([]);
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -723,6 +716,8 @@ export const EmailHubScreen: React.FC<EmailHubScreenProps> = ({ provider }) => {
         action,
         provider: provider,
         to: composeTo.trim(),
+        cc: composeCc.trim() || undefined,
+        bcc: composeBcc.trim() || undefined,
         subject: composeSubject.trim() || '(No Subject)',
         body: composeBody.trim(),
         ...(action === 'schedule'
@@ -743,6 +738,9 @@ export const EmailHubScreen: React.FC<EmailHubScreenProps> = ({ provider }) => {
 
       setIsComposerOpen(false);
       setComposeTo('');
+      setComposeCc('');
+      setComposeBcc('');
+      setShowCcBcc(false);
       setComposeSubject('');
       setComposeBody('');
       setIsScheduleMode(false);
@@ -752,6 +750,9 @@ export const EmailHubScreen: React.FC<EmailHubScreenProps> = ({ provider }) => {
       showToast(`✅ Message dispatched via ${providerTitle}!`);
       setIsComposerOpen(false);
       setComposeTo('');
+      setComposeCc('');
+      setComposeBcc('');
+      setShowCcBcc(false);
       setComposeSubject('');
       setComposeBody('');
     } finally {
@@ -1406,7 +1407,51 @@ export const EmailHubScreen: React.FC<EmailHubScreenProps> = ({ provider }) => {
                 autoCapitalize="none"
                 keyboardType="email-address"
               />
+              <TouchableOpacity
+                onPress={() => setShowCcBcc(!showCcBcc)}
+                style={styles.ccBccToggleBtn}
+                activeOpacity={0.7}
+              >
+                <Text variant="caption" weight="bold" color={colors.primary}>
+                  {showCcBcc ? 'Hide CC/BCC' : 'Cc / Bcc'}
+                </Text>
+              </TouchableOpacity>
             </View>
+
+            {/* CC / BCC Fields */}
+            {showCcBcc && (
+              <>
+                <View style={[styles.composeInputBox, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+                  <Text variant="caption" weight="bold" color={colors.textMuted} style={styles.inputPrefix}>
+                    Cc:
+                  </Text>
+                  <TextInput
+                    style={[styles.inputField, { color: colors.textPrimary }]}
+                    placeholder="cc@company.com"
+                    placeholderTextColor={colors.textMuted}
+                    value={composeCc}
+                    onChangeText={setComposeCc}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                  />
+                </View>
+
+                <View style={[styles.composeInputBox, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+                  <Text variant="caption" weight="bold" color={colors.textMuted} style={styles.inputPrefix}>
+                    Bcc:
+                  </Text>
+                  <TextInput
+                    style={[styles.inputField, { color: colors.textPrimary }]}
+                    placeholder="bcc@company.com"
+                    placeholderTextColor={colors.textMuted}
+                    value={composeBcc}
+                    onChangeText={setComposeBcc}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                  />
+                </View>
+              </>
+            )}
 
             {/* Subject */}
             <View style={[styles.composeInputBox, { borderColor: colors.border, backgroundColor: colors.surface }]}>
@@ -2014,6 +2059,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginBottom: 10,
+  },
+  ccBccToggleBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 4,
   },
   inputPrefix: {
     width: 58,

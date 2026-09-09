@@ -54,17 +54,19 @@ export const lightThemeColors = {
   secondaryDark: '#0f766e',
   secondaryLight: '#14b8a6',
 
-  background: '#f4f7f5',
+  // Aesthetic, clean modern light canvas
+  background: '#f8fafc',
   surface: '#ffffff',
   card: '#ffffff',
-  cardHover: '#f8faf9',
-  inputBg: '#f1f5f3',
+  cardHover: '#f1f5f9',
+  inputBg: '#f1f5f9',
   modalBg: '#ffffff',
   bottomSheetBg: '#ffffff',
 
-  border: 'rgba(5, 150, 105, 0.25)',
+  // Clean, subtle neutral borders (prevents harsh borders)
+  border: '#e2e8f0',
   borderFocus: '#059669',
-  borderMuted: '#e2e8f0',
+  borderMuted: '#f1f5f9',
   divider: '#f1f5f9',
 
   textPrimary: '#0f172a',
@@ -74,13 +76,13 @@ export const lightThemeColors = {
   textInverse: '#ffffff',
 
   success: '#059669',
-  successBg: '#d1fae5',
+  successBg: '#ecfdf5',
   warning: '#d97706',
-  warningBg: '#fef3c7',
+  warningBg: '#fffbeb',
   error: '#dc2626',
-  errorBg: '#fee2e2',
+  errorBg: '#fef2f2',
   info: '#2563eb',
-  infoBg: '#dbeafe',
+  infoBg: '#eff6ff',
 
   tabBarBg: '#ffffff',
   tabBarActive: '#059669',
@@ -114,3 +116,44 @@ export const colors = {
 };
 
 export type ThemeColors = typeof darkThemeColors;
+
+export interface ThemePreset {
+  id: string;
+  name: string;
+  primary: string;
+  accent: string;
+}
+
+export const THEME_PRESETS: ThemePreset[] = [
+  { id: 'emerald', name: 'Emerald Velvet', primary: '#059669', accent: '#10b981' },
+  { id: 'indigo', name: 'Linear Indigo', primary: '#4f46e5', accent: '#6366f1' },
+  { id: 'azure', name: 'Pacific Azure', primary: '#0284c7', accent: '#38bdf8' },
+  { id: 'violet', name: 'Royal Amethyst', primary: '#7c3aed', accent: '#a855f7' },
+  { id: 'rose', name: 'Rose Terracotta', primary: '#e11d48', accent: '#fb7185' },
+  { id: 'amber', name: 'Warm Amber', primary: '#d97706', accent: '#fbbf24' },
+  { id: 'slate', name: 'Nordic Slate', primary: '#334155', accent: '#64748b' },
+];
+
+export function createCustomThemeColors(
+  base: 'light' | 'dark',
+  primary: string,
+  accent: string
+): ThemeColors {
+  const basePalette = base === 'dark' ? darkThemeColors : lightThemeColors;
+  const isDark = base === 'dark';
+
+  return {
+    ...basePalette,
+    primary,
+    primaryDark: primary,
+    primaryLight: primary,
+    secondary: accent,
+    secondaryDark: accent,
+    secondaryLight: accent,
+    borderFocus: primary,
+    tabBarActive: primary,
+    textEmerald: primary,
+    // Aesthetic subtle card borders: clean neutral border in light mode, soft dark border in dark mode
+    border: isDark ? 'rgba(255, 255, 255, 0.08)' : '#e2e8f0',
+  };
+}

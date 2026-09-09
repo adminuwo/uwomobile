@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, FlatList, KeyboardAvoidingView, Platform, StyleSheet, TouchableOpacity, ActivityIndicator, BackHandler, Alert, RefreshControl } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Screen } from '../../../src/components/Screen';
 import { Text } from '../../../src/components/Text';
 import { Avatar } from '../../../src/components/Avatar';
@@ -101,13 +101,15 @@ export default function ConversationDetailScreen() {
     fetchChatHistory();
   }, [fetchChatHistory]);
 
-  // Periodic quiet auto-polling every 2.5s so new incoming WhatsApp messages show immediately
-  useEffect(() => {
-    const interval = setInterval(() => {
-      syncMessages(true);
-    }, 2500);
-    return () => clearInterval(interval);
-  }, [syncMessages]);
+  // Periodic quiet auto-polling every 2.5s so new incoming WhatsApp messages show immediately while focused
+  useFocusEffect(
+    useCallback(() => {
+      const interval = setInterval(() => {
+        syncMessages(true);
+      }, 2500);
+      return () => clearInterval(interval);
+    }, [syncMessages])
+  );
 
   // Real-time WebSocket integration for live incoming messages & typing indicators
   useEffect(() => {
@@ -320,7 +322,11 @@ export default function ConversationDetailScreen() {
   };
 
   const handleBack = useCallback(() => {
-    router.navigate('/(app)/inbox' as any);
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(app)/inbox' as any);
+    }
   }, [router]);
 
   useEffect(() => {

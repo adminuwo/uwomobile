@@ -9,12 +9,16 @@ import { Card } from '../../src/components/Card';
 import { Badge } from '../../src/components/Badge';
 import { Avatar } from '../../src/components/Avatar';
 import { ClientLogoBadge } from '../../src/components/ClientLogoBadge';
+import { GrowthChart } from '../../src/components/GrowthChart';
 import { useSessionStore } from '../../src/stores/sessionStore';
 import { useBrandStore } from '../../src/stores/brandStore';
 import { useTheme } from '../../src/theme';
+import { useTranslation } from '../../src/i18n';
 import { statsApi } from '../../src/api/stats';
 import { authApi } from '../../src/api/auth';
 import { newsApi } from '../../src/api/news';
+import { crmApi, ContactFollowUp } from '../../src/api/crm';
+import { LeadStageBadge } from '../../src/components/crm/LeadStageBadge';
 import { 
   MessageSquare, 
   Users, 
@@ -28,12 +32,19 @@ import {
   FolderKanban,
   Newspaper,
   ExternalLink,
-  Activity
+  Activity,
+  Calendar,
+  Clock,
+  Bell,
+  Phone,
+  Mail,
+  ChevronRight
 } from 'lucide-react-native';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { colors, spacing } = useTheme();
+  const { t } = useTranslation();
   const user = useSessionStore((state) => state.user);
   const setUser = useSessionStore((state) => state.setUser);
   const brand = useBrandStore((state) => state.brand);
@@ -70,10 +81,16 @@ export default function HomeScreen() {
     queryFn: () => newsApi.getNewsFeed('technology'),
   });
 
+  const { data: upcomingFollowUps, isLoading: followUpsLoading, refetch: refetchFollowUps } = useQuery<ContactFollowUp[]>({
+    queryKey: ['upcomingFollowUps'],
+    queryFn: () => crmApi.getUpcomingFollowUps(),
+  });
+
   const onRefresh = () => {
     refetchClientStats();
     refetchMonitoringStats();
     refetchNews();
+    refetchFollowUps();
   };
 
   const userName = currentUser?.name || currentUser?.first_name || currentUser?.email?.split('@')[0] || 'User';
@@ -119,7 +136,7 @@ export default function HomeScreen() {
         <View style={styles.welcomeRow}>
           <View style={styles.welcomeText}>
             <Text variant="caption" color={colors.textMuted}>
-              Welcome back,
+              {t('home.welcomeBack')}
             </Text>
             <Text variant="h1" weight="bold" color={colors.textPrimary}>
               {userName}
@@ -134,7 +151,7 @@ export default function HomeScreen() {
 
         {/* Overview Snapshot */}
         <Text variant="label" style={styles.sectionLabel}>
-          OVERVIEW SNAPSHOT
+          {t('home.overviewSnapshot')}
         </Text>
 
         {/* Primary Row: Connectors & Active Workflows */}
@@ -149,10 +166,10 @@ export default function HomeScreen() {
                 <Share2 size={20} color={colors.primary} />
               </View>
               <Text variant="h3" weight="bold" color={colors.primary} style={styles.statValue}>
-                {resourceCounts.connectors} Connectors
+                {resourceCounts.connectors} {t('home.connectors')}
               </Text>
               <Text variant="caption" color={colors.textMuted}>
-                WhatsApp, IG, Email & Social
+                {t('home.connectorsDesc')}
               </Text>
             </Card>
           </TouchableOpacity>
@@ -167,10 +184,10 @@ export default function HomeScreen() {
                 <GitBranch size={20} color={colors.info} />
               </View>
               <Text variant="h3" weight="bold" color={colors.info} style={styles.statValue}>
-                {resourceCounts.projects} Active Flows
+                {resourceCounts.projects} {t('home.activeFlows')}
               </Text>
               <Text variant="caption" color={colors.textMuted}>
-                Automated routing & AI replies
+                {t('home.activeFlowsDesc')}
               </Text>
             </Card>
           </TouchableOpacity>
@@ -188,10 +205,10 @@ export default function HomeScreen() {
                 <Users size={20} color={colors.secondary} />
               </View>
               <Text variant="h3" weight="bold" color={colors.secondary} style={styles.statValue}>
-                {resourceCounts.teamMembers} Members
+                {resourceCounts.teamMembers} {t('home.members')}
               </Text>
               <Text variant="caption" color={colors.textMuted}>
-                Active agents & supervisors
+                {t('home.membersDesc')}
               </Text>
             </Card>
           </TouchableOpacity>
@@ -206,10 +223,10 @@ export default function HomeScreen() {
                 <FileText size={20} color={colors.warning} />
               </View>
               <Text variant="h3" weight="bold" color={colors.warning} style={styles.statValue}>
-                {resourceCounts.pdfs} KB Documents
+                {resourceCounts.pdfs} {t('home.kbDocuments')}
               </Text>
               <Text variant="caption" color={colors.textMuted}>
-                Trained docs & system KB
+                {t('home.kbDocumentsDesc')}
               </Text>
             </Card>
           </TouchableOpacity>
@@ -227,10 +244,10 @@ export default function HomeScreen() {
                 <FolderKanban size={20} color={colors.success} />
               </View>
               <Text variant="h3" weight="bold" color={colors.success} style={styles.statValue}>
-                {resourceCounts.crmLeads ?? clientStats?.activeUsers ?? 0} CRM Leads
+                {resourceCounts.crmLeads ?? clientStats?.activeUsers ?? 0} {t('home.crmLeads')}
               </Text>
               <Text variant="caption" color={colors.textMuted}>
-                Pipelines, deals & stages
+                {t('home.crmLeadsDesc')}
               </Text>
             </Card>
           </TouchableOpacity>
@@ -245,101 +262,150 @@ export default function HomeScreen() {
                 <Package size={20} color={colors.primary} />
               </View>
               <Text variant="h3" weight="bold" color={colors.primary} style={styles.statValue}>
-                {resourceCounts.products} Products
+                {resourceCounts.products} {t('home.products')}
               </Text>
               <Text variant="caption" color={colors.textMuted}>
-                Catalog items & inventory
+                {t('home.productsDesc')}
               </Text>
             </Card>
           </TouchableOpacity>
         </View>
 
-        {/* Automation Performance & Activity */}
+        {/* Upcoming CRM Follow-Ups Widget */}
+        <View style={styles.sectionHeaderRow}>
+          <Calendar size={18} color={colors.primary} />
+          <Text variant="label" style={styles.newsSectionLabel}>
+            {t('home.upcomingFollowUps')}
+          </Text>
+          {Boolean(upcomingFollowUps && upcomingFollowUps.length > 0) && (
+            <View style={[styles.countBadge, { backgroundColor: `${colors.primary}20` }]}>
+              <Text variant="caption" weight="bold" color={colors.primary}>
+                {upcomingFollowUps?.length}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {upcomingFollowUps && upcomingFollowUps.length > 0 ? (
+          <View style={styles.followUpsList}>
+            {upcomingFollowUps.slice(0, 4).map((fu) => {
+              const isOverdue = fu.is_overdue;
+              const dateObj = new Date(fu.scheduled_at);
+              const isToday = dateObj.toDateString() === new Date().toDateString();
+              const timeFormatted = isToday
+                ? `Today, ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                : `${dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}, ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+              return (
+                <TouchableOpacity
+                  key={fu.id}
+                  activeOpacity={0.7}
+                  onPress={() => router.push(`/lead/${fu.contact}` as any)}
+                >
+                  <Card
+                    style={[
+                      styles.fuCard,
+                      isOverdue && { borderColor: '#EF4444', borderWidth: 1 },
+                    ]}
+                  >
+                    <View style={styles.fuHeader}>
+                      <View style={styles.fuTypeBadge}>
+                        {fu.follow_up_type === 'CALL' ? (
+                          <Phone size={13} color="#2563EB" />
+                        ) : fu.follow_up_type === 'MESSAGE' ? (
+                          <MessageSquare size={13} color="#16A34A" />
+                        ) : fu.follow_up_type === 'MEETING' ? (
+                          <Users size={13} color="#9333EA" />
+                        ) : (
+                          <Mail size={13} color="#EA580C" />
+                        )}
+                        <Text style={[styles.fuTypeText, { color: colors.textSecondary }]}>
+                          {fu.follow_up_type}
+                        </Text>
+                      </View>
+
+                      {isOverdue ? (
+                        <View style={[styles.statusTag, { backgroundColor: '#FEE2E2' }]}>
+                          <Text style={[styles.statusTagText, { color: '#DC2626' }]}>OVERDUE</Text>
+                        </View>
+                      ) : (
+                        <View style={[styles.statusTag, { backgroundColor: `${colors.primary}15` }]}>
+                          <Clock size={10} color={colors.primary} />
+                          <Text style={[styles.statusTagText, { color: colors.primary }]}>{timeFormatted}</Text>
+                        </View>
+                      )}
+                    </View>
+
+                    <Text variant="h3" weight="bold" color={colors.textPrimary} numberOfLines={1} style={styles.fuTitle}>
+                      {fu.title}
+                    </Text>
+
+                    <View style={styles.fuFooter}>
+                      <View style={styles.fuContactInfo}>
+                        <Avatar name={fu.contact_name || 'Lead'} size="xs" />
+                        <Text variant="caption" weight="medium" color={colors.textSecondary} numberOfLines={1}>
+                          {fu.contact_name || 'Lead'}
+                        </Text>
+                        {fu.contact_stage ? (
+                          <LeadStageBadge stage={fu.contact_stage} size="sm" />
+                        ) : null}
+                      </View>
+
+                      <View style={styles.fuArrow}>
+                        <Text variant="caption" weight="bold" color={colors.primary}>
+                          {t('home.viewLead')}
+                        </Text>
+                        <ChevronRight size={14} color={colors.primary} />
+                      </View>
+                    </View>
+                  </Card>
+                </TouchableOpacity>
+              );
+            })}
+
+            <TouchableOpacity
+              style={[styles.allCrmBtn, { borderColor: colors.border }]}
+              onPress={() => router.push('/crm')}
+            >
+              <Text variant="caption" weight="bold" color={colors.primary}>
+                {t('home.viewAllCrmLeads')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <Card variant="outlined" style={styles.emptyFuCard}>
+            <View style={styles.emptyFuRow}>
+              <Bell size={20} color={colors.textMuted} />
+              <View style={{ flex: 1 }}>
+                <Text variant="body" weight="medium" color={colors.textPrimary}>
+                  {t('home.allCaughtUp')}
+                </Text>
+                <Text variant="caption" color={colors.textMuted}>
+                  {t('home.allCaughtUpDesc')}
+                </Text>
+              </View>
+            </View>
+          </Card>
+        )}
+
+        {/* Growth Chart — matches web dashboard */}
         <Text variant="label" style={styles.sectionLabel}>
-          AUTOMATION & LIVE PERFORMANCE
+          {t('home.performanceGrowth')}
         </Text>
 
-        <View style={styles.grid}>
-          <TouchableOpacity 
-            activeOpacity={0.7} 
-            style={styles.gridCardTouch}
-            onPress={() => router.push('/automations' as any)}
-          >
-            <Card style={styles.gridCard}>
-              <View style={[styles.cardIconBox, { backgroundColor: colors.surface }]}>
-                <Zap size={20} color={colors.warning} />
-              </View>
-              <Text variant="h2" weight="bold" style={styles.statValue}>
-                {clientStats?.automationRuns ?? 0}
-              </Text>
-              <Text variant="caption" color={colors.textMuted}>
-                Automation Runs
-              </Text>
-            </Card>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            activeOpacity={0.7} 
-            style={styles.gridCardTouch}
-            onPress={() => router.push('/workflows' as any)}
-          >
-            <Card style={styles.gridCard}>
-              <View style={[styles.cardIconBox, { backgroundColor: colors.surface }]}>
-                <Activity size={20} color={colors.success} />
-              </View>
-              <Text variant="h2" weight="bold" style={styles.statValue}>
-                {resourceCounts.projects}
-              </Text>
-              <Text variant="caption" color={colors.textMuted}>
-                Active Automations
-              </Text>
-            </Card>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.grid}>
-          <TouchableOpacity 
-            activeOpacity={0.7} 
-            style={styles.gridCardTouch}
-            onPress={() => router.push('/inbox')}
-          >
-            <Card style={styles.gridCard}>
-              <View style={[styles.cardIconBox, { backgroundColor: colors.surface }]}>
-                <MessageSquare size={20} color={colors.primary} />
-              </View>
-              <Text variant="h2" weight="bold" style={styles.statValue}>
-                {monitoringStats?.unread_conversations ?? 0}
-              </Text>
-              <Text variant="caption" color={colors.textMuted}>
-                Unread Messages
-              </Text>
-            </Card>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            activeOpacity={0.7} 
-            style={styles.gridCardTouch}
-            onPress={() => router.push('/inbox')}
-          >
-            <Card style={styles.gridCard}>
-              <View style={[styles.cardIconBox, { backgroundColor: colors.surface }]}>
-                <TrendingUp size={20} color={colors.info} />
-              </View>
-              <Text variant="h2" weight="bold" style={styles.statValue}>
-                {monitoringStats?.avg_response_time || clientStats?.avgResponse || '14s'}
-              </Text>
-              <Text variant="caption" color={colors.textMuted}>
-                Avg Response Time
-              </Text>
-            </Card>
-          </TouchableOpacity>
-        </View>
+        <GrowthChart
+          automationRuns={clientStats?.automationRuns ?? 0}
+          activeAutomations={resourceCounts.projects}
+          unreadMessages={monitoringStats?.unread_conversations ?? 0}
+          avgResponse={monitoringStats?.avg_response_time || clientStats?.avgResponse || '14s'}
+          colors={colors}
+        />
 
         {/* Industry News & Market Updates Section */}
         <View style={styles.sectionHeaderRow}>
           <Newspaper size={18} color={colors.primary} />
           <Text variant="label" style={styles.newsSectionLabel}>
-            INDUSTRY NEWS & UPDATES
+            {t('home.industryNews')}
           </Text>
         </View>
 
@@ -368,7 +434,7 @@ export default function HomeScreen() {
                   onPress={() => Linking.openURL(article.link)}
                 >
                   <Text variant="caption" weight="bold" color={colors.primary}>
-                    Read Full Article
+                    {t('home.readFullArticle')}
                   </Text>
                   <ExternalLink size={14} color={colors.primary} />
                 </TouchableOpacity>
@@ -378,7 +444,7 @@ export default function HomeScreen() {
         ) : (
           <Card variant="outlined" style={styles.emptyNewsCard}>
             <Text variant="caption" color={colors.textMuted}>
-              {newsLoading ? 'Fetching latest tech & business news...' : 'No news updates available right now.'}
+              {newsLoading ? t('home.fetchingNews') : t('home.noNewsAvailable')}
             </Text>
           </Card>
         )}
@@ -510,5 +576,84 @@ const styles = StyleSheet.create({
   },
   phaseTitle: {
     marginBottom: 6,
+  },
+  countBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginLeft: 6,
+  },
+  followUpsList: {
+    gap: 8,
+    marginBottom: 12,
+  },
+  fuCard: {
+    padding: 12,
+    gap: 8,
+  },
+  fuHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  fuTypeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  fuTypeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  statusTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  statusTagText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  fuTitle: {
+    fontSize: 14,
+  },
+  fuFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 4,
+  },
+  fuContactInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+  },
+  fuArrow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  allCrmBtn: {
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    marginTop: 2,
+  },
+  emptyFuCard: {
+    padding: 14,
+    marginBottom: 12,
+  },
+  emptyFuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
 });

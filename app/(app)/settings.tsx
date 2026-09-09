@@ -8,9 +8,11 @@ import { Button } from '../../src/components/Button';
 import { useTheme } from '../../src/theme';
 import { useSessionStore } from '../../src/stores/sessionStore';
 import { apiClient } from '../../src/api/client';
-import { Building2, User, Phone, MapPin, Shield, Save, CheckCircle2, Activity, RefreshCw, Server, Database } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { Building2, User, Phone, MapPin, Shield, Save, CheckCircle2, Activity, RefreshCw, Server, Database, Laptop, ChevronRight, QrCode } from 'lucide-react-native';
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const { colors } = useTheme();
   const { user } = useSessionStore();
 
@@ -239,6 +241,28 @@ export default function SettingsScreen() {
                 {healthData?.latencyMs ? `${healthData.latencyMs} ms` : '< 50 ms'}
               </Text>
             </View>
+          </Card>
+
+          {/* Linked Devices & Web Login */}
+          <Text variant="label" style={styles.sectionLabel}>Linked Devices & Web Login</Text>
+          <Card style={styles.card}>
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}
+              onPress={() => router.push('/(app)/linked-devices' as any)}
+            >
+              <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: colors.primary + '15', justifyContent: 'center', alignItems: 'center' }}>
+                <Laptop size={22} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text variant="body" weight="bold" color={colors.textPrimary}>
+                  Linked Devices
+                </Text>
+                <Text variant="caption" color={colors.textSecondary} style={{ marginTop: 2 }}>
+                  Link computers or log out web sessions
+                </Text>
+              </View>
+              <ChevronRight size={18} color={colors.textMuted} />
+            </TouchableOpacity>
           </Card>
 
           <Button

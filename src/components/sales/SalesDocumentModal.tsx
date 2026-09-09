@@ -64,13 +64,25 @@ export const SalesDocumentModal: React.FC<SalesDocumentModalProps> = ({
 
     setSubmitting(true);
     try {
+      const formattedItems = items.map((item, idx) => ({
+        name: item.description?.trim() || `Item #${idx + 1}`,
+        description: item.description?.trim() || '',
+        quantity: item.quantity || 1,
+        unit_price: item.unit_price || 0,
+        tax_rate: item.tax_rate || 0,
+      }));
+
       const doc = await salesDocumentsApi.createDocument({
         document_type: documentType,
         customer_name: customerName.trim(),
-        items,
+        document_date: new Date().toISOString().split('T')[0],
+        items: formattedItems as any,
         subtotal,
         total_tax: totalTax,
+        tax_amount: totalTax,
         total_amount: totalAmount,
+        grand_total: totalAmount,
+        customer_notes: notes.trim(),
         notes: notes.trim(),
         status: 'SENT',
       });

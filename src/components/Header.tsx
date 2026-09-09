@@ -1,5 +1,6 @@
-import React, { ReactNode } from 'react';
-import { View, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
+import React, { ReactNode, useEffect } from 'react';
+import { View, TouchableOpacity, StyleSheet, ViewStyle, BackHandler } from 'react-native';
+import { useRouter, usePathname } from 'expo-router';
 import { useTheme } from '../theme';
 import { Text } from './Text';
 import { ChevronLeft, Menu } from 'lucide-react-native';
@@ -21,7 +22,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({
   title,
-  showBack = false,
+  showBack,
   onBackPress,
   showMenu = true,
   rightAction,
@@ -29,16 +30,73 @@ export const Header: React.FC<HeaderProps> = ({
   showLogo = true,
   style,
 }) => {
+  const router = useRouter();
+  const pathname = usePathname();
   const { colors, spacing } = useTheme();
   const openDrawer = useDrawerStore((state) => state.openDrawer);
   const { clientName, logoUri, initial, isLoading } = useTenantBranding();
   const actionToRender = rightElement || rightAction;
 
+  // Root tabs that should default to showing Menu drawer instead of Back button
+  const isRootTab = 
+    pathname === '/home' || pathname === '/(app)/home' || 
+    pathname === '/' || pathname === '/(app)' || 
+    pathname === '/inbox' || pathname === '/(app)/inbox' || 
+    pathname === '/crm' || pathname === '/(app)/crm' || 
+    pathname === '/more' || pathname === '/(app)/more';
+
+  // If showBack is explicitly passed, use it. Otherwise, if it's not a root tab, default to showing Back!
+  const shouldShowBack = showBack !== undefined ? showBack : !isRootTab;
+
+  const handleBackPress = () => {
+    if (onBackPress) {
+      onBackPress();
+      return;
+    }
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      // Intelligent fallback based on path
+      if (pathname.includes('/lead') || pathname.includes('/crm')) {
+        router.replace('/(app)/crm');
+      } else if (pathname.includes('/conversation') || pathname.includes('/inbox')) {
+        router.replace('/(app)/inbox');
+      } else if (
+        pathname.includes('/sales') || 
+        pathname.includes('/team') || 
+        pathname.includes('/settings') ||
+        pathname.includes('/connectors') ||
+        pathname.includes('/workflows') ||
+        pathname.includes('/broadcasts') ||
+        pathname.includes('/knowledge') ||
+        pathname.includes('/reports') ||
+        pathname.includes('/support') ||
+        pathname.includes('/guides') ||
+        pathname.includes('/agency') ||
+        pathname.includes('/plans')
+      ) {
+        router.replace('/(app)/more');
+      } else {
+        router.replace('/(app)/home');
+      }
+    }
+  };
+
+  // Hardware BackHandler on Android for screens with a back button
+  useEffect(() => {
+    if (!shouldShowBack) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      handleBackPress();
+      return true;
+    });
+    return () => sub.remove();
+  }, [shouldShowBack, onBackPress, pathname]);
+
   // Title to display: Prefer specific screen title if passed, else tenant client company name
   const displayTitle = title || clientName;
 
-  // Render Logo Badge only when title is absent (e.g. Home screen) and showBack is false
-  const shouldRenderLogo = showLogo && !showBack && !title;
+  // Render Logo Badge only when title is absent (e.g. Home screen) and shouldShowBack is false
+  const shouldRenderLogo = showLogo && !shouldShowBack && !title;
 
   return (
     <View
@@ -53,11 +111,11 @@ export const Header: React.FC<HeaderProps> = ({
       ]}
     >
       <View style={styles.leftContainer}>
-        {showBack ? (
+        {shouldShowBack ? (
           <TouchableOpacity
-            onPress={onBackPress}
+            onPress={handleBackPress}
             style={styles.iconButton}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             <ChevronLeft size={24} color={colors.textPrimary} />
           </TouchableOpacity>

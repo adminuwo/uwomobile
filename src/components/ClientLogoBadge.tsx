@@ -3,6 +3,7 @@ import { View, Image, StyleSheet, ViewStyle } from 'react-native';
 import { useTheme } from '../theme';
 import { Text } from './Text';
 import { Skeleton } from './Skeleton';
+import { resolveValidImageUri } from '../utils/imageUri';
 
 interface ClientLogoBadgeProps {
   logoUri?: string | null;
@@ -21,16 +22,17 @@ export const ClientLogoBadge: React.FC<ClientLogoBadgeProps> = ({
 }) => {
   const { colors } = useTheme();
   const [hasError, setHasError] = useState(false);
+  const validLogoUri = resolveValidImageUri(logoUri);
 
   useEffect(() => {
     setHasError(false);
-  }, [logoUri]);
+  }, [validLogoUri]);
 
   if (isLoading) {
     return <Skeleton width={size} height={size} borderRadius={size / 4} style={style} />;
   }
 
-  const showImage = !!logoUri && !hasError;
+  const showImage = !!validLogoUri && !hasError;
   const displayInitial = (initial || 'W').trim().charAt(0).toUpperCase();
 
   return (
@@ -50,7 +52,7 @@ export const ClientLogoBadge: React.FC<ClientLogoBadgeProps> = ({
     >
       {showImage ? (
         <Image
-          source={{ uri: logoUri }}
+          source={{ uri: validLogoUri! }}
           style={[styles.logoImage, { borderRadius: size / 4 - 1 }]}
           onError={() => setHasError(true)}
           resizeMode="contain"

@@ -5,7 +5,7 @@ import { Avatar } from '../Avatar';
 import { LeadStageBadge } from './LeadStageBadge';
 import { Contact } from '../../api/crm';
 import { useTheme } from '../../theme';
-import { Phone, Mail, MessageSquare, ChevronRight } from 'lucide-react-native';
+import { Phone, Mail, MessageSquare, ChevronRight, Calendar } from 'lucide-react-native';
 
 interface LeadCardProps {
   contact: Contact;
@@ -55,7 +55,26 @@ export const LeadCard: React.FC<LeadCardProps> = ({ contact, onPress, onOpenChat
       </View>
 
       <View style={[styles.footerRow, { borderTopColor: colors.borderMuted || colors.border }]}>
-        <LeadStageBadge stage={contact.stage} size="sm" />
+        <View style={styles.badgeAndTags}>
+          <LeadStageBadge stage={contact.stage} size="sm" />
+          {Boolean(contact.follow_ups_count && contact.follow_ups_count > 0) && (
+            <View style={[styles.followUpBadge, { backgroundColor: '#F59E0B18', borderColor: '#F59E0B55' }]}>
+              <Calendar size={11} color="#D97706" />
+              <Text style={styles.followUpBadgeText}>
+                {contact.next_followup_at
+                  ? new Date(contact.next_followup_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                  : `${contact.follow_ups_count} task${(contact.follow_ups_count ?? 0) > 1 ? 's' : ''}`}
+              </Text>
+            </View>
+          )}
+          {Array.isArray(contact.tags) && contact.tags.length > 0 && (
+            <View style={styles.tagPill}>
+              <Text numberOfLines={1} style={[styles.tagText, { color: colors.textMuted }]}>
+                {contact.tags[0]}
+              </Text>
+            </View>
+          )}
+        </View>
 
         {onOpenChat && (
           <TouchableOpacity
@@ -122,5 +141,36 @@ const styles = StyleSheet.create({
   chatButtonText: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  badgeAndTags: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+  },
+  tagPill: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    maxWidth: 120,
+  },
+  tagText: {
+    fontSize: 10,
+    fontWeight: '500',
+  },
+  followUpBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  followUpBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#D97706',
   },
 });

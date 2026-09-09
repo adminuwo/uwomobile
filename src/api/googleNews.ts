@@ -126,33 +126,19 @@ export const googleNewsApi = {
       const endpoint = `/api/google-news/feed${qs ? `?${qs}` : ''}`;
       const res = await client.get<any>(endpoint);
 
-      if (res && Array.isArray(res.articles) && res.articles.length > 0) {
-        return {
-          query: res.query || params?.query || '',
-          category: res.category || params?.category || 'TOP_STORIES',
-          count: res.count || res.articles.length,
-          articles: res.articles,
-        };
-      }
-
-      // Fallback if empty array returned from RSS
-      const catKey = (params?.category || 'TECHNOLOGY').toUpperCase();
-      const fallbackList = FALLBACK_ARTICLES[catKey] || FALLBACK_ARTICLES.TOP_STORIES;
       return {
-        query: params?.query || '',
-        category: params?.category || 'TOP_STORIES',
-        count: fallbackList.length,
-        articles: fallbackList,
+        query: res.query || params?.query || '',
+        category: res.category || params?.category || 'TOP_STORIES',
+        count: Array.isArray(res?.articles) ? res.articles.length : 0,
+        articles: Array.isArray(res?.articles) ? res.articles : [],
       };
     } catch (err) {
-      console.log('[googleNewsApi.getFeed] Warning, using fallback news articles:', err);
-      const catKey = (params?.category || 'TECHNOLOGY').toUpperCase();
-      const fallbackList = FALLBACK_ARTICLES[catKey] || FALLBACK_ARTICLES.TOP_STORIES;
+      console.log('[googleNewsApi.getFeed] Warning:', err);
       return {
         query: params?.query || '',
         category: params?.category || 'TOP_STORIES',
-        count: fallbackList.length,
-        articles: fallbackList,
+        count: 0,
+        articles: [],
       };
     }
   },

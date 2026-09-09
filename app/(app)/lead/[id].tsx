@@ -9,12 +9,16 @@ import { Card } from '../../../src/components/Card';
 import { Button } from '../../../src/components/Button';
 import { Input } from '../../../src/components/Input';
 import { LeadStageBadge } from '../../../src/components/crm/LeadStageBadge';
-import { crmApi, Contact, LeadStage } from '../../../src/api/crm';
+import { FollowUpCard } from '../../../src/components/crm/FollowUpCard';
+import { ScheduleFollowUpModal } from '../../../src/components/crm/ScheduleFollowUpModal';
+import { crmApi, Contact, LeadStage, ContactFollowUp, FollowUpStatus, CreateFollowUpPayload } from '../../../src/api/crm';
 import { useTheme } from '../../../src/theme';
-import { Phone, Mail, MessageSquare, Calendar, Tag, FileText, ArrowLeft, Save } from 'lucide-react-native';
+import { Phone, Mail, MessageSquare, Calendar, Tag, FileText, ArrowLeft, Save, Plus, Bell } from 'lucide-react-native';
 
 const STAGES: { id: LeadStage; label: string }[] = [
   { id: 'NEW', label: 'New' },
+  { id: 'QUALIFIED', label: 'Qualified' },
+  { id: 'HOT_LEAD', label: '🔥 Hot Lead' },
   { id: 'FOLLOWUP', label: 'Follow Up' },
   { id: 'NEGOTIATION', label: 'Negotiation' },
   { id: 'WON', label: 'Won' },
@@ -32,6 +36,11 @@ export default function LeadDetailScreen() {
   const [notes, setNotes] = useState('');
   const [savingNotes, setSavingNotes] = useState(false);
 
+  // Follow-up state
+  const [followUps, setFollowUps] = useState<ContactFollowUp[]>([]);
+  const [loadingFollowUps, setLoadingFollowUps] = useState(false);
+  const [scheduleModalVisible, setScheduleModalVisible] = useState(false);
+
   const fetchContact = useCallback(async () => {
     if (!id) return;
     try {
@@ -48,9 +57,36 @@ export default function LeadDetailScreen() {
     }
   }, [id]);
 
+  const fetchFollowUps = useCallback(async () => {
+    if (!id) return;
+    try {
+      setLoadingFollowUps(true);
+      const data = await crmApi.getFollowUps(id);
+      setFollowUps(data);
+    } catch (err) {
+      console.warn('Error fetching follow-ups:', err);
+    } finally {
+      setLoadingFollowUps(false);
+    }
+  }, [id]);
+
   useEffect(() => {
     fetchContact();
-  }, [fetchContact]);
+    fetchFollowUps();
+  }, [fetchContact, fetchFollowUps]);
+
+  const handleCreateFollowUp = async (payload: CreateFollowUpPayload) => {
+    if (!contact) return;
+    await crmApi.createFollowUp(contact.id, payload);
+    await fetchFollowUps();
+    await fetchContact(); // refresh stage if auto-advanced
+  };
+
+  const handleUpdateFollowUp = async (followUpId: string, data: { status: FollowUpStatus }) => {
+    if (!contact) return;
+    await crmApi.updateFollowUp(contact.id, followUpId, data);
+    await fetchFollowUps();
+  };
 
   const handleStageChange = async (newStage: LeadStage) => {
     if (!contact || updatingStage || contact.stage === newStage) return;
@@ -100,7 +136,7 @@ export default function LeadDetailScreen() {
   if (loading || !contact) {
     return (
       <Screen safeAreaEdges={['top', 'left', 'right']}>
-        <Header title="Lead Details" />
+        <Header title="Lead Details" showBack={true} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -110,7 +146,7 @@ export default function LeadDetailScreen() {
 
   return (
     <Screen safeAreaEdges={['top', 'bottom', 'left', 'right']}>
-      <Header title="Lead Profile" />
+      <Header title="Lead Profile" showBack={true} />
 
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         {/* Profile Card */}
@@ -196,7 +232,46 @@ export default function LeadDetailScreen() {
             style={styles.saveNotesBtn}
           />
         </Card>
+
+        {/* Follow-Ups Card */}
+        <Card
+          title={`Follow-Ups ${followUps.length > 0 ? `(${followUps.filter((f) => f.status === 'PENDING').length} pending)` : ''}`}
+        >
+          {loadingFollowUps ? (
+            <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 10 }} />
+          ) : followUps.length === 0 ? (
+            <View style={styles.emptyFollowUps}>
+              <Bell size={28} color={colors.textMuted} />
+              <Text style={[styles.emptyFollowUpsText, { color: colors.textMuted }]}>
+                No follow-ups scheduled yet.
+              </Text>
+            </View>
+          ) : (
+            followUps.map((fu) => (
+              <FollowUpCard
+                key={fu.id}
+                item={fu}
+                contactId={contact.id}
+                onUpdate={handleUpdateFollowUp}
+              />
+            ))
+          )}
+
+          <Button
+            title="+ Schedule Follow-Up"
+            variant="outline"
+            icon={<Plus size={15} color={colors.primary} />}
+            onPress={() => setScheduleModalVisible(true)}
+            style={styles.scheduleBtn}
+          />
+        </Card>
       </ScrollView>
+
+      <ScheduleFollowUpModal
+        visible={scheduleModalVisible}
+        onClose={() => setScheduleModalVisible(false)}
+        onSave={handleCreateFollowUp}
+      />
     </Screen>
   );
 }
@@ -256,5 +331,17 @@ const styles = StyleSheet.create({
   },
   saveNotesBtn: {
     marginTop: 8,
+  },
+  emptyFollowUps: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    gap: 8,
+  },
+  emptyFollowUpsText: {
+    fontSize: 13,
+  },
+  scheduleBtn: {
+    marginTop: 12,
   },
 });

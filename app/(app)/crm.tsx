@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, FlatList, TouchableOpacity, RefreshControl, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
 import { Header } from '../../src/components/Header';
 import { SearchBar } from '../../src/components/SearchBar';
@@ -15,12 +15,17 @@ import { ExportLeadsModal } from '../../src/components/crm/ExportLeadsModal';
 import { EmptyState } from '../../src/components/EmptyState';
 import { ErrorState } from '../../src/components/ErrorState';
 import { crmApi, Contact, LeadStage } from '../../src/api/crm';
+import { useSessionStore } from '../../src/stores/sessionStore';
 import { useTheme } from '../../src/theme';
+import { useTranslation } from '../../src/i18n';
 import { Users, LayoutGrid, List, Plus, Upload, Download } from 'lucide-react-native';
 
 export default function CRMScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t } = useTranslation();
+  const authStatus = useSessionStore((state) => state.status);
+  const token = useSessionStore((state) => state.token);
   const [viewMode, setViewMode] = useState<'list' | 'pipeline'>('list');
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -56,9 +61,11 @@ export default function CRMScreen() {
     }
   }, [searchQuery]);
 
-  useEffect(() => {
-    loadContacts();
-  }, [loadContacts]);
+  useFocusEffect(
+    useCallback(() => {
+      loadContacts();
+    }, [loadContacts])
+  );
 
   const handleSelectLead = (contact: Contact) => {
     router.push({
@@ -107,7 +114,7 @@ export default function CRMScreen() {
   return (
     <Screen safeAreaEdges={['top', 'left', 'right']}>
       <Header
-        title="CRM Pipeline"
+        title={t('crm.title')}
         rightElement={
           <View style={styles.headerRightActions}>
             <TouchableOpacity
@@ -116,7 +123,7 @@ export default function CRMScreen() {
               onPress={() => setImportModalVisible(true)}
             >
               <Upload size={14} color={colors.textPrimary} />
-              <Text style={[styles.actionIconText, { color: colors.textPrimary }]}>Import</Text>
+              <Text style={[styles.actionIconText, { color: colors.textPrimary }]}>{t('crm.import')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -125,7 +132,7 @@ export default function CRMScreen() {
               onPress={() => setExportModalVisible(true)}
             >
               <Download size={14} color={colors.textPrimary} />
-              <Text style={[styles.actionIconText, { color: colors.textPrimary }]}>Export</Text>
+              <Text style={[styles.actionIconText, { color: colors.textPrimary }]}>{t('crm.export')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -134,7 +141,7 @@ export default function CRMScreen() {
               onPress={() => setAddModalVisible(true)}
             >
               <Plus size={16} color="#FFFFFF" />
-              <Text style={styles.addButtonText}>Add Lead</Text>
+              <Text style={styles.addButtonText}>{t('crm.addLead')}</Text>
             </TouchableOpacity>
           </View>
         }
@@ -146,7 +153,7 @@ export default function CRMScreen() {
           <SearchBar
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder="Search leads, phone, or email..."
+            placeholder={t('crm.searchPlaceholder')}
           />
         </View>
 
@@ -187,14 +194,14 @@ export default function CRMScreen() {
             <LeadCard contact={item} onPress={handleSelectLead} onOpenChat={handleOpenChat} />
           )}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => loadContacts(true)} tintColor="#10B981" />
+            <RefreshControl refreshing={refreshing} onRefresh={() => loadContacts(true)} tintColor={colors.primary} />
           }
           ListEmptyComponent={
             !loading ? (
               <EmptyState
                 icon={Users}
-                title="No CRM Leads Found"
-                description="Click 'Add Lead' above to create your first customer lead."
+                title={t('crm.noLeadsTitle')}
+                description={t('crm.noLeadsDesc')}
               />
             ) : null
           }
@@ -205,32 +212,32 @@ export default function CRMScreen() {
       {/* Add Lead Modal */}
       <Modal
         visible={addModalVisible}
-        title="Add New CRM Lead"
+        title={t('crm.addNewLead')}
         onClose={() => setAddModalVisible(false)}
       >
         <View style={styles.modalBody}>
           <Input
-            label="Full Name"
-            placeholder="e.g. Rahul Sharma"
+            label={t('crm.fullName')}
+            placeholder={t('crm.fullNamePlaceholder')}
             value={newName}
             onChangeText={setNewName}
           />
           <Input
-            label="Phone Number"
-            placeholder="e.g. +919876543210"
+            label={t('crm.phoneNumber')}
+            placeholder={t('crm.phonePlaceholder')}
             keyboardType="phone-pad"
             value={newPhone}
             onChangeText={setNewPhone}
           />
           <Input
-            label="Email Address"
-            placeholder="e.g. rahul@example.com"
+            label={t('crm.emailAddress')}
+            placeholder={t('crm.emailPlaceholder')}
             keyboardType="email-address"
             value={newEmail}
             onChangeText={setNewEmail}
           />
 
-          <Button title="Create Lead" loading={creating} onPress={handleCreateLead} />
+          <Button title={t('crm.createLead')} loading={creating} onPress={handleCreateLead} />
         </View>
       </Modal>
 
