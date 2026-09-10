@@ -24,6 +24,16 @@ export const authApi = {
   },
 
   /**
+   * Consumes Django Google OAuth endpoint `/api/auth/google/`
+   */
+  async loginWithGoogle(idToken: string, extra?: { name?: string; invite_token?: string }): Promise<LoginResponse> {
+    return apiClient.post<LoginResponse>('/api/auth/google/', {
+      id_token: idToken,
+      ...extra,
+    });
+  },
+
+  /**
    * Consumes existing Django endpoint `/api/profile`
    */
   async getProfile(): Promise<UserProfile> {

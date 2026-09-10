@@ -16,6 +16,7 @@ interface SessionState {
   // Actions
   initialize: () => Promise<void>;
   login: (credentials: LoginCredentials) => Promise<boolean>;
+  loginWithGoogle: (idToken: string, extra?: { name?: string; invite_token?: string }) => Promise<boolean>;
   logout: () => Promise<void>;
   setUser: (user: UserProfile | null) => void;
   clearError: () => void;
@@ -115,6 +116,51 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       set({
         isLoading: false,
         error: err.message || 'Login failed. Please check your credentials.',
+      });
+      return false;
+    }
+  },
+
+  loginWithGoogle: async (idToken: string, extra?: { name?: string; invite_token?: string }) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await authApi.loginWithGoogle(idToken, extra);
+
+      const token = response.token || response.access_token;
+      if (!token) {
+        throw new Error(response.message || response.detail || 'Google authentication failed. Token missing.');
+      }
+
+      // Store token securely
+      await secureStorage.setAccessToken(token);
+
+      // Store user if returned or fetch profile
+      let userProfile = response.user || null;
+      if (!userProfile) {
+        try {
+          userProfile = await authApi.getProfile();
+        } catch {
+          userProfile = { email: extra?.name || 'google_user' };
+        }
+      }
+
+      if (userProfile) {
+        await secureStorage.setItem(APP_CONFIG.userStorageKey, JSON.stringify(userProfile));
+      }
+
+      set({
+        status: 'authenticated',
+        token,
+        user: userProfile,
+        isLoading: false,
+        error: null,
+      });
+
+      return true;
+    } catch (err: any) {
+      set({
+        isLoading: false,
+        error: err.message || 'Google authentication failed. Please try again.',
       });
       return false;
     }

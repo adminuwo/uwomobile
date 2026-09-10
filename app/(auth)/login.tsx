@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Image, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, StyleSheet, Image, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
 import { Input } from '../../src/components/Input';
 import { resolveValidImageUri } from '../../src/utils/imageUri';
 import { Button } from '../../src/components/Button';
+import { GoogleIcon } from '../../src/components/GoogleIcon';
 import { useSessionStore } from '../../src/stores/sessionStore';
 import { useBrandStore } from '../../src/stores/brandStore';
+import { useGoogleAuth } from '../../src/hooks/useGoogleAuth';
 import { useTheme } from '../../src/theme';
 import { ShieldCheck, Mail, Lock, AlertCircle, ArrowRight } from 'lucide-react-native';
 
@@ -15,6 +17,7 @@ export default function LoginScreen() {
   const router = useRouter();
   const { colors, spacing, radius } = useTheme();
   const { login, isLoading, error, clearError } = useSessionStore();
+  const { promptGoogleLogin, isGoogleLoading, googleError, clearGoogleError } = useGoogleAuth();
   const brand = useBrandStore((state) => state.brand);
 
   const [email, setEmail] = useState('');
@@ -23,6 +26,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     clearError();
+    clearGoogleError();
     setValidationError('');
 
     if (!email || !email.includes('@')) {
@@ -41,7 +45,14 @@ export default function LoginScreen() {
     }
   };
 
-  const displayError = validationError || error;
+  const handleGooglePress = async () => {
+    clearError();
+    setValidationError('');
+    await promptGoogleLogin();
+  };
+
+  const displayError = validationError || error || googleError;
+  const isActionLoading = isLoading || isGoogleLoading;
 
   return (
     <Screen safeAreaEdges={['top', 'bottom', 'left', 'right']}>
@@ -80,10 +91,10 @@ export default function LoginScreen() {
           {/* Form Card */}
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.xl }]}>
             <Text variant="h2" weight="bold" style={styles.formTitle}>
-              Sign In to Workspace
+              Sign In
             </Text>
             <Text variant="caption" color={colors.textMuted} style={styles.formSubtitle}>
-              Enter your credentials to access your mobile CRM and inbox.
+              Enter your email and password to continue.
             </Text>
 
             {displayError ? (
@@ -94,6 +105,42 @@ export default function LoginScreen() {
                 </Text>
               </View>
             ) : null}
+
+            {/* Google Login Button */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={handleGooglePress}
+              disabled={isActionLoading}
+              style={[
+                styles.googleButton,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  borderRadius: radius.md,
+                  opacity: isActionLoading ? 0.6 : 1,
+                },
+              ]}
+            >
+              {isGoogleLoading ? (
+                <ActivityIndicator size="small" color={colors.primary} style={styles.googleIconContainer} />
+              ) : (
+                <View style={styles.googleIconContainer}>
+                  <GoogleIcon size={20} />
+                </View>
+              )}
+              <Text variant="body" weight="semibold" color={colors.textPrimary}>
+                {isGoogleLoading ? 'Connecting to Google...' : 'Continue with Google'}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Divider */}
+            <View style={styles.dividerContainer}>
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+              <Text variant="caption" color={colors.textMuted} style={styles.dividerText}>
+                OR CONTINUE WITH EMAIL
+              </Text>
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+            </View>
 
             <Input
               label="Email Address"
@@ -121,9 +168,10 @@ export default function LoginScreen() {
             />
 
             <Button
-              title="Sign In to Workspace"
+              title="Sign In"
               onPress={handleLogin}
               loading={isLoading}
+              disabled={isActionLoading}
               variant="primary"
               fullWidth
               rightIcon={<ArrowRight size={18} color={colors.textInverse} />}
@@ -134,7 +182,7 @@ export default function LoginScreen() {
           {/* Footer note */}
           <View style={styles.footer}>
             <Text variant="caption" color={colors.textMuted} align="center">
-              Secured by UwoConnect Enterprise Shield • v1.0.0
+              Secured by UwoConnect • v1.0.0
             </Text>
           </View>
         </ScrollView>
@@ -202,6 +250,38 @@ const styles = StyleSheet.create({
   },
   submitBtn: {
     marginTop: 8,
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    marginBottom: 16,
+    minHeight: 50,
+  },
+  googleIconContainer: {
+    marginRight: 10,
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 16,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    paddingHorizontal: 12,
+    fontSize: 10,
+    letterSpacing: 0.8,
+    fontWeight: '600',
   },
   footer: {
     marginTop: 32,
