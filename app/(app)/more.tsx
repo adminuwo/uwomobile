@@ -13,6 +13,7 @@ import {
   Palette,
   Globe,
   LogOut,
+  ShieldCheck,
 } from 'lucide-react-native';
 import { useSessionStore } from '../../src/stores/sessionStore';
 
@@ -98,6 +99,13 @@ export default function MoreScreen() {
             title={t('account.language')}
             subtitle={`${currentLanguageInfo.name} (${currentLanguageInfo.nativeName})`}
             onPress={() => router.push('/language' as any)}
+          />
+          <View style={[styles.divider, { backgroundColor: colors.divider }]} />
+          <MenuItem
+            icon={<ShieldCheck size={20} color="#059669" />}
+            title="Legal & Compliance"
+            subtitle="Terms & Conditions, Privacy Policy & Permissions"
+            onPress={() => router.push('/(app)/legal' as any)}
           />
           <View style={[styles.divider, { backgroundColor: colors.divider }]} />
           <MenuItem

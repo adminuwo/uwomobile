@@ -83,6 +83,10 @@ export interface RegisterPayload {
   meta_portfolio_eligible: boolean;
   meta_portfolio_name?: string;
   portfolio_name?: string;
+  terms_accepted?: boolean;
+  privacy_accepted?: boolean;
+  terms_version?: string;
+  privacy_version?: string;
 }
 
 export interface LoginResponse {

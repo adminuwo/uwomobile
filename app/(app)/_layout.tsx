@@ -108,6 +108,11 @@ export default function AppLayout() {
         <Tabs.Screen name="agency" options={{ href: null }} />
         <Tabs.Screen name="calls" options={{ href: null }} />
         <Tabs.Screen name="linked-devices" options={{ href: null }} />
+        <Tabs.Screen name="legal/index" options={{ href: null }} />
+        <Tabs.Screen name="legal/terms" options={{ href: null }} />
+        <Tabs.Screen name="legal/privacy" options={{ href: null }} />
+        <Tabs.Screen name="legal/permissions" options={{ href: null }} />
+        <Tabs.Screen name="legal/delete-account" options={{ href: null }} />
       </Tabs>
     </View>
   );

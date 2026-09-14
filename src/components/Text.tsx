@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text as RNText, TextProps as RNTextProps, StyleSheet, TextStyle, Platform } from 'react-native';
+import { Text as RNText, TextProps as RNTextProps, StyleSheet, TextStyle, Platform, StyleProp } from 'react-native';
 import { useTheme } from '../theme';
 
 export type TextVariant = 'h1' | 'h2' | 'h3' | 'subtitle' | 'body' | 'caption' | 'label' | 'emerald';
@@ -9,7 +9,7 @@ interface TextProps extends RNTextProps {
   color?: string;
   weight?: 'regular' | 'medium' | 'semibold' | 'bold';
   align?: 'auto' | 'left' | 'right' | 'center' | 'justify';
-  style?: TextStyle | TextStyle[];
+  style?: StyleProp<TextStyle>;
 }
 
 export const Text: React.FC<TextProps> = ({

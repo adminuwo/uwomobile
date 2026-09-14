@@ -52,6 +52,7 @@ export default function RegisterScreen() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
   const [validationError, setValidationError] = useState('');
 
   const handleCreateAccount = async () => {
@@ -93,6 +94,11 @@ export default function RegisterScreen() {
       return;
     }
 
+    if (!acceptedLegal) {
+      setValidationError('Please agree to the Terms & Conditions and Privacy Policy to continue.');
+      return;
+    }
+
     const nameParts = fullName.trim().split(' ');
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
@@ -107,6 +113,10 @@ export default function RegisterScreen() {
       portfolio_name: portfolioName.trim(),
       phone_number: phone.trim(),
       meta_portfolio_eligible: true,
+      terms_accepted: true,
+      privacy_accepted: true,
+      terms_version: '1.0',
+      privacy_version: '1.0',
     });
 
     if (success) {
@@ -420,6 +430,51 @@ export default function RegisterScreen() {
                 leftIcon={<Lock size={18} color={colors.textMuted} />}
               />
 
+              {/* Mandatory Terms & Privacy Consent Checkbox */}
+              <View style={styles.consentRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.checkboxBox,
+                    {
+                      borderColor: acceptedLegal ? colors.primary : colors.border,
+                      backgroundColor: acceptedLegal ? colors.primary : colors.surface,
+                    },
+                  ]}
+                  onPress={() => {
+                    setAcceptedLegal(!acceptedLegal);
+                    if (validationError) setValidationError('');
+                  }}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  {acceptedLegal && <Check size={14} color="#FFFFFF" strokeWidth={3} />}
+                </TouchableOpacity>
+
+                <View style={styles.consentTextContainer}>
+                  <Text variant="caption" color={colors.textSecondary} style={{ lineHeight: 18 }}>
+                    I have read and agree to the{' '}
+                    <Text
+                      variant="caption"
+                      weight="bold"
+                      color={colors.primary}
+                      onPress={() => router.push('/(auth)/terms')}
+                    >
+                      Terms & Conditions
+                    </Text>
+                    {' '}and{' '}
+                    <Text
+                      variant="caption"
+                      weight="bold"
+                      color={colors.primary}
+                      onPress={() => router.push('/(auth)/privacy')}
+                    >
+                      Privacy Policy
+                    </Text>
+                    .
+                  </Text>
+                </View>
+              </View>
+
               {/* Submit Button */}
               <Button
                 title="Create Account"
@@ -586,6 +641,24 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   errorText: {
+    flex: 1,
+  },
+  consentRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginVertical: 12,
+    gap: 10,
+  },
+  checkboxBox: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  consentTextContainer: {
     flex: 1,
   },
   submitBtn: {

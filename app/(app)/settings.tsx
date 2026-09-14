@@ -9,7 +9,7 @@ import { useTheme } from '../../src/theme';
 import { useSessionStore } from '../../src/stores/sessionStore';
 import { apiClient } from '../../src/api/client';
 import { useRouter } from 'expo-router';
-import { Building2, User, Phone, MapPin, Shield, Save, CheckCircle2, Activity, RefreshCw, Server, Database, Laptop, ChevronRight, QrCode } from 'lucide-react-native';
+import { Building2, User, Phone, MapPin, Shield, Save, CheckCircle2, Activity, RefreshCw, Server, Database, Laptop, ChevronRight, QrCode, ShieldCheck, Trash2 } from 'lucide-react-native';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -262,6 +262,48 @@ export default function SettingsScreen() {
                 </Text>
               </View>
               <ChevronRight size={18} color={colors.textMuted} />
+            </TouchableOpacity>
+          </Card>
+
+          {/* Legal & Account Governance */}
+          <Text variant="label" style={styles.sectionLabel}>Legal & Compliance</Text>
+          <Card style={styles.card}>
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}
+              onPress={() => router.push('/(app)/legal' as any)}
+            >
+              <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: '#05966915', justifyContent: 'center', alignItems: 'center' }}>
+                <ShieldCheck size={22} color="#059669" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text variant="body" weight="bold" color={colors.textPrimary}>
+                  Legal Center
+                </Text>
+                <Text variant="caption" color={colors.textSecondary} style={{ marginTop: 2 }}>
+                  Terms & Conditions, Privacy Policy & Permissions
+                </Text>
+              </View>
+              <ChevronRight size={18} color={colors.textMuted} />
+            </TouchableOpacity>
+
+            <View style={{ height: 1, backgroundColor: colors.borderMuted }} />
+
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}
+              onPress={() => router.push('/(app)/legal/delete-account' as any)}
+            >
+              <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: colors.error + '15', justifyContent: 'center', alignItems: 'center' }}>
+                <Trash2 size={20} color={colors.error} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text variant="body" weight="bold" color={colors.error}>
+                  Delete Account
+                </Text>
+                <Text variant="caption" color={colors.textSecondary} style={{ marginTop: 2 }}>
+                  Permanently deactivate account and credentials
+                </Text>
+              </View>
+              <ChevronRight size={18} color={colors.error} />
             </TouchableOpacity>
           </Card>
 

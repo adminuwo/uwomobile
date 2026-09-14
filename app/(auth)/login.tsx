@@ -206,6 +206,31 @@ export default function LoginScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
+
+            {/* Legal Notice */}
+            <View style={styles.legalNoticeContainer}>
+              <Text variant="caption" color={colors.textMuted} align="center" style={{ lineHeight: 16 }}>
+                By signing in, you agree to our{' '}
+                <Text
+                  variant="caption"
+                  weight="bold"
+                  color={colors.primary}
+                  onPress={() => router.push('/(auth)/terms')}
+                >
+                  Terms & Conditions
+                </Text>
+                {' '}and{' '}
+                <Text
+                  variant="caption"
+                  weight="bold"
+                  color={colors.primary}
+                  onPress={() => router.push('/(auth)/privacy')}
+                >
+                  Privacy Policy
+                </Text>
+                .
+              </Text>
+            </View>
           </View>
 
           {/* Footer note */}
@@ -322,6 +347,10 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 0.8,
     fontWeight: '600',
+  },
+  legalNoticeContainer: {
+    marginTop: 18,
+    paddingHorizontal: 4,
   },
   footer: {
     marginTop: 32,

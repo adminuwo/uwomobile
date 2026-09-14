@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Linking, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -18,6 +18,8 @@ import { statsApi } from '../../src/api/stats';
 import { authApi } from '../../src/api/auth';
 import { newsApi } from '../../src/api/news';
 import { crmApi, ContactFollowUp } from '../../src/api/crm';
+import { legalApi } from '../../src/api/legal';
+import { LegalConsentModal } from '../../src/components/legal/LegalConsentModal';
 import { LeadStageBadge } from '../../src/components/crm/LeadStageBadge';
 import { 
   MessageSquare, 
@@ -92,11 +94,26 @@ export default function HomeScreen() {
     enabled: !!user,
   });
 
+  const { data: consentStatus, refetch: refetchConsent } = useQuery({
+    queryKey: ['legalConsentStatus', userKey],
+    queryFn: () => legalApi.getConsentStatus(),
+    enabled: !!user,
+  });
+
+  const [showConsentModal, setShowConsentModal] = useState(false);
+
+  useEffect(() => {
+    if (consentStatus?.requires_consent) {
+      setShowConsentModal(true);
+    }
+  }, [consentStatus]);
+
   const onRefresh = () => {
     refetchClientStats();
     refetchMonitoringStats();
     refetchNews();
     refetchFollowUps();
+    refetchConsent();
   };
 
   const userName = currentUser?.name || currentUser?.first_name || currentUser?.email?.split('@')[0] || 'User';
@@ -465,6 +482,14 @@ export default function HomeScreen() {
           </Text>
         </Card>
       </ScrollView>
+
+      <LegalConsentModal
+        visible={showConsentModal}
+        onConsentAccepted={() => {
+          setShowConsentModal(false);
+          refetchConsent();
+        }}
+      />
     </Screen>
   );
 }
