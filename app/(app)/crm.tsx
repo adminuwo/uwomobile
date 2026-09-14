@@ -69,7 +69,7 @@ export default function CRMScreen() {
 
   const handleSelectLead = (contact: Contact) => {
     router.push({
-      pathname: '/(app)/lead/[id]' as any,
+      pathname: '/lead/[id]' as any,
       params: { id: contact.id },
     });
   };
@@ -77,7 +77,7 @@ export default function CRMScreen() {
   const handleOpenChat = (contact: Contact) => {
     const rawAddress = contact.platform_id || contact.phone_number || contact.id;
     router.push({
-      pathname: '/(app)/conversation/[id]' as any,
+      pathname: '/conversation/[id]' as any,
       params: {
         id: contact.id,
         rawAddress: rawAddress,

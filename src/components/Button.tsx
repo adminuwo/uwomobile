@@ -1,5 +1,6 @@
 import React, { ReactNode } from 'react';
 import {
+  View,
   TouchableOpacity,
   TouchableOpacityProps,
   ActivityIndicator,
@@ -126,7 +127,7 @@ export const Button: React.FC<ButtonProps> = ({
         <ActivityIndicator color={getTextColor()} size="small" />
       ) : (
         <>
-          {iconToRender && <TouchableOpacity style={styles.iconLeft}>{iconToRender}</TouchableOpacity>}
+          {iconToRender && <View style={styles.iconLeft}>{iconToRender}</View>}
           <Text
             variant={size === 'sm' ? 'caption' : 'body'}
             weight="bold"
@@ -135,7 +136,7 @@ export const Button: React.FC<ButtonProps> = ({
           >
             {title}
           </Text>
-          {rightIcon && <TouchableOpacity style={styles.iconRight}>{rightIcon}</TouchableOpacity>}
+          {rightIcon && <View style={styles.iconRight}>{rightIcon}</View>}
         </>
       )}
     </TouchableOpacity>

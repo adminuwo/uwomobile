@@ -114,7 +114,7 @@ android {
         applicationId 'com.uwo.uwoconnect'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
+        versionCode 14
         versionName "1.0.0"
     }
     signingConfigs {

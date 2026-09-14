@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import { LoginCredentials, LoginResponse, UserProfile } from '../types/auth';
+import { LoginCredentials, LoginResponse, UserProfile, RegisterPayload } from '../types/auth';
 
 export interface QrSessionResponse {
   session_id: string;
@@ -16,6 +16,13 @@ export interface QrStatusResponse {
 }
 
 export const authApi = {
+  /**
+   * Consumes existing Django endpoint `/api/auth/register`
+   */
+  async register(data: RegisterPayload): Promise<LoginResponse> {
+    return apiClient.post<LoginResponse>('/api/auth/register', data);
+  },
+
   /**
    * Consumes existing Django endpoint `/api/auth/login`
    */
@@ -59,5 +66,26 @@ export const authApi = {
    */
   async consumeQrSession(sessionId: string): Promise<LoginResponse> {
     return apiClient.post<LoginResponse>('/api/auth/qr/consume', { session_id: sessionId });
+  },
+
+  /**
+   * Request a 6-digit OTP for password reset
+   */
+  async sendForgotPasswordOtp(email: string): Promise<{ message: string; otp_debug?: string }> {
+    return apiClient.post<{ message: string; otp_debug?: string }>('/api/auth/forgot-password/send-otp', { email });
+  },
+
+  /**
+   * Verify the 6-digit OTP
+   */
+  async verifyForgotPasswordOtp(email: string, otp: string): Promise<{ message: string }> {
+    return apiClient.post<{ message: string }>('/api/auth/forgot-password/verify-otp', { email, otp });
+  },
+
+  /**
+   * Reset password with new credentials after OTP verification
+   */
+  async resetForgotPassword(email: string, password: string): Promise<{ message: string }> {
+    return apiClient.post<{ message: string }>('/api/auth/forgot-password/reset', { email, password });
   },
 };

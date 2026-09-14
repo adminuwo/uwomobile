@@ -29,6 +29,10 @@ export interface ClientInfo {
   slack_enabled?: boolean;
   shopify_enabled?: boolean;
   stripe_enabled?: boolean;
+  global_connectors?: Record<string, boolean>;
+  effective_connectors?: Record<string, any>;
+  channel_access?: Record<string, boolean>;
+  meta_portfolio_name?: string;
 }
 
 export interface UserProfile {
@@ -51,6 +55,10 @@ export interface UserProfile {
   is_staff?: boolean;
   is_superuser?: boolean;
   created_at?: string;
+  global_connectors?: Record<string, boolean>;
+  effective_connectors?: Record<string, any>;
+  meta_portfolio_eligible?: boolean;
+  meta_portfolio_name?: string;
 }
 
 export interface AuthToken {
@@ -63,6 +71,18 @@ export interface AuthToken {
 export interface LoginCredentials {
   email: string;
   password: string;
+}
+
+export interface RegisterPayload {
+  email: string;
+  password: string;
+  first_name?: string;
+  last_name?: string;
+  business_name?: string;
+  phone_number?: string;
+  meta_portfolio_eligible: boolean;
+  meta_portfolio_name?: string;
+  portfolio_name?: string;
 }
 
 export interface LoginResponse {

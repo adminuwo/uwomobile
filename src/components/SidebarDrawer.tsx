@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   View,
+  Image,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
@@ -15,6 +16,7 @@ import { useTranslation } from '../i18n';
 import { useDrawerStore } from '../stores/drawerStore';
 import { useSessionStore } from '../stores/sessionStore';
 import { useTenantBranding } from '../hooks/useTenantBranding';
+import { useChannelAccess } from '../hooks/useChannelAccess';
 import { ClientLogoBadge } from './ClientLogoBadge';
 import {
   Home,
@@ -68,6 +70,7 @@ export const SidebarDrawer: React.FC = () => {
   const { isOpen, closeDrawer } = useDrawerStore();
   const { user, logout } = useSessionStore();
   const { clientName, logoUri, initial, isLoading } = useTenantBranding();
+  const { isChannelComingSoon } = useChannelAccess();
 
   const handleNavigation = (route: string) => {
     closeDrawer();
@@ -83,10 +86,34 @@ export const SidebarDrawer: React.FC = () => {
   const channelItems: MenuItem[] = [
     { id: 'home', label: t('drawer.homeDashboard'), icon: Home, route: '/(app)/home' },
     { id: 'inbox', label: t('drawer.inbox'), icon: MessageSquare, route: '/(app)/inbox' },
-    { id: 'gmail', label: t('drawer.gmail'), icon: Mail, route: '/(app)/gmail' },
-    { id: 'email', label: t('drawer.emailOutlook'), icon: Mail, route: '/(app)/email' },
-    { id: 'youtube', label: t('drawer.youtubeStudio'), icon: Youtube, route: '/(app)/youtube' },
-    { id: 'google-news', label: t('drawer.googleNewsHub'), icon: Newspaper, route: '/(app)/google-news', badge: 'LIVE' },
+    { 
+      id: 'gmail', 
+      label: t('drawer.gmail'), 
+      icon: Mail, 
+      route: '/(app)/gmail',
+      badge: isChannelComingSoon('gmail') ? 'SOON' : undefined
+    },
+    { 
+      id: 'email', 
+      label: t('drawer.emailOutlook'), 
+      icon: Mail, 
+      route: '/(app)/email',
+      badge: isChannelComingSoon('outlook') ? 'SOON' : undefined
+    },
+    { 
+      id: 'youtube', 
+      label: t('drawer.youtubeStudio'), 
+      icon: Youtube, 
+      route: '/(app)/youtube',
+      badge: isChannelComingSoon('youtube') ? 'SOON' : undefined
+    },
+    { 
+      id: 'google-news', 
+      label: t('drawer.googleNewsHub'), 
+      icon: Newspaper, 
+      route: '/(app)/google-news', 
+      badge: isChannelComingSoon('google_news') ? 'SOON' : 'LIVE' 
+    },
     { id: 'team', label: t('drawer.teamHub'), icon: UserCheck, route: '/(app)/team', badge: 'QR' },
     { id: 'team-chat', label: t('drawer.teamWorkspaceChat'), icon: MessageSquare, route: '/(app)/team-chat' },
     { id: 'calls', label: t('drawer.voiceVideoCalls'), icon: PhoneCall, route: '/(app)/calls' },
@@ -217,12 +244,13 @@ export const SidebarDrawer: React.FC = () => {
         >
           <View style={[styles.drawerHeader, { borderBottomColor: colors.border }]}>
             <View style={styles.brandRow}>
-              <ClientLogoBadge
-                logoUri={logoUri}
-                initial={initial}
-                isLoading={isLoading}
-                size={34}
-              />
+              <View style={[styles.uwoLogoBox, { backgroundColor: '#FFFFFF', borderColor: colors.border }]}>
+                <Image
+                  source={require('../../assets/icon.png')}
+                  style={styles.uwoLogoImage}
+                  resizeMode="contain"
+                />
+              </View>
               <View style={{ flex: 1 }}>
                 <Text
                   variant="h3"
@@ -231,10 +259,10 @@ export const SidebarDrawer: React.FC = () => {
                   numberOfLines={1}
                   ellipsizeMode="tail"
                 >
-                  {clientName}
+                  UWO Connect
                 </Text>
                 <Text variant="caption" color={colors.textMuted} style={{ fontSize: 10 }}>
-                  Workspace Navigation
+                  Multi-channel automation platform
                 </Text>
               </View>
             </View>
@@ -249,11 +277,12 @@ export const SidebarDrawer: React.FC = () => {
 
           <View style={[styles.profileCard, { backgroundColor: `${colors.primary}0D`, borderColor: `${colors.primary}25` }]}>
             <View style={styles.profileRow}>
-              <View style={[styles.avatarCircle, { backgroundColor: colors.primary }]}>
-                <Text variant="body" weight="bold" color="#FFFFFF" style={{ fontSize: 13 }}>
-                  {userInitials}
-                </Text>
-              </View>
+              <ClientLogoBadge
+                logoUri={logoUri}
+                initial={initial}
+                isLoading={isLoading}
+                size={38}
+              />
 
               <View style={{ flex: 1 }}>
                 <Text variant="body" weight="bold" color={colors.textPrimary} numberOfLines={1}>
@@ -344,6 +373,20 @@ const styles = StyleSheet.create({
     gap: 10,
     flex: 1,
     marginRight: 8,
+  },
+  uwoLogoBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    borderWidth: 1,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 3,
+  },
+  uwoLogoImage: {
+    width: '100%',
+    height: '100%',
   },
   closeBtn: {
     width: 30,

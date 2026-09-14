@@ -49,29 +49,31 @@ class ApiClient {
         const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
         console.log(`[ApiClient] Request failed: ${error.config?.baseURL || ''}${error.config?.url} | status: ${error.response?.status || 'NO_RESPONSE'}`);
 
-        // If network error occurred and not retried yet, try fallback candidates
-        if (!error.response && originalRequest && !originalRequest._retry) {
+        // If network error occurred and not retried yet, try fallback candidates in development mode only
+        if (env.IS_DEV && !error.response && originalRequest && !originalRequest._retry) {
           originalRequest._retry = true;
           const currentBase = this.instance.defaults.baseURL || '';
 
           const candidates = Platform.OS === 'android'
-            ? ['http://10.0.2.2:8000', 'http://10.0.2.2:8080', 'http://127.0.0.1:8000', 'http://192.168.29.183:8000']
-            : ['http://127.0.0.1:8000', 'http://127.0.0.1:8080', 'http://192.168.29.183:8000'];
+            ? ['http://10.0.2.2:8000', 'https://uwoconnectforrb-743928421487.asia-south1.run.app']
+            : ['http://127.0.0.1:8000', 'https://uwoconnectforrb-743928421487.asia-south1.run.app'];
 
           for (const fallbackUrl of candidates) {
             if (fallbackUrl !== currentBase) {
               console.log(`[ApiClient] Retrying request with candidate: ${fallbackUrl}${originalRequest.url}...`);
-              this.instance.defaults.baseURL = fallbackUrl;
               originalRequest.baseURL = fallbackUrl;
               try {
                 const res = await this.instance(originalRequest);
                 console.log(`[ApiClient] Retried successfully with: ${fallbackUrl}`);
+                this.instance.defaults.baseURL = fallbackUrl;
                 return res;
               } catch (retryErr: any) {
                 // Try next
               }
             }
           }
+          // Restore base URL if no candidates worked
+          this.instance.defaults.baseURL = currentBase;
         }
 
         const formattedError = this.handleApiError(error);

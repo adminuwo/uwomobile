@@ -12,6 +12,7 @@ import { useTheme } from '../../src/theme';
 import { authApi } from '../../src/api/auth';
 import { statsApi } from '../../src/api/stats';
 import { useSessionStore } from '../../src/stores/sessionStore';
+import { useChannelAccess } from '../../src/hooks/useChannelAccess';
 import { 
   Share2, 
   MessageSquare, 
@@ -40,7 +41,8 @@ import {
   X,
   Eye,
   EyeOff,
-  Check
+  Check,
+  Lock
 } from 'lucide-react-native';
 
 // ═════════════════════════════════════════════════════════════════════════════════
@@ -262,6 +264,7 @@ export default function ConnectorsScreen() {
   const router = useRouter();
   const { colors, spacing, radius } = useTheme();
   const user = useSessionStore((state) => state.user);
+  const { isChannelComingSoon } = useChannelAccess();
   const [activeFilter, setActiveFilter] = useState<FilterTab>('ALL');
 
   const [selectedItem, setSelectedItem] = useState<ChannelConnectorItem | null>(null);
@@ -574,6 +577,15 @@ export default function ConnectorsScreen() {
   const filteredItems = getFilteredItems();
 
   const handleItemPress = (item: ChannelConnectorItem) => {
+    if (isChannelComingSoon(item.id)) {
+      Alert.alert(
+        `${item.name} (Coming Soon)`,
+        `This integration is currently deactivated by the platform administrator for your workspace and will be available in an upcoming update.\n\nActive channels available today: WhatsApp Business API, Instagram Direct, and Facebook Messenger.`,
+        [{ text: 'Understood', style: 'default' }]
+      );
+      return;
+    }
+
     if (item.route) {
       router.push(item.route as any);
       return;
@@ -633,59 +645,69 @@ export default function ConnectorsScreen() {
     setIsModalOpen(true);
   };
 
-  const renderConnectorCard = (item: ChannelConnectorItem) => (
-    <TouchableOpacity
-      key={item.id}
-      activeOpacity={0.7}
-      onPress={() => handleItemPress(item)}
-    >
-      <Card style={styles.connectorCard}>
-        <View style={styles.connectorHeader}>
-          <View style={[
-            styles.iconContainer, 
-            item.isSvg ? { backgroundColor: 'transparent' } : { backgroundColor: item.color + '15' }
-          ]}>
-            {item.icon}
-          </View>
+  const renderConnectorCard = (item: ChannelConnectorItem) => {
+    const isComingSoon = isChannelComingSoon(item.id);
 
-          <View style={styles.connectorTitleBox}>
-            <View style={styles.nameBadgeRow}>
-              <Text variant="h3" weight="bold" color={colors.textPrimary} style={styles.connectorName}>
-                {item.name}
+    return (
+      <TouchableOpacity
+        key={item.id}
+        activeOpacity={0.7}
+        onPress={() => handleItemPress(item)}
+      >
+        <Card style={styles.connectorCard}>
+          <View style={styles.connectorHeader}>
+            <View style={[
+              styles.iconContainer, 
+              item.isSvg ? { backgroundColor: 'transparent' } : { backgroundColor: item.color + '15' }
+            ]}>
+              {item.icon}
+            </View>
+
+            <View style={styles.connectorTitleBox}>
+              <View style={styles.nameBadgeRow}>
+                <Text variant="h3" weight="bold" color={colors.textPrimary} style={styles.connectorName}>
+                  {item.name}
+                </Text>
+              </View>
+              <Text variant="caption" color={colors.textMuted}>
+                {item.category}
               </Text>
             </View>
-            <Text variant="caption" color={colors.textMuted}>
-              {item.category}
-            </Text>
+
+            <Badge 
+              label={isComingSoon ? 'COMING SOON' : item.isConnected ? 'ACTIVE' : 'READY'} 
+              variant={isComingSoon ? 'warning' : item.isConnected ? 'success' : 'info'} 
+            />
           </View>
 
-          <Badge 
-            label={item.isConnected ? 'ACTIVE' : 'READY'} 
-            variant={item.isConnected ? 'success' : 'warning'} 
-          />
-        </View>
-
-        <Text variant="caption" color={colors.textMuted} style={styles.connectorDesc}>
-          {item.description}
-        </Text>
-
-        <View style={[styles.connectorFooter, { borderTopColor: colors.border }]}>
-          <Text variant="caption" weight="medium" color={item.isConnected ? colors.primary : colors.textMuted}>
-            {item.details}
+          <Text variant="caption" color={colors.textMuted} style={styles.connectorDesc}>
+            {item.description}
           </Text>
-          <View style={styles.statusRow}>
-            {item.route ? (
-              <ChevronRight size={18} color={colors.primary} />
-            ) : item.isConnected ? (
-              <CheckCircle2 size={16} color={colors.success} />
-            ) : (
-              <Zap size={16} color={colors.textMuted} />
-            )}
+
+          <View style={[styles.connectorFooter, { borderTopColor: colors.border }]}>
+            <Text 
+              variant="caption" 
+              weight="medium" 
+              color={isComingSoon ? '#F59E0B' : item.isConnected ? colors.primary : colors.textMuted}
+            >
+              {isComingSoon ? 'Deactivated by Admin' : item.details}
+            </Text>
+            <View style={styles.statusRow}>
+              {isComingSoon ? (
+                <Lock size={16} color="#F59E0B" />
+              ) : item.route ? (
+                <ChevronRight size={18} color={colors.primary} />
+              ) : item.isConnected ? (
+                <CheckCircle2 size={16} color={colors.success} />
+              ) : (
+                <Zap size={16} color={colors.textMuted} />
+              )}
+            </View>
           </View>
-        </View>
-      </Card>
-    </TouchableOpacity>
-  );
+        </Card>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <Screen safeAreaEdges={['top', 'left', 'right']}>

@@ -120,18 +120,23 @@ export default function InboxScreen() {
   }, []);
 
   const handleSelectConversation = (conversation: Conversation) => {
+    console.log('[INBOX] Row selected:', conversation.id, conversation.name);
     const rawAddress = conversation.contactObj?.phone_number || conversation.contactObj?.platform_id || conversation.rawAddress || conversation.id;
-    router.push({
-      pathname: '/(app)/conversation/[id]' as any,
-      params: {
-        id: conversation.id,
-        rawAddress: rawAddress,
-        name: conversation.name,
-        channel: conversation.channel,
-        isLocked: conversation.isLocked ? 'true' : 'false',
-        assignedTo: conversation.assignedTo || '',
-      },
-    });
+    try {
+      router.push({
+        pathname: '/conversation/[id]' as any,
+        params: {
+          id: String(conversation.id),
+          rawAddress: rawAddress,
+          name: conversation.name,
+          channel: conversation.channel,
+          isLocked: conversation.isLocked ? 'true' : 'false',
+          assignedTo: conversation.assignedTo || '',
+        },
+      });
+    } catch (err) {
+      console.warn('[INBOX] Navigation error:', err);
+    }
   };
 
   return (

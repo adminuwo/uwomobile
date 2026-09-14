@@ -98,6 +98,7 @@ function RootLayoutNav() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
+      <Stack.Screen name="expo-auth-session" options={{ animation: 'none' }} />
       <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
       <Stack.Screen name="(app)" options={{ animation: 'fade' }} />
     </Stack>

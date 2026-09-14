@@ -1,8 +1,10 @@
 import { create } from 'zustand';
-import { UserProfile, LoginCredentials } from '../types/auth';
+import { UserProfile, LoginCredentials, RegisterPayload } from '../types/auth';
 import { authApi } from '../api/auth';
 import { secureStorage } from '../services/secureStore';
 import { APP_CONFIG } from '../config/app-config';
+import { queryClient } from '../config/queryClient';
+import { useBrandStore } from './brandStore';
 
 export type AuthStatus = 'initializing' | 'authenticated' | 'unauthenticated';
 
@@ -15,6 +17,7 @@ interface SessionState {
 
   // Actions
   initialize: () => Promise<void>;
+  register: (payload: RegisterPayload) => Promise<boolean>;
   login: (credentials: LoginCredentials) => Promise<boolean>;
   loginWithGoogle: (idToken: string, extra?: { name?: string; invite_token?: string }) => Promise<boolean>;
   logout: () => Promise<void>;
@@ -42,12 +45,16 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       // Try fetching profile with saved token
       try {
         const profile = await authApi.getProfile();
+        if (profile) {
+          await secureStorage.setItem(APP_CONFIG.userStorageKey, JSON.stringify(profile));
+        }
         set({
           status: 'authenticated',
           token: savedToken,
           user: profile,
           isLoading: false,
         });
+        useBrandStore.getState().fetchBrandConfig().catch(() => {});
       } catch (profileErr) {
         // Fallback: If offline or token error, attempt loading cached user
         const cachedUserStr = await secureStorage.getItem(APP_CONFIG.userStorageKey);
@@ -76,14 +83,16 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
   },
 
-  login: async (credentials: LoginCredentials) => {
+  register: async (payload: RegisterPayload) => {
     try {
       set({ isLoading: true, error: null });
-      const response = await authApi.login(credentials);
+      queryClient.clear();
+      const response = await authApi.register(payload);
 
       const token = response.token || response.access_token;
       if (!token) {
-        throw new Error(response.message || response.detail || 'Authentication failed. Token missing.');
+        set({ isLoading: false });
+        return true;
       }
 
       // Store token securely
@@ -95,6 +104,69 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         try {
           userProfile = await authApi.getProfile();
         } catch {
+          userProfile = {
+            email: payload.email,
+            first_name: payload.first_name,
+            company_name: payload.business_name,
+          };
+        }
+      }
+
+      if (userProfile) {
+        await secureStorage.setItem(APP_CONFIG.userStorageKey, JSON.stringify(userProfile));
+      }
+
+      set({
+        status: 'authenticated',
+        token,
+        user: userProfile,
+        isLoading: false,
+        error: null,
+      });
+
+      useBrandStore.getState().fetchBrandConfig().catch(() => {});
+      return true;
+    } catch (err: any) {
+      const errorMsg =
+        err.response?.data?.error ||
+        err.response?.data?.detail ||
+        err.response?.data?.email?.[0] ||
+        err.response?.data?.meta_portfolio_eligible?.[0] ||
+        err.message ||
+        'Registration failed. Please try again.';
+      set({
+        isLoading: false,
+        error: errorMsg,
+      });
+      return false;
+    }
+  },
+
+  login: async (credentials: LoginCredentials) => {
+    try {
+      set({ isLoading: true, error: null });
+      // Reset any previous user query cache
+      queryClient.clear();
+
+      const response = await authApi.login(credentials);
+
+      const token = response.token || response.access_token;
+      if (!token) {
+        throw new Error(response.message || response.detail || 'Authentication failed. Token missing.');
+      }
+
+      // Store token securely
+      await secureStorage.setAccessToken(token);
+
+      // Fetch fresh profile with newly saved token to ensure complete tenant details
+      let userProfile: UserProfile | null = response.user || null;
+      try {
+        const freshProfile = await authApi.getProfile();
+        if (freshProfile) {
+          userProfile = freshProfile;
+        }
+      } catch (profileErr) {
+        if (!userProfile) {
           userProfile = { email: credentials.email };
         }
       }
@@ -111,6 +183,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         error: null,
       });
 
+      useBrandStore.getState().fetchBrandConfig().catch(() => {});
       return true;
     } catch (err: any) {
       set({
@@ -124,6 +197,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   loginWithGoogle: async (idToken: string, extra?: { name?: string; invite_token?: string }) => {
     try {
       set({ isLoading: true, error: null });
+      queryClient.clear();
       const response = await authApi.loginWithGoogle(idToken, extra);
 
       const token = response.token || response.access_token;
@@ -134,12 +208,15 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       // Store token securely
       await secureStorage.setAccessToken(token);
 
-      // Store user if returned or fetch profile
-      let userProfile = response.user || null;
-      if (!userProfile) {
-        try {
-          userProfile = await authApi.getProfile();
-        } catch {
+      // Fetch fresh profile
+      let userProfile: UserProfile | null = response.user || null;
+      try {
+        const freshProfile = await authApi.getProfile();
+        if (freshProfile) {
+          userProfile = freshProfile;
+        }
+      } catch {
+        if (!userProfile) {
           userProfile = { email: extra?.name || 'google_user' };
         }
       }
@@ -156,6 +233,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         error: null,
       });
 
+      useBrandStore.getState().fetchBrandConfig().catch(() => {});
       return true;
     } catch (err: any) {
       set({
@@ -170,6 +248,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     set({ isLoading: true });
     await secureStorage.removeAccessToken();
     await secureStorage.deleteItem(APP_CONFIG.userStorageKey);
+    queryClient.clear();
     set({
       status: 'unauthenticated',
       token: null,

@@ -123,7 +123,7 @@ export default function LeadDetailScreen() {
     if (!contact) return;
     const rawAddress = contact.platform_id || contact.phone_number || contact.id;
     router.push({
-      pathname: '/(app)/conversation/[id]' as any,
+      pathname: '/conversation/[id]' as any,
       params: {
         id: contact.id,
         rawAddress: rawAddress,

@@ -90,14 +90,14 @@ export default function MoreScreen() {
             icon={<Palette size={20} color={colors.primary} />}
             title={t('account.appearance')}
             subtitle={getThemeSubtitle()}
-            onPress={() => router.push('/(app)/appearance')}
+            onPress={() => router.push('/appearance' as any)}
           />
           <View style={[styles.divider, { backgroundColor: colors.divider }]} />
           <MenuItem
             icon={<Globe size={20} color={colors.primary} />}
             title={t('account.language')}
             subtitle={`${currentLanguageInfo.name} (${currentLanguageInfo.nativeName})`}
-            onPress={() => router.push('/(app)/language')}
+            onPress={() => router.push('/language' as any)}
           />
           <View style={[styles.divider, { backgroundColor: colors.divider }]} />
           <MenuItem

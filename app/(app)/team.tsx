@@ -23,6 +23,7 @@ import { Avatar } from '../../src/components/Avatar';
 import { useTheme } from '../../src/theme';
 import { useSessionStore } from '../../src/stores/sessionStore';
 import { statsApi } from '../../src/api/stats';
+import { teamApi } from '../../src/api/team';
 import { authApi, QrSessionResponse } from '../../src/api/auth';
 import {
   Users,
@@ -378,20 +379,10 @@ export default function TeamScreen() {
     const codeToJoin = codeOverride || joinCodeInput.trim() || qrInviteCode;
     if (!codeToJoin) return;
 
-    const newMember: TeamMember = {
-      id: `m-${Date.now()}`,
-      name: user?.name || user?.first_name || 'Joined Member',
-      email: user?.email || 'new.member@uwoconnect.com',
-      role: 'AGENT',
-      department: 'Sales & Marketing',
-      status: 'ACTIVE',
-      tasksCompleted: 0,
-      avgResponseTime: 'New',
-    };
-    setTeamMembers((prev) => [newMember, ...prev]);
     setShowJoinModal(false);
     setShowQrModal(false);
     setJoinSuccessToast(true);
+    refetchMembers();
     setTimeout(() => setJoinSuccessToast(false), 3500);
   };
 
@@ -404,135 +395,135 @@ export default function TeamScreen() {
 
   // Task Form State
   const [taskTitle, setTaskTitle] = useState('');
-  const [taskAssignee, setTaskAssignee] = useState('Aditya Sharma');
+  const [taskAssignee, setTaskAssignee] = useState('');
   const [taskPriority, setTaskPriority] = useState<'HIGH' | 'MEDIUM' | 'LOW'>('MEDIUM');
   const [taskCategory, setTaskCategory] = useState('Lead Follow-up');
+
+  // Project Form State
+  const [projectName, setProjectName] = useState('');
+  const [projectDept, setProjectDept] = useState('');
 
   // Copy Link State
   const [copiedLink, setCopiedLink] = useState(false);
 
-  // Team Members Data
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([
-    {
-      id: 'm1',
-      name: 'Aditya Sharma',
-      email: 'aditya@uwoconnect.com',
-      role: 'ADMIN',
-      department: 'Management',
-      status: 'ACTIVE',
-      tasksCompleted: 24,
-      avgResponseTime: '< 15s',
-      phone: '+91 98765 43210',
-    },
-    {
-      id: 'm2',
-      name: 'Priya Patel',
-      email: 'priya.patel@uwoconnect.com',
-      role: 'SUPERVISOR',
-      department: 'Customer Support',
-      status: 'ACTIVE',
-      tasksCompleted: 19,
-      avgResponseTime: '< 30s',
-      phone: '+91 98765 12345',
-    },
-    {
-      id: 'm3',
-      name: 'Rahul Verma',
-      email: 'rahul.verma@uwoconnect.com',
-      role: 'AGENT',
-      department: 'Sales & Marketing',
-      status: 'ACTIVE',
-      tasksCompleted: 14,
-      avgResponseTime: '45s',
-      phone: '+91 98123 45678',
-    },
-    {
-      id: 'm4',
-      name: 'Ananya Gupta',
-      email: 'ananya.g@uwoconnect.com',
-      role: 'AGENT',
-      department: 'Engineering',
-      status: 'AWAY',
-      tasksCompleted: 11,
-      avgResponseTime: '1m 20s',
-      phone: '+91 97111 22334',
-    },
-  ]);
+  // ── Fetch Real Data from MongoDB via Backend Endpoints ──
+  const {
+    data: apiMembers,
+    isLoading: membersLoading,
+    refetch: refetchMembers,
+  } = useQuery({
+    queryKey: ['teamMembers'],
+    queryFn: () => teamApi.getMembers(),
+  });
 
-  // Projects Data
-  const [projectsList, setProjectsList] = useState<WorkspaceProject[]>([
-    {
-      id: 'p1',
-      name: 'ABC Hospital WhatsApp Router',
-      department: 'Healthcare Sales',
-      status: 'ACTIVE',
-      progress: 85,
-      leadCount: 4820,
-      membersCount: 3,
-    },
-    {
-      id: 'p2',
-      name: 'Instagram Lead Auto-Responder',
-      department: 'Marketing',
-      status: 'IN_PROGRESS',
-      progress: 60,
-      leadCount: 1250,
-      membersCount: 2,
-    },
-    {
-      id: 'p3',
-      name: 'CRM Webhook Integration Hub',
-      department: 'Engineering',
-      status: 'COMPLETED',
-      progress: 100,
-      leadCount: 8900,
-      membersCount: 4,
-    },
-  ]);
+  const {
+    data: apiProjects,
+    isLoading: projectsLoading,
+    refetch: refetchProjects,
+  } = useQuery({
+    queryKey: ['teamProjects'],
+    queryFn: () => teamApi.getProjects(),
+  });
 
-  // Tasks Data
-  const [tasksList, setTasksList] = useState<WorkspaceTask[]>([
-    {
-      id: 't1',
-      title: 'Verify WhatsApp Business API Webhook Secret',
-      assigneeName: 'Aditya Sharma',
-      priority: 'HIGH',
-      dueDate: 'Today, 5:00 PM',
-      status: 'IN_PROGRESS',
-      category: 'Security & Auth',
-    },
-    {
-      id: 't2',
-      title: 'Review Hospital Appointment Lead Escalation Flow',
-      assigneeName: 'Priya Patel',
-      priority: 'HIGH',
-      dueDate: 'Tomorrow',
-      status: 'TO_DO',
-      category: 'Customer Support',
-    },
-    {
-      id: 't3',
-      title: 'Update Product Catalog Prices for Q3 Campaign',
-      assigneeName: 'Rahul Verma',
-      priority: 'MEDIUM',
-      dueDate: 'Sep 06',
-      status: 'COMPLETED',
-      category: 'Sales',
-    },
-  ]);
+  const {
+    data: apiTasks,
+    isLoading: tasksLoading,
+    refetch: refetchTasks,
+  } = useQuery({
+    queryKey: ['teamTasks'],
+    queryFn: () => teamApi.getTasks(),
+  });
 
-  const { data: statsData, isLoading: statsLoading, refetch } = useQuery({
+  const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useQuery({
     queryKey: ['clientStatsTeam'],
     queryFn: () => statsApi.getClientStats(),
   });
 
-  const departmentsList = [
-    'ALL',
-    'Sales & Marketing',
-    'Customer Support',
-    'Engineering',
-    'Management',
-  ];
+  // Map real MongoDB members
+  const teamMembers: TeamMember[] = React.useMemo(() => {
+    if (!apiMembers || !Array.isArray(apiMembers) || apiMembers.length === 0) {
+      if (user?.email) {
+        const u = user as any;
+        const userDisplayName = (u?.first_name ? `${u?.first_name} ${u?.last_name || ''}` : (u?.name || u?.email?.split('@')[0] || 'Team Admin')).trim();
+        return [{
+          id: String(user?.id || 'me'),
+          name: userDisplayName,
+          email: user?.email || '',
+          role: (user?.role === 'ADMIN' || user?.role === 'CLIENT' ? 'ADMIN' : 'AGENT') as any,
+          department: u?.department || 'Management',
+          status: 'ACTIVE' as const,
+          tasksCompleted: 0,
+          avgResponseTime: '< 1m',
+        }];
+      }
+      return [];
+    }
+
+    return apiMembers.map((m: any, idx: number) => {
+      const fullName = (m.first_name ? `${m.first_name} ${m.last_name || ''}` : (m.name || m.username?.split('@')[0] || m.email?.split('@')[0] || 'Team Member')).trim();
+      let roleVal: 'ADMIN' | 'SUPERVISOR' | 'AGENT' = 'AGENT';
+      const r = String(m.role || m.enterprise_role || '').toUpperCase();
+      if (r.includes('ADMIN') || r.includes('CLIENT')) roleVal = 'ADMIN';
+      else if (r.includes('SUPERVISOR') || r.includes('MANAGER')) roleVal = 'SUPERVISOR';
+
+      return {
+        id: String(m.id || `m-${idx}`),
+        name: fullName || 'Team Member',
+        email: m.email || m.username || '',
+        role: roleVal,
+        department: m.department || 'General',
+        avatar: m.avatar || undefined,
+        status: (m.is_online ? 'ACTIVE' : (m.availability_status === 'AWAY' ? 'AWAY' : 'OFFLINE')) as any,
+        tasksCompleted: m.tasks_completed || 0,
+        avgResponseTime: m.avg_response_time || '< 1m',
+        phone: m.phone_number || m.phone || undefined,
+      };
+    });
+  }, [apiMembers, user]);
+
+  // Map real MongoDB projects
+  const projectsList: WorkspaceProject[] = React.useMemo(() => {
+    if (!apiProjects || !Array.isArray(apiProjects)) return [];
+    return apiProjects.map((p: any, idx: number) => ({
+      id: String(p.id || `p-${idx}`),
+      name: p.name || 'Project',
+      department: p.department || 'General',
+      status: (p.status === 'COMPLETED' ? 'COMPLETED' : (p.status === 'IN_PROGRESS' ? 'IN_PROGRESS' : 'ACTIVE')) as any,
+      progress: p.progress_percentage || 0,
+      leadCount: p.task_count || 0,
+      membersCount: Array.isArray(p.members) ? p.members.length : 0,
+    }));
+  }, [apiProjects]);
+
+  // Map real MongoDB tasks
+  const tasksList: WorkspaceTask[] = React.useMemo(() => {
+    if (!apiTasks || !Array.isArray(apiTasks)) return [];
+    return apiTasks.map((t: any, idx: number) => ({
+      id: String(t.id || `t-${idx}`),
+      title: t.title || 'Task',
+      assigneeName: t.created_by_name || t.assigned_to_name || t.department || 'Team Member',
+      priority: (t.priority === 'HIGH' || t.priority === 'URGENT' ? 'HIGH' : (t.priority === 'LOW' ? 'LOW' : 'MEDIUM')) as any,
+      dueDate: t.due_date || 'Due Soon',
+      status: (t.status === 'COMPLETED' ? 'COMPLETED' : (t.status === 'IN_PROGRESS' ? 'IN_PROGRESS' : 'TO_DO')) as any,
+      category: t.department || 'General',
+    }));
+  }, [apiTasks]);
+
+  // Dynamically extract active departments from MongoDB members
+  const departmentsList = React.useMemo(() => {
+    const set = new Set<string>(['ALL']);
+    teamMembers.forEach((m) => {
+      if (m.department && m.department.trim()) set.add(m.department.trim());
+    });
+    if (set.size === 1) {
+      set.add('Management');
+      set.add('Engineering');
+      set.add('Sales & Marketing');
+      set.add('Customer Support');
+      set.add('General');
+    }
+    return Array.from(set);
+  }, [teamMembers]);
 
   const filteredMembers = teamMembers.filter((m) => {
     const matchesSearch =
@@ -545,20 +536,19 @@ export default function TeamScreen() {
     return true;
   });
 
-  const handleSendInvite = () => {
+  const handleSendInvite = async () => {
     if (!inviteEmail.trim()) return;
-    const newMember: TeamMember = {
-      id: `m-${Date.now()}`,
-      name: inviteName.trim() || inviteEmail.split('@')[0],
-      email: inviteEmail.trim(),
-      role: inviteRole,
-      department: inviteDept,
-      status: 'ACTIVE',
-      tasksCompleted: 0,
-      avgResponseTime: 'New',
-    };
-
-    setTeamMembers((prev) => [newMember, ...prev]);
+    try {
+      await teamApi.createMember({
+        email: inviteEmail.trim(),
+        name: inviteName.trim() || inviteEmail.split('@')[0],
+        role: inviteRole,
+        department: inviteDept,
+      });
+    } catch (e) {
+      console.warn('[Team] Invite/create member error:', e);
+    }
+    refetchMembers();
     setShowInviteModal(false);
     setInviteName('');
     setInviteEmail('');
@@ -566,34 +556,55 @@ export default function TeamScreen() {
     setTimeout(() => setInviteSuccessToast(false), 3000);
   };
 
-  const handleCreateTask = () => {
+  const handleCreateTask = async () => {
     if (!taskTitle.trim()) return;
-    const newTask: WorkspaceTask = {
-      id: `t-${Date.now()}`,
-      title: taskTitle.trim(),
-      assigneeName: taskAssignee,
-      priority: taskPriority,
-      dueDate: 'Due Soon',
-      status: 'TO_DO',
-      category: taskCategory,
-    };
-
-    setTasksList((prev) => [newTask, ...prev]);
+    try {
+      await teamApi.createTask({
+        title: taskTitle.trim(),
+        priority: taskPriority,
+        department: taskCategory,
+      });
+    } catch (e) {
+      console.warn('[Team] Create task error:', e);
+    }
+    refetchTasks();
     setShowCreateTaskModal(false);
     setTaskTitle('');
   };
 
-  const toggleTaskStatus = (taskId: string) => {
-    setTasksList((prev) =>
-      prev.map((t) => {
-        if (t.id === taskId) {
-          const nextStatus: WorkspaceTask['status'] =
-            t.status === 'COMPLETED' ? 'TO_DO' : 'COMPLETED';
-          return { ...t, status: nextStatus };
-        }
-        return t;
-      })
-    );
+  const toggleTaskStatus = async (taskId: string) => {
+    const currentTask = tasksList.find((t) => t.id === taskId);
+    const nextStatus = currentTask?.status === 'COMPLETED' ? 'NOT_STARTED' : 'COMPLETED';
+    try {
+      await teamApi.updateTaskStatus(taskId, nextStatus);
+    } catch (e) {
+      console.warn('[Team] Toggle task status error:', e);
+    }
+    refetchTasks();
+  };
+
+  const handleCreateProject = async () => {
+    if (!projectName.trim()) return;
+    try {
+      await teamApi.createProject({
+        name: projectName.trim(),
+        department: projectDept.trim() || 'General',
+      });
+    } catch (e) {
+      console.warn('[Team] Create project error:', e);
+    }
+    refetchProjects();
+    setShowCreateProjectModal(false);
+    setProjectName('');
+    setProjectDept('');
+  };
+
+  const isRefreshing = statsLoading || membersLoading || projectsLoading || tasksLoading;
+  const handleRefreshAll = () => {
+    refetchStats();
+    refetchMembers();
+    refetchProjects();
+    refetchTasks();
   };
 
   const handleCopyInviteLink = async () => {
@@ -633,7 +644,7 @@ export default function TeamScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={statsLoading} onRefresh={refetch} />}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefreshAll} />}
       >
         {/* Web Parity Hero Banner Card */}
         <Card variant="default" style={styles.heroCard}>
@@ -1022,52 +1033,75 @@ export default function TeamScreen() {
               </TouchableOpacity>
             </View>
 
-            {projectsList.map((proj) => (
-              <Card key={proj.id} variant="default" style={styles.projectCard}>
-                <View style={styles.projHeaderRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text variant="h3" weight="bold" color={colors.textPrimary}>
-                      {proj.name}
-                    </Text>
-                    <Text variant="caption" color={colors.textMuted} style={{ marginTop: 2 }}>
-                      Department: {proj.department}
-                    </Text>
-                  </View>
-                  <Badge label={proj.status} variant={proj.status === 'COMPLETED' ? 'success' : 'info'} />
-                </View>
-
-                {/* Progress Bar */}
-                <View style={styles.progressTrackContainer}>
-                  <View style={styles.progressLabelRow}>
-                    <Text variant="caption" color={colors.textMuted} style={{ fontSize: 10 }}>
-                      Completion Progress
-                    </Text>
-                    <Text variant="caption" weight="bold" color={colors.primary} style={{ fontSize: 10 }}>
-                      {proj.progress}%
-                    </Text>
-                  </View>
-                  <View style={[styles.progressTrack, { backgroundColor: colors.background }]}>
-                    <View style={[styles.progressFill, { width: `${proj.progress}%`, backgroundColor: colors.primary }]} />
-                  </View>
-                </View>
-
-                <View style={styles.projFooterRow}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <Zap size={13} color={colors.warning} />
-                    <Text variant="caption" weight="bold" color={colors.textPrimary}>
-                      {proj.leadCount.toLocaleString()} Leads Routed
-                    </Text>
+            {projectsList.length > 0 ? (
+              projectsList.map((proj) => (
+                <Card key={proj.id} variant="default" style={styles.projectCard}>
+                  <View style={styles.projHeaderRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text variant="h3" weight="bold" color={colors.textPrimary}>
+                        {proj.name}
+                      </Text>
+                      <Text variant="caption" color={colors.textMuted} style={{ marginTop: 2 }}>
+                        Department: {proj.department}
+                      </Text>
+                    </View>
+                    <Badge label={proj.status} variant={proj.status === 'COMPLETED' ? 'success' : 'info'} />
                   </View>
 
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <Users size={13} color={colors.textMuted} />
-                    <Text variant="caption" color={colors.textMuted}>
-                      {proj.membersCount} Members Assigned
-                    </Text>
+                  {/* Progress Bar */}
+                  <View style={styles.progressTrackContainer}>
+                    <View style={styles.progressLabelRow}>
+                      <Text variant="caption" color={colors.textMuted} style={{ fontSize: 10 }}>
+                        Completion Progress
+                      </Text>
+                      <Text variant="caption" weight="bold" color={colors.primary} style={{ fontSize: 10 }}>
+                        {proj.progress}%
+                      </Text>
+                    </View>
+                    <View style={[styles.progressTrack, { backgroundColor: colors.background }]}>
+                      <View style={[styles.progressFill, { width: `${proj.progress}%`, backgroundColor: colors.primary }]} />
+                    </View>
                   </View>
+
+                  <View style={styles.projFooterRow}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Zap size={13} color={colors.warning} />
+                      <Text variant="caption" weight="bold" color={colors.textPrimary}>
+                        {proj.leadCount.toLocaleString()} Leads Routed
+                      </Text>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Users size={13} color={colors.textMuted} />
+                      <Text variant="caption" color={colors.textMuted}>
+                        {proj.membersCount} Members Assigned
+                      </Text>
+                    </View>
+                  </View>
+                </Card>
+              ))
+            ) : (
+              <Card variant="outlined" style={styles.emptyCard}>
+                <View style={styles.emptyIconBox}>
+                  <Briefcase size={32} color={colors.textMuted} />
                 </View>
+                <Text variant="h3" weight="bold" color={colors.textPrimary} style={{ marginTop: 10 }}>
+                  No active projects
+                </Text>
+                <Text variant="caption" color={colors.textMuted} style={{ textAlign: 'center', marginTop: 4, marginBottom: 16 }}>
+                  Create projects to organize team tasks, track completion, and manage team deadlines.
+                </Text>
+                <TouchableOpacity
+                  style={[styles.actionPillBtn, { backgroundColor: colors.primary, borderColor: colors.primary }]}
+                  onPress={() => setShowCreateProjectModal(true)}
+                >
+                  <Plus size={16} color="#FFF" />
+                  <Text variant="caption" weight="bold" color="#FFF">
+                    Create New Project
+                  </Text>
+                </TouchableOpacity>
               </Card>
-            ))}
+            )}
           </View>
         )}
 
@@ -1089,64 +1123,87 @@ export default function TeamScreen() {
               </TouchableOpacity>
             </View>
 
-            {tasksList.map((task) => {
-              const isDone = task.status === 'COMPLETED';
-              return (
-                <Card key={task.id} variant="default" style={styles.taskCard}>
-                  <View style={styles.taskHeaderRow}>
-                    <TouchableOpacity
-                      style={[
-                        styles.taskCheckBox,
-                        {
-                          backgroundColor: isDone ? '#059669' : 'transparent',
-                          borderColor: isDone ? '#059669' : colors.border,
-                        },
-                      ]}
-                      onPress={() => toggleTaskStatus(task.id)}
-                    >
-                      {isDone && <Check size={12} color="#FFF" strokeWidth={3} />}
-                    </TouchableOpacity>
-
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        variant="body"
-                        weight="bold"
-                        color={isDone ? colors.textMuted : colors.textPrimary}
-                        style={{ textDecorationLine: isDone ? 'line-through' : 'none' }}
+            {tasksList.length > 0 ? (
+              tasksList.map((task) => {
+                const isDone = task.status === 'COMPLETED';
+                return (
+                  <Card key={task.id} variant="default" style={styles.taskCard}>
+                    <View style={styles.taskHeaderRow}>
+                      <TouchableOpacity
+                        style={[
+                          styles.taskCheckBox,
+                          {
+                            backgroundColor: isDone ? '#059669' : 'transparent',
+                            borderColor: isDone ? '#059669' : colors.border,
+                          },
+                        ]}
+                        onPress={() => toggleTaskStatus(task.id)}
                       >
-                        {task.title}
-                      </Text>
-                      <Text variant="caption" color={colors.textMuted} style={{ marginTop: 2 }}>
-                        Assignee: <Text weight="bold" color={colors.textPrimary}>{task.assigneeName}</Text> • {task.category}
-                      </Text>
+                        {isDone && <Check size={12} color="#FFF" strokeWidth={3} />}
+                      </TouchableOpacity>
+
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          variant="body"
+                          weight="bold"
+                          color={isDone ? colors.textMuted : colors.textPrimary}
+                          style={{ textDecorationLine: isDone ? 'line-through' : 'none' }}
+                        >
+                          {task.title}
+                        </Text>
+                        <Text variant="caption" color={colors.textMuted} style={{ marginTop: 2 }}>
+                          Assignee: <Text weight="bold" color={colors.textPrimary}>{task.assigneeName}</Text> • {task.category}
+                        </Text>
+                      </View>
+
+                      <Badge
+                        label={task.priority}
+                        variant={task.priority === 'HIGH' ? 'error' : (task.priority === 'MEDIUM' ? 'warning' : 'neutral')}
+                      />
                     </View>
 
-                    <Badge
-                      label={task.priority}
-                      variant={task.priority === 'HIGH' ? 'error' : (task.priority === 'MEDIUM' ? 'warning' : 'neutral')}
-                    />
-                  </View>
+                    <View style={styles.taskFooterRow}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Clock size={12} color={colors.textMuted} />
+                        <Text variant="caption" color={colors.textMuted} style={{ fontSize: 10 }}>
+                          Due: {task.dueDate}
+                        </Text>
+                      </View>
 
-                  <View style={styles.taskFooterRow}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <Clock size={12} color={colors.textMuted} />
-                      <Text variant="caption" color={colors.textMuted} style={{ fontSize: 10 }}>
-                        Due: {task.dueDate}
-                      </Text>
+                      <TouchableOpacity
+                        style={[styles.taskStatusPill, { backgroundColor: isDone ? '#ECFDF5' : '#FEF3C7' }]}
+                        onPress={() => toggleTaskStatus(task.id)}
+                      >
+                        <Text variant="caption" weight="bold" color={isDone ? '#059669' : '#D97706'} style={{ fontSize: 9 }}>
+                          {task.status.replace('_', ' ')}
+                        </Text>
+                      </TouchableOpacity>
                     </View>
-
-                    <TouchableOpacity
-                      style={[styles.taskStatusPill, { backgroundColor: isDone ? '#ECFDF5' : '#FEF3C7' }]}
-                      onPress={() => toggleTaskStatus(task.id)}
-                    >
-                      <Text variant="caption" weight="bold" color={isDone ? '#059669' : '#D97706'} style={{ fontSize: 9 }}>
-                        {task.status.replace('_', ' ')}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </Card>
-              );
-            })}
+                  </Card>
+                );
+              })
+            ) : (
+              <Card variant="outlined" style={styles.emptyCard}>
+                <View style={styles.emptyIconBox}>
+                  <CheckSquare size={32} color={colors.textMuted} />
+                </View>
+                <Text variant="h3" weight="bold" color={colors.textPrimary} style={{ marginTop: 10 }}>
+                  No tasks assigned yet
+                </Text>
+                <Text variant="caption" color={colors.textMuted} style={{ textAlign: 'center', marginTop: 4, marginBottom: 16 }}>
+                  Add workspace tasks to delegate responsibilities, set priorities, and track progress.
+                </Text>
+                <TouchableOpacity
+                  style={[styles.actionPillBtn, { backgroundColor: colors.primary, borderColor: colors.primary }]}
+                  onPress={() => setShowCreateTaskModal(true)}
+                >
+                  <Plus size={16} color="#FFF" />
+                  <Text variant="caption" weight="bold" color="#FFF">
+                    Add First Task
+                  </Text>
+                </TouchableOpacity>
+              </Card>
+            )}
           </View>
         )}
       </ScrollView>
@@ -1693,11 +1750,13 @@ export default function TeamScreen() {
 
               <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
                 <View style={styles.formGroup}>
-                  <Text style={styles.fieldLabel}>Project Name</Text>
+                  <Text style={styles.fieldLabel}>Project Name <Text style={{ color: '#EF4444' }}>*</Text></Text>
                   <TextInput
                     style={styles.modernTextInput}
                     placeholder="e.g. Q4 WhatsApp Marketing Campaign"
                     placeholderTextColor="#94A3B8"
+                    value={projectName}
+                    onChangeText={setProjectName}
                   />
                 </View>
 
@@ -1707,26 +1766,14 @@ export default function TeamScreen() {
                     style={styles.modernTextInput}
                     placeholder="Sales & Marketing"
                     placeholderTextColor="#94A3B8"
+                    value={projectDept}
+                    onChangeText={setProjectDept}
                   />
                 </View>
 
                 <TouchableOpacity
-                  style={[styles.primaryModalBtn, { backgroundColor: '#4F46E5' }]}
-                  onPress={() => {
-                    setShowCreateProjectModal(false);
-                    setProjectsList((prev) => [
-                      {
-                        id: `p-${Date.now()}`,
-                        name: 'New Automation Project',
-                        department: 'General',
-                        status: 'ACTIVE',
-                        progress: 10,
-                        leadCount: 0,
-                        membersCount: 1,
-                      },
-                      ...prev,
-                    ]);
-                  }}
+                  style={[styles.primaryModalBtn, { backgroundColor: colors.primary }]}
+                  onPress={handleCreateProject}
                   activeOpacity={0.85}
                 >
                   <FolderPlus size={18} color="#FFFFFF" />

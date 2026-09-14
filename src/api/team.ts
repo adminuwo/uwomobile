@@ -35,8 +35,38 @@ export const teamApi = {
   async getMembers(): Promise<TeamMember[]> {
     const res = await apiClient.get<any>('/api/team/members/');
     if (Array.isArray(res)) return res;
-    if (res?.results) return res.results;
+    if (res?.results && Array.isArray(res.results)) return res.results;
     return [];
+  },
+
+  async getProjects(): Promise<any[]> {
+    const res = await apiClient.get<any>('/api/team/projects/');
+    if (Array.isArray(res)) return res;
+    if (res?.results && Array.isArray(res.results)) return res.results;
+    return [];
+  },
+
+  async getTasks(): Promise<any[]> {
+    const res = await apiClient.get<any>('/api/team/tasks/');
+    if (Array.isArray(res)) return res;
+    if (res?.results && Array.isArray(res.results)) return res.results;
+    return [];
+  },
+
+  async createMember(data: { email: string; name?: string; role?: string; department?: string; password?: string }): Promise<any> {
+    return apiClient.post('/api/team/members/', data);
+  },
+
+  async createTask(data: { title: string; priority?: string; status?: string; department?: string }): Promise<any> {
+    return apiClient.post('/api/team/tasks/', data);
+  },
+
+  async updateTaskStatus(taskId: string, status: string): Promise<any> {
+    return apiClient.patch(`/api/team/tasks/${taskId}/`, { status });
+  },
+
+  async createProject(data: { name: string; department?: string; description?: string }): Promise<any> {
+    return apiClient.post('/api/team/projects/', data);
   },
 
   async getChatMessages(): Promise<TeamChatMessage[]> {

@@ -29,6 +29,8 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.uwo.uwoconnect",
+      "versionCode": 14,
+      "usesCleartextTraffic": true,
       "intentFilters": [
         {
           "action": "VIEW",

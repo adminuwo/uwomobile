@@ -17,7 +17,17 @@ const DEFAULT_PRODUCTION_URL = 'https://uwoconnectforrb-743928421487.asia-south1
 
 const getDynamicApiUrl = (): string => {
   if (process.env.EXPO_PUBLIC_API_URL) {
+    if (Platform.OS === 'android' && !Constants.isDevice) {
+      const url = process.env.EXPO_PUBLIC_API_URL;
+      if (url.includes('192.168.') || url.includes('localhost') || url.includes('127.0.0.1')) {
+        return url.replace(/https?:\/\/[^:/]+/, 'http://10.0.2.2');
+      }
+    }
     return process.env.EXPO_PUBLIC_API_URL;
+  }
+
+  if (Platform.OS === 'android') {
+    return 'http://10.0.2.2:8000';
   }
 
   const hostUri = 
@@ -41,11 +51,7 @@ const getDynamicApiUrl = (): string => {
     } catch {}
   }
 
-  if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:8000';
-  }
-
-  return 'http://192.168.29.183:8000';
+  return 'http://10.0.2.2:8000';
 };
 
 
@@ -62,7 +68,7 @@ const getEnv = (): EnvConfig => {
   // In development, automatically connect to the local Django server on port 8080
   let apiBaseUrl = isDev
     ? getDynamicApiUrl()
-    : (process.env.EXPO_PUBLIC_API_URL || DEFAULT_PRODUCTION_URL);
+    : (process.env.EXPO_PUBLIC_API_URL || process.env.API_BASE_URL || extra.API_BASE_URL || DEFAULT_PRODUCTION_URL);
 
   return {
     APP_ENV: appEnv,

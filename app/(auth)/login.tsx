@@ -167,6 +167,19 @@ export default function LoginScreen() {
               leftIcon={<Lock size={18} color={colors.textMuted} />}
             />
 
+            {/* Forgot Password link */}
+            <View style={styles.forgotPasswordRow}>
+              <TouchableOpacity
+                onPress={() => router.push('/(auth)/forgot-password')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                activeOpacity={0.7}
+              >
+                <Text variant="caption" weight="semibold" color={colors.primary}>
+                  Forgot Password?
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             <Button
               title="Sign In"
               onPress={handleLogin}
@@ -177,6 +190,22 @@ export default function LoginScreen() {
               rightIcon={<ArrowRight size={18} color={colors.textInverse} />}
               style={styles.submitBtn}
             />
+
+            {/* Create Account link */}
+            <View style={styles.registerLinkContainer}>
+              <Text variant="caption" color={colors.textSecondary}>
+                Don't have an account?{' '}
+              </Text>
+              <TouchableOpacity
+                onPress={() => router.push('/(auth)/register')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                activeOpacity={0.7}
+              >
+                <Text variant="caption" weight="bold" color={colors.primary}>
+                  Register now
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Footer note */}
@@ -248,8 +277,19 @@ const styles = StyleSheet.create({
   errorText: {
     flex: 1,
   },
+  forgotPasswordRow: {
+    alignItems: 'flex-end',
+    marginTop: -4,
+    marginBottom: 16,
+  },
   submitBtn: {
-    marginTop: 8,
+    marginTop: 4,
+  },
+  registerLinkContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 18,
   },
   googleButton: {
     flexDirection: 'row',

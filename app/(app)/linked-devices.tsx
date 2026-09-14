@@ -9,6 +9,7 @@ import {
   Modal,
   TextInput,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { requireOptionalNativeModule } from 'expo-modules-core';
 import { Screen } from '../../src/components/Screen';
@@ -184,6 +185,7 @@ export default function LinkedDevicesScreen() {
       );
     } finally {
       setIsScanning(false);
+      isProcessingRef.current = false;
     }
   };
 
@@ -310,25 +312,46 @@ export default function LinkedDevicesScreen() {
               </View>
             </View>
 
-            <Button
-              title={hasCameraSupport ? "Link a New Device" : "Link Device via Code"}
-              icon={hasCameraSupport ? <QrCode size={18} color="#FFF" /> : <KeyRound size={18} color="#FFF" />}
-              onPress={handleOpenScanner}
-              style={styles.linkButton}
-            />
-
-            {!hasCameraSupport && (
+            {/* Primary & Secondary Action Buttons */}
+            <View style={styles.heroActionRow}>
               <TouchableOpacity
-                style={[styles.inlineNotice, { backgroundColor: colors.primary + '0D', borderColor: colors.primary + '25' }]}
-                onPress={() => setShowManualInput(true)}
-                activeOpacity={0.7}
+                style={[styles.actionBtnPrimary, { backgroundColor: colors.primary }]}
+                onPress={handleOpenScanner}
+                activeOpacity={0.85}
               >
-                <Info size={14} color={colors.primary} />
-                <Text variant="caption" color={colors.textSecondary} style={{ flex: 1, fontSize: 11 }}>
-                  Tap here to enter or paste the session code from your desktop screen.
+                <QrCode size={19} color="#FFF" />
+                <Text variant="body" weight="bold" color="#FFF">
+                  Scan QR Code
                 </Text>
               </TouchableOpacity>
-            )}
+
+              <TouchableOpacity
+                style={[
+                  styles.actionBtnSecondary,
+                  {
+                    backgroundColor: colors.primary + '10',
+                    borderColor: colors.primary + '35',
+                  },
+                ]}
+                onPress={() => {
+                  setManualCode('');
+                  setShowManualInput(true);
+                }}
+                activeOpacity={0.8}
+              >
+                <KeyRound size={18} color={colors.primary} />
+                <Text variant="body" weight="bold" color={colors.primary}>
+                  Enter Code
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={[styles.inlineNotice, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <Info size={14} color={colors.primary} />
+              <Text variant="caption" color={colors.textSecondary} style={{ flex: 1, fontSize: 11, lineHeight: 16 }}>
+                Open uwoconnect.com on your computer to scan the QR code or enter the 4-letter login code.
+              </Text>
+            </View>
           </Card>
 
           {/* Active Devices Section */}
@@ -504,7 +527,7 @@ export default function LinkedDevicesScreen() {
               >
                 <KeyRound size={16} color="#FFF" />
                 <Text variant="caption" weight="bold" color="#FFF">
-                  Enter Session Code Manually
+                  Or Enter Code Manually
                 </Text>
               </TouchableOpacity>
             )}
@@ -512,44 +535,72 @@ export default function LinkedDevicesScreen() {
         </View>
       </Modal>
 
-      {/* Manual Code Input Modal (Simulator / Testing Fallback) */}
+      {/* Manual Code Input Modal */}
       <Modal visible={showManualInput} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
+            <View style={[styles.modalIconBadge, { backgroundColor: colors.primary + '15' }]}>
+              <KeyRound size={28} color={colors.primary} />
+            </View>
+
             <View style={styles.modalHeaderRow}>
               <Text variant="h3" weight="bold" color={colors.textPrimary}>
-                Enter QR Session Code
+                Enter Desktop Login Code
               </Text>
-              <TouchableOpacity onPress={() => setShowManualInput(false)}>
+              <TouchableOpacity onPress={() => setShowManualInput(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                 <X size={20} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
-            <Text variant="label" color={colors.textSecondary} style={{ marginTop: 4, marginBottom: 16 }}>
-              Copy the session code or URL displayed on your desktop login screen.
+
+            <Text variant="caption" color={colors.textSecondary} style={styles.modalInstruction}>
+              Enter the 4-character code (e.g. A9X2) or session code displayed on your computer screen under the QR code.
             </Text>
 
-            <TextInput
-              style={[styles.manualInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
-              value={manualCode}
-              onChangeText={setManualCode}
-              placeholder="Paste session code..."
-              placeholderTextColor={colors.textMuted}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
+            <View style={[styles.inputWrapper, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <TextInput
+                style={[
+                  styles.manualInput,
+                  {
+                    color: colors.textPrimary,
+                    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+                  },
+                ]}
+                value={manualCode}
+                onChangeText={(val) => setManualCode(val.toUpperCase())}
+                placeholder="e.g. A9X2"
+                placeholderTextColor={colors.textMuted}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                autoFocus={true}
+                maxLength={64}
+                returnKeyType="done"
+                onSubmitEditing={handleManualSubmit}
+              />
+              {manualCode.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => setManualCode('')}
+                  style={styles.clearBtn}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <X size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+              )}
+            </View>
 
             <View style={styles.modalActionRow}>
               <Button
                 title="Cancel"
                 variant="ghost"
                 onPress={() => setShowManualInput(false)}
+                disabled={isScanning}
                 style={{ flex: 1 }}
               />
               <Button
-                title="Verify Code"
+                title={isScanning ? 'Verifying...' : 'Verify Code'}
                 disabled={!manualCode.trim() || isScanning}
                 onPress={handleManualSubmit}
-                style={{ flex: 1, backgroundColor: colors.primary }}
+                icon={isScanning ? <ActivityIndicator size="small" color="#FFF" /> : <Check size={16} color="#FFF" />}
+                style={{ flex: 1.4, backgroundColor: colors.primary }}
               />
             </View>
           </View>
@@ -649,6 +700,30 @@ const styles = StyleSheet.create({
   },
   heroTextCol: {
     flex: 1,
+  },
+  heroActionRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
+  },
+  actionBtnPrimary: {
+    flex: 1.15,
+    height: 48,
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  actionBtnSecondary: {
+    flex: 1,
+    height: 48,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   linkButton: {
     borderRadius: 16,
@@ -831,20 +906,46 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
   },
+  modalIconBadge: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
   modalHeaderRow: {
     width: '100%',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  manualInput: {
+  modalInstruction: {
+    marginTop: 6,
+    marginBottom: 18,
+    textAlign: 'center',
+    lineHeight: 18,
+    paddingHorizontal: 8,
+  },
+  inputWrapper: {
     width: '100%',
-    height: 48,
-    borderRadius: 14,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    fontSize: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    paddingHorizontal: 14,
     marginBottom: 20,
+  },
+  manualInput: {
+    flex: 1,
+    height: 52,
+    fontSize: 22,
+    fontWeight: '700',
+    textAlign: 'center',
+    letterSpacing: 4,
+  },
+  clearBtn: {
+    padding: 6,
   },
   confirmIconCircle: {
     width: 72,

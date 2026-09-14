@@ -49,8 +49,10 @@ export default function HomeScreen() {
   const setUser = useSessionStore((state) => state.setUser);
   const brand = useBrandStore((state) => state.brand);
 
+  const userKey = user?.id || user?.email || 'default_user';
+
   const { data: profileData } = useQuery({
-    queryKey: ['userProfile'],
+    queryKey: ['userProfile', userKey],
     queryFn: async () => {
       try {
         const profile = await authApi.getProfile();
@@ -62,18 +64,21 @@ export default function HomeScreen() {
         return null;
       }
     },
+    enabled: !!user,
   });
 
-  const currentUser = profileData || user;
+  const currentUser = user || profileData;
 
   const { data: clientStats, isLoading: clientStatsLoading, refetch: refetchClientStats } = useQuery({
-    queryKey: ['clientStats'],
+    queryKey: ['clientStats', userKey],
     queryFn: () => statsApi.getClientStats(),
+    enabled: !!user,
   });
 
   const { data: monitoringStats, isLoading: monitoringStatsLoading, refetch: refetchMonitoringStats } = useQuery({
-    queryKey: ['monitoringStats'],
+    queryKey: ['monitoringStats', userKey],
     queryFn: () => statsApi.getMonitoringStats(),
+    enabled: !!user,
   });
 
   const { data: newsData, isLoading: newsLoading, refetch: refetchNews } = useQuery({
@@ -82,8 +87,9 @@ export default function HomeScreen() {
   });
 
   const { data: upcomingFollowUps, isLoading: followUpsLoading, refetch: refetchFollowUps } = useQuery<ContactFollowUp[]>({
-    queryKey: ['upcomingFollowUps'],
+    queryKey: ['upcomingFollowUps', userKey],
     queryFn: () => crmApi.getUpcomingFollowUps(),
+    enabled: !!user,
   });
 
   const onRefresh = () => {
