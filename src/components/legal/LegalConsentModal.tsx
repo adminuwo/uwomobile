@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Modal, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useTheme } from '../../theme';
 import { Text } from '../Text';
 import { Card } from '../Card';
@@ -45,9 +45,8 @@ export const LegalConsentModal: React.FC<LegalConsentModalProps> = ({
   if (!visible) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
-      <View style={styles.overlay}>
-        <Card style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+    <View style={styles.overlay}>
+      <Card style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {/* Header Icon */}
           <View style={[styles.iconCircle, { backgroundColor: colors.primary + '18' }]}>
             <ShieldCheck size={28} color={colors.primary} />
@@ -115,17 +114,18 @@ export const LegalConsentModal: React.FC<LegalConsentModalProps> = ({
           />
         </Card>
       </View>
-    </Modal>
   );
 };
 
 const styles = StyleSheet.create({
   overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    zIndex: 9999,
+    elevation: 20,
   },
   modalCard: {
     width: '100%',

@@ -14,6 +14,7 @@ import {
   Globe,
   LogOut,
   ShieldCheck,
+  Settings,
 } from 'lucide-react-native';
 import { useSessionStore } from '../../src/stores/sessionStore';
 
@@ -99,6 +100,13 @@ export default function MoreScreen() {
             title={t('account.language')}
             subtitle={`${currentLanguageInfo.name} (${currentLanguageInfo.nativeName})`}
             onPress={() => router.push('/language' as any)}
+          />
+          <View style={[styles.divider, { backgroundColor: colors.divider }]} />
+          <MenuItem
+            icon={<Settings size={20} color={colors.primary} />}
+            title="Workspace & Settings"
+            subtitle="Organization profile, device linking, and diagnostics"
+            onPress={() => router.push('/(app)/settings' as any)}
           />
           <View style={[styles.divider, { backgroundColor: colors.divider }]} />
           <MenuItem
