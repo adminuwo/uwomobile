@@ -229,14 +229,18 @@ export default function ConversationDetailScreen() {
         message_type: isNote ? 'INTERNAL' : 'OUTGOING',
       });
 
-      if (serverMsg) {
+      if (serverMsg && serverMsg.id) {
         setMessages((prev) => {
           const hasServerId = prev.some((m) => m.id === serverMsg.id);
           if (hasServerId) {
             return prev.filter((m) => m.id !== optimisticMsg.id);
           }
-          return prev.map((m) => (m.id === optimisticMsg.id ? serverMsg : m));
+          return prev.map((m) => (m.id === optimisticMsg.id ? { ...optimisticMsg, ...serverMsg } : m));
         });
+      } else {
+        setMessages((prev) =>
+          prev.map((m) => (m.id === optimisticMsg.id ? { ...m, status: 'SENT' } : m))
+        );
       }
     } catch (err: any) {
       console.warn('Send message error:', err);
