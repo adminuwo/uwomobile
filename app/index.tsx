@@ -78,10 +78,10 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   poweredByBrand: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '800',
     letterSpacing: 3,
-    color: '#0f172a',
+    color: '#10b981',
   },
 });
 
