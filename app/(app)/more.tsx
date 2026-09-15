@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
 import { Header } from '../../src/components/Header';
@@ -15,8 +15,12 @@ import {
   LogOut,
   ShieldCheck,
   Settings,
+  LifeBuoy,
+  Phone,
+  Mail
 } from 'lucide-react-native';
 import { useSessionStore } from '../../src/stores/sessionStore';
+import { useContentStore } from '../../src/stores/contentStore';
 
 interface MenuItemProps {
   icon: React.ReactNode;
@@ -53,6 +57,8 @@ export default function MoreScreen() {
   const { t, currentLanguageInfo } = useTranslation();
   const router = useRouter();
   const logout = useSessionStore((state) => state.logout);
+  const getContent = useContentStore((state) => state.getContent);
+  const contentVersion = useContentStore((state) => state.version);
 
   const handleLogout = () => {
     Alert.alert(
@@ -123,6 +129,55 @@ export default function MoreScreen() {
             onPress={handleLogout}
           />
         </Card>
+
+        {/* Dynamic Support & Contact Info Section */}
+        <Text variant="label" color={colors.textMuted} style={styles.sectionLabel}>
+          Support & Assistance
+        </Text>
+        <Card style={styles.supportCard}>
+          <View style={styles.supportHeader}>
+            <View style={[styles.supportIconBox, { backgroundColor: `${colors.primary}15` }]}>
+              <LifeBuoy size={20} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text variant="body" weight="bold" color={colors.textPrimary}>
+                {getContent('app_name', 'UWO Connect')} Customer Helpdesk
+              </Text>
+              <Text variant="caption" color={colors.textMuted}>
+                {getContent('support_hours', 'Mon - Sat, 9:00 AM - 7:00 PM IST')}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.supportButtonsRow}>
+            <TouchableOpacity
+              style={[styles.supportActionBtn, { borderColor: colors.border }]}
+              onPress={() => Linking.openURL(`tel:${getContent('support_phone', '+918358990909')}`)}
+            >
+              <Phone size={14} color={colors.primary} />
+              <Text variant="caption" weight="bold" color={colors.primary} style={{ marginLeft: 6 }}>
+                {getContent('support_phone', '+91 83589 90909')}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.supportActionBtn, { borderColor: colors.border }]}
+              onPress={() => Linking.openURL(`mailto:${getContent('support_email', 'support@uwo24.com')}`)}
+            >
+              <Mail size={14} color={colors.primary} />
+              <Text variant="caption" weight="bold" color={colors.primary} style={{ marginLeft: 6 }}>
+                Email Help
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Dynamic Content Version Badge */}
+          <View style={styles.versionFooter}>
+            <Text variant="caption" color={colors.textMuted} style={{ fontSize: 11 }}>
+              Dynamic Content Version: <Text variant="caption" weight="bold" color={colors.textPrimary}>v{contentVersion}</Text>
+            </Text>
+          </View>
+        </Card>
       </ScrollView>
     </Screen>
   );
@@ -165,5 +220,44 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     marginLeft: 66,
-  }
+  },
+  supportCard: {
+    padding: 18,
+    marginTop: 4,
+  },
+  supportHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 14,
+  },
+  supportIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  supportButtonsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
+  },
+  supportActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    backgroundColor: 'rgba(16, 185, 129, 0.06)',
+  },
+  versionFooter: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#e4e4e7',
+    paddingTop: 10,
+    alignItems: 'center',
+  },
 });

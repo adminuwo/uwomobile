@@ -40,8 +40,11 @@ import {
   Bell,
   Phone,
   Mail,
-  ChevronRight
+  ChevronRight,
+  Megaphone
 } from 'lucide-react-native';
+import { useContentStore } from '../../src/stores/contentStore';
+import { DynamicBannerCarousel } from '../../src/components/DynamicBannerCarousel';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -50,6 +53,9 @@ export default function HomeScreen() {
   const user = useSessionStore((state) => state.user);
   const setUser = useSessionStore((state) => state.setUser);
   const brand = useBrandStore((state) => state.brand);
+  const getContent = useContentStore((state) => state.getContent);
+  const isFeatureEnabled = useContentStore((state) => state.isFeatureEnabled);
+  const checkVersionAndSync = useContentStore((state) => state.checkVersionAndSync);
 
   const userKey = user?.id || user?.email || 'default_user';
 
@@ -109,6 +115,7 @@ export default function HomeScreen() {
   }, [consentStatus]);
 
   const onRefresh = () => {
+    checkVersionAndSync().catch(() => {});
     refetchClientStats();
     refetchMonitoringStats();
     refetchNews();
@@ -159,11 +166,16 @@ export default function HomeScreen() {
         <View style={styles.welcomeRow}>
           <View style={styles.welcomeText}>
             <Text variant="caption" color={colors.textMuted}>
-              {t('home.welcomeBack')}
+              {getContent('welcome_title') || t('home.welcomeBack')}
             </Text>
             <Text variant="h1" weight="bold" color={colors.textPrimary}>
               {userName}
             </Text>
+            {getContent('welcome_subtitle') ? (
+              <Text variant="caption" color={colors.textSecondary} style={{ marginTop: 2, lineHeight: 16 }}>
+                {getContent('welcome_subtitle')}
+              </Text>
+            ) : null}
           </View>
           <ClientLogoBadge
             logoUri={clientLogoUri}
@@ -171,6 +183,28 @@ export default function HomeScreen() {
             size={42}
           />
         </View>
+
+        {/* Dynamic Global Announcement Banner */}
+        {getContent('announcement_active', 'true') === 'true' && getContent('announcement_title') ? (
+          <View style={[styles.announcementBanner, { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}30` }]}>
+            <View style={[styles.announcementIconBox, { backgroundColor: `${colors.primary}20` }]}>
+              <Megaphone size={16} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text variant="label" weight="bold" color={colors.primary}>
+                {getContent('announcement_title')}
+              </Text>
+              {getContent('announcement_message') ? (
+                <Text variant="caption" color={colors.textSecondary} style={{ marginTop: 2, lineHeight: 15 }}>
+                  {getContent('announcement_message')}
+                </Text>
+              ) : null}
+            </View>
+          </View>
+        ) : null}
+
+        {/* Dynamic Admin-Controlled Promotional Banners */}
+        <DynamicBannerCarousel />
 
         {/* Overview Snapshot */}
         <Text variant="label" style={styles.sectionLabel}>
@@ -294,22 +328,24 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Upcoming CRM Follow-Ups Widget */}
-        <View style={styles.sectionHeaderRow}>
-          <Calendar size={18} color={colors.primary} />
-          <Text variant="label" style={styles.newsSectionLabel}>
-            {t('home.upcomingFollowUps')}
-          </Text>
-          {Boolean(upcomingFollowUps && upcomingFollowUps.length > 0) && (
-            <View style={[styles.countBadge, { backgroundColor: `${colors.primary}20` }]}>
-              <Text variant="caption" weight="bold" color={colors.primary}>
-                {upcomingFollowUps?.length}
+        {/* Upcoming CRM Follow-Ups Widget (Feature Flag Controlled) */}
+        {isFeatureEnabled('crm_module') && (
+          <>
+            <View style={styles.sectionHeaderRow}>
+              <Calendar size={18} color={colors.primary} />
+              <Text variant="label" style={styles.newsSectionLabel}>
+                {t('home.upcomingFollowUps')}
               </Text>
+              {Boolean(upcomingFollowUps && upcomingFollowUps.length > 0) && (
+                <View style={[styles.countBadge, { backgroundColor: `${colors.primary}20` }]}>
+                  <Text variant="caption" weight="bold" color={colors.primary}>
+                    {upcomingFollowUps?.length}
+                  </Text>
+                </View>
+              )}
             </View>
-          )}
-        </View>
 
-        {upcomingFollowUps && upcomingFollowUps.length > 0 ? (
+            {upcomingFollowUps && upcomingFollowUps.length > 0 ? (
           <View style={styles.followUpsList}>
             {upcomingFollowUps.slice(0, 4).map((fu) => {
               const isOverdue = fu.is_overdue;
@@ -401,14 +437,16 @@ export default function HomeScreen() {
               <Bell size={20} color={colors.textMuted} />
               <View style={{ flex: 1 }}>
                 <Text variant="body" weight="medium" color={colors.textPrimary}>
-                  {t('home.allCaughtUp')}
+                  {getContent('empty_leads_title') || t('home.allCaughtUp')}
                 </Text>
                 <Text variant="caption" color={colors.textMuted}>
-                  {t('home.allCaughtUpDesc')}
+                  {getContent('empty_leads_desc') || t('home.allCaughtUpDesc')}
                 </Text>
               </View>
             </View>
           </Card>
+        )}
+          </>
         )}
 
         {/* Growth Chart — matches web dashboard */}
@@ -424,52 +462,56 @@ export default function HomeScreen() {
           colors={colors}
         />
 
-        {/* Industry News & Market Updates Section */}
-        <View style={styles.sectionHeaderRow}>
-          <Newspaper size={18} color={colors.primary} />
-          <Text variant="label" style={styles.newsSectionLabel}>
-            {t('home.industryNews')}
-          </Text>
-        </View>
-
-        {newsArticles.length > 0 ? (
-          newsArticles.map((article, idx) => (
-            <Card key={idx} style={styles.newsCard}>
-              <View style={styles.newsCardHeader}>
-                <Badge label={article.source || 'News'} variant="info" />
-                {article.pub_date ? (
-                  <Text variant="caption" color={colors.textMuted}>
-                    {article.pub_date.split(' ').slice(0, 4).join(' ')}
-                  </Text>
-                ) : null}
-              </View>
-              <Text variant="h3" weight="bold" color={colors.textPrimary} style={styles.newsTitle}>
-                {article.title}
+        {/* Industry News Feed (Feature Flag Controlled) */}
+        {isFeatureEnabled('news_feed') && (
+          <>
+            <View style={styles.sectionHeaderRow}>
+              <Newspaper size={18} color={colors.primary} />
+              <Text variant="label" style={styles.newsSectionLabel}>
+                {t('home.industryNews')}
               </Text>
-              {article.snippet ? (
-                <Text variant="caption" color={colors.textMuted} numberOfLines={2} style={styles.newsSnippet}>
-                  {article.snippet}
-                </Text>
-              ) : null}
-              {article.link ? (
-                <TouchableOpacity 
-                  style={styles.newsLinkBtn}
-                  onPress={() => Linking.openURL(article.link)}
-                >
-                  <Text variant="caption" weight="bold" color={colors.primary}>
-                    {t('home.readFullArticle')}
+            </View>
+
+            {newsArticles.length > 0 ? (
+              newsArticles.map((article, idx) => (
+                <Card key={idx} style={styles.newsCard}>
+                  <View style={styles.newsCardHeader}>
+                    <Badge label={article.source || 'News'} variant="info" />
+                    {article.pub_date ? (
+                      <Text variant="caption" color={colors.textMuted}>
+                        {article.pub_date.split(' ').slice(0, 4).join(' ')}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <Text variant="h3" weight="bold" color={colors.textPrimary} style={styles.newsTitle}>
+                    {article.title}
                   </Text>
-                  <ExternalLink size={14} color={colors.primary} />
-                </TouchableOpacity>
-              ) : null}
-            </Card>
-          ))
-        ) : (
-          <Card variant="outlined" style={styles.emptyNewsCard}>
-            <Text variant="caption" color={colors.textMuted}>
-              {newsLoading ? t('home.fetchingNews') : t('home.noNewsAvailable')}
-            </Text>
-          </Card>
+                  {article.snippet ? (
+                    <Text variant="caption" color={colors.textMuted} numberOfLines={2} style={styles.newsSnippet}>
+                      {article.snippet}
+                    </Text>
+                  ) : null}
+                  {article.link ? (
+                    <TouchableOpacity 
+                      style={styles.newsLinkBtn}
+                      onPress={() => Linking.openURL(article.link)}
+                    >
+                      <Text variant="caption" weight="bold" color={colors.primary}>
+                        {t('home.readFullArticle')}
+                      </Text>
+                      <ExternalLink size={14} color={colors.primary} />
+                    </TouchableOpacity>
+                  ) : null}
+                </Card>
+              ))
+            ) : (
+              <Card variant="outlined" style={styles.emptyNewsCard}>
+                <Text variant="caption" color={colors.textMuted}>
+                  {newsLoading ? t('home.fetchingNews') : t('home.noNewsAvailable')}
+                </Text>
+              </Card>
+            )}
+          </>
         )}
 
         {/* Phase 1 Mobile Note */}
@@ -503,10 +545,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 18,
+    marginBottom: 16,
   },
   welcomeText: {
     flex: 1,
+  },
+  announcementBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 12,
+    gap: 10,
+  },
+  announcementIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
   },
   brandCard: {
     marginBottom: 22,

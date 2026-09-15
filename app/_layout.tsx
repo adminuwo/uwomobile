@@ -71,19 +71,34 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
 }
 
 import { I18nProvider, useTranslation } from '../src/i18n';
+import { useContentStore } from '../src/stores/contentStore';
+import { MaintenanceOverlay } from '../src/components/MaintenanceOverlay';
+import { AppState } from 'react-native';
 
 function RootLayoutNav() {
   const { initialize, status } = useSessionStore();
   const { fetchBrandConfig } = useBrandStore();
   const { syncWithServer: syncTheme } = useTheme();
   const { syncWithServer: syncI18n } = useTranslation();
+  const { initialize: initContent, checkVersionAndSync } = useContentStore();
 
   useEffect(() => {
     // Ensure native splash screen is hidden immediately so white JS screen displays
     SplashScreen.hideAsync().catch(() => {});
     fetchBrandConfig().catch(() => {});
     initialize().catch(() => {});
-  }, [initialize, fetchBrandConfig]);
+    initContent().catch(() => {});
+  }, [initialize, fetchBrandConfig, initContent]);
+
+  useEffect(() => {
+    // Auto sync content on app resume (e.g. user returns from home or another app)
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        checkVersionAndSync().catch(() => {});
+      }
+    });
+    return () => subscription.remove();
+  }, [checkVersionAndSync]);
 
   useEffect(() => {
     if (status !== 'initializing') {
@@ -115,6 +130,7 @@ export default function RootLayout() {
           <ThemeProvider>
             <I18nProvider>
               <RootLayoutNav />
+              <MaintenanceOverlay />
             </I18nProvider>
           </ThemeProvider>
         </QueryClientProvider>
