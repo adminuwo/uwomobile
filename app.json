@@ -21,7 +21,8 @@
       "buildNumber": "2",
       "infoPlist": {
         "NSCameraUsageDescription": "UwoConnect requires camera access to attach media to messages and CRM contacts.",
-        "NSPhotoLibraryUsageDescription": "UwoConnect requires photo library access to upload media."
+        "NSPhotoLibraryUsageDescription": "UwoConnect requires photo library access to upload media.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
