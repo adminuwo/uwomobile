@@ -49,6 +49,18 @@ target 'UwoConnect' do
     :privacy_file_aggregation_enabled => podfile_properties['apple.privacyManifestAggregationEnabled'] != 'false',
   )
 
+  pre_install do |installer|
+    dev_menu_file = File.join(__dir__, '../node_modules/expo-dev-menu/ios/DevMenuViewController.swift')
+    if File.exist?(dev_menu_file)
+      content = File.read(dev_menu_file)
+      if content.include?("let isSimulator = TARGET_IPHONE_SIMULATOR > 0")
+        content.gsub!("let isSimulator = TARGET_IPHONE_SIMULATOR > 0", "#if targetEnvironment(simulator)\n    let isSimulator = true\n    #else\n    let isSimulator = false\n    #endif")
+        File.write(dev_menu_file, content)
+        Pod::UI.puts "[patch] Patched DevMenuViewController.swift for Xcode 16+".green
+      end
+    end
+  end
+
   post_install do |installer|
     react_native_post_install(
       installer,

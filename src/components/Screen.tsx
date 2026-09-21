@@ -8,9 +8,9 @@ import {
   Platform,
   Animated,
   Dimensions,
+  PanResponder,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useRouter, usePathname } from 'expo-router';
 import { useTheme } from '../theme';
 import { isRootTab, smartNavigateBack } from '../services/appNavigation';
@@ -52,46 +52,36 @@ export const Screen: React.FC<ScreenProps> = ({
   const isEdgeSwipe = useRef(false);
   const isNavigating = useRef(false);
 
-  const panGesture = useMemo(() => {
+  const panResponder = useMemo(() => {
     if (!shouldEnableSwipe) {
       return null;
     }
 
-    return Gesture.Pan()
-      .manualActivation(true)
-      .onTouchesDown((e, state) => {
-        const startX = e.allTouches[0]?.x ?? 999;
-        if (startX <= 50 && !isNavigating.current) {
-          isEdgeSwipe.current = true;
-          state.activate();
-        } else {
-          isEdgeSwipe.current = false;
-          state.fail();
+    return PanResponder.create({
+      onStartShouldSetPanResponder: (evt) => {
+        // Only capture touches starting within 50px of the left edge
+        return evt.nativeEvent.pageX <= 50;
+      },
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        // Only activate for horizontal right drag, ignore vertical scrolling
+        const startedAtEdge = evt.nativeEvent.pageX - gestureState.dx <= 50;
+        const isRightDrag = gestureState.dx > 12;
+        const isHorizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.5;
+        return startedAtEdge && isRightDrag && isHorizontal;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dx > 0) {
+          translateX.setValue(gestureState.dx);
         }
-      })
-      .runOnJS(true)
-      .activeOffsetX(15)
-      .failOffsetY([-25, 25])
-      .onUpdate((e) => {
-        if (!isEdgeSwipe.current || isNavigating.current) return;
-        if (e.translationX > 0) {
-          translateX.setValue(e.translationX);
-        }
-      })
-      .onEnd((e) => {
-        if (!isEdgeSwipe.current || isNavigating.current) return;
-        isEdgeSwipe.current = false;
-
-        // Swiped right past 60px or fast flick right
-        if (e.translationX > 60 || e.velocityX > 400) {
-          isNavigating.current = true;
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx > 60 || gestureState.vx > 0.4) {
           Animated.timing(translateX, {
             toValue: SCREEN_WIDTH,
             duration: 140,
             useNativeDriver: true,
           }).start(() => {
             translateX.setValue(0);
-            isNavigating.current = false;
             if (onSwipeBack) {
               onSwipeBack();
             } else {
@@ -99,17 +89,21 @@ export const Screen: React.FC<ScreenProps> = ({
             }
           });
         } else {
-          // Cancelled: smoothly spring back to original position
           Animated.spring(translateX, {
             toValue: 0,
             bounciness: 4,
             useNativeDriver: true,
           }).start();
         }
-      })
-      .onFinalize(() => {
-        isEdgeSwipe.current = false;
-      });
+      },
+      onPanResponderTerminate: () => {
+        Animated.spring(translateX, {
+          toValue: 0,
+          bounciness: 4,
+          useNativeDriver: true,
+        }).start();
+      },
+    });
   }, [shouldEnableSwipe, router, pathname, onSwipeBack]);
 
   const topInset = safeAreaEdges.includes('top')
@@ -156,13 +150,14 @@ export const Screen: React.FC<ScreenProps> = ({
     </View>
   );
 
-  if (shouldEnableSwipe && panGesture) {
+  if (shouldEnableSwipe && panResponder) {
     return (
-      <GestureDetector gesture={panGesture}>
-        <Animated.View style={[styles.animatedWrapper, { transform: [{ translateX }] }]}>
-          {screenContent}
-        </Animated.View>
-      </GestureDetector>
+      <Animated.View
+        {...panResponder.panHandlers}
+        style={[styles.animatedWrapper, { transform: [{ translateX }], backgroundColor: resolvedBg }]}
+      >
+        {screenContent}
+      </Animated.View>
     );
   }
 
