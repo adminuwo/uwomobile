@@ -46,6 +46,12 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "gurumukhahuja@icloud.com",
+        "ascAppId": "6813870655",
+        "appleTeamId": "3MWP4W4XQV"
+      }
+    }
   }
 }
