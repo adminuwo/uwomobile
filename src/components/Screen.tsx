@@ -58,18 +58,20 @@ export const Screen: React.FC<ScreenProps> = ({
     }
 
     return Gesture.Pan()
-      .runOnJS(true)
-      .hitSlop({ left: 0, width: 45 })
-      .activeOffsetX(15)
-      .failOffsetY([-25, 25])
-      .onBegin((e) => {
-        // Must start within 45px of the left edge to be considered an iOS edge back swipe
-        if (e.x <= 45 && !isNavigating.current) {
+      .manualActivation(true)
+      .onTouchesDown((e, state) => {
+        const startX = e.allTouches[0]?.x ?? 999;
+        if (startX <= 50 && !isNavigating.current) {
           isEdgeSwipe.current = true;
+          state.activate();
         } else {
           isEdgeSwipe.current = false;
+          state.fail();
         }
       })
+      .runOnJS(true)
+      .activeOffsetX(15)
+      .failOffsetY([-25, 25])
       .onUpdate((e) => {
         if (!isEdgeSwipe.current || isNavigating.current) return;
         if (e.translationX > 0) {

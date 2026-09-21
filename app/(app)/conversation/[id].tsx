@@ -356,7 +356,11 @@ export default function ConversationDetailScreen() {
   };
 
   const handleBack = useCallback(() => {
-    router.replace('/(app)/inbox' as any);
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(app)/inbox' as any);
+    }
   }, [router]);
 
   useEffect(() => {

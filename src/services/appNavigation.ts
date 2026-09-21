@@ -134,6 +134,7 @@ export function getLogicalParent(pathname: string): string {
 
 /**
  * Perform smart, reliable back navigation
+ * Prioritizes router.canGoBack() / router.back() so the exact previous screen is restored.
  */
 export function smartNavigateBack(
   router: Router,
@@ -145,35 +146,15 @@ export function smartNavigateBack(
     return;
   }
 
-  const current = cleanPath(currentPathname);
-
-  // Pop current from our history stack if it matches the top
-  if (historyStack.length > 0 && historyStack[historyStack.length - 1] === current) {
-    historyStack.pop();
-  }
-
-  // Look for the preceding distinct route
-  let targetRoute: string | null = null;
-  while (historyStack.length > 0) {
-    const candidate = historyStack.pop();
-    if (candidate && candidate !== current) {
-      targetRoute = candidate;
-      break;
-    }
-  }
-
-  if (targetRoute) {
-    router.replace(targetRoute as any);
-    return;
-  }
-
-  // If Expo Router's native stack can pop, let it pop
+  // 1. FIRST PRIORITY: Always pop using router.canGoBack() / router.back()
+  // With backBehavior="history" on <Tabs>, React Navigation tracks every screen visited
+  // and router.back() ALWAYS pops to the EXACT just-previous screen!
   if (router.canGoBack()) {
     router.back();
     return;
   }
 
-  // Fallback to logical parent
+  // 2. Fallback to logical parent only if no history exists (e.g. cold start / direct deep link)
   const fallback = getLogicalParent(currentPathname);
   router.replace(fallback as any);
 }
