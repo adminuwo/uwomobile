@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import * as DocumentPicker from 'expo-document-picker';
+import { View, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, ActionSheetIOS, Platform } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { Screen } from '../../src/components/Screen';
 import { Header } from '../../src/components/Header';
@@ -87,26 +87,18 @@ export default function SettingsScreen() {
     }
   };
 
-  const handlePickImage = async () => {
+  const processAndSaveImage = async (uri: string, mimeType?: string, base64?: string) => {
     try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ['image/*'],
-        copyToCacheDirectory: true,
-      });
-
-      if (result.canceled || !result.assets || result.assets.length === 0) {
-        return;
+      setUploadingLogo(true);
+      let base64Data = base64;
+      if (!base64Data) {
+        base64Data = await FileSystem.readAsStringAsync(uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
       }
 
-      const asset = result.assets[0];
-      setUploadingLogo(true);
-
-      const base64Data = await FileSystem.readAsStringAsync(asset.uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-
-      const mimeType = asset.mimeType || 'image/jpeg';
-      const dataUri = `data:${mimeType};base64,${base64Data}`;
+      const mime = mimeType || 'image/jpeg';
+      const dataUri = `data:${mime};base64,${base64Data}`;
 
       setLogoUrl(dataUri);
 
@@ -120,12 +112,67 @@ export default function SettingsScreen() {
 
       // Synchronize brand store
       useBrandStore.getState().fetchBrandConfig().catch(() => {});
-      Alert.alert('Profile Updated', 'Profile icon updated successfully.');
+      Alert.alert('Profile Updated', 'Profile photo updated successfully.');
     } catch (err: any) {
-      console.error('Error selecting or saving profile icon:', err);
+      console.error('Error selecting or saving profile photo:', err);
       Alert.alert('Upload Error', err?.message || 'Failed to update profile photo.');
     } finally {
       setUploadingLogo(false);
+    }
+  };
+
+  const handlePickFromGallery = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Please allow photo library access in Settings to select a profile photo.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        return;
+      }
+
+      const asset = result.assets[0];
+      await processAndSaveImage(asset.uri, asset.mimeType, asset.base64 || undefined);
+    } catch (err: any) {
+      console.error('Error picking photo from library:', err);
+      Alert.alert('Error', err?.message || 'Failed to select photo.');
+    }
+  };
+
+  const handleTakePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Please allow camera access in Settings to take a profile photo.');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        return;
+      }
+
+      const asset = result.assets[0];
+      await processAndSaveImage(asset.uri, asset.mimeType, asset.base64 || undefined);
+    } catch (err: any) {
+      console.error('Error capturing photo:', err);
+      Alert.alert('Error', err?.message || 'Failed to take photo.');
     }
   };
 
@@ -162,29 +209,41 @@ export default function SettingsScreen() {
   };
 
   const showPhotoOptions = () => {
-    Alert.alert(
-      'Profile & Brand Icon',
-      'Choose an option to update your profile photo or company logo',
-      [
+    if (Platform.OS === 'ios') {
+      const options = ['Choose from Photos', 'Take Photo', ...(logoUrl ? ['Remove Photo'] : []), 'Cancel'];
+      const destructiveButtonIndex = logoUrl ? 2 : undefined;
+      const cancelButtonIndex = options.length - 1;
+
+      ActionSheetIOS.showActionSheetWithOptions(
         {
-          text: 'Select Image / Photo',
-          onPress: () => handlePickImage(),
+          options,
+          cancelButtonIndex,
+          destructiveButtonIndex,
+          title: 'Profile & Brand Photo',
+          message: 'Select a photo from your gallery or take a new one',
         },
-        ...(logoUrl
-          ? [
-              {
-                text: 'Remove Photo',
-                style: 'destructive' as const,
-                onPress: handleRemovePhoto,
-              },
-            ]
-          : []),
-        {
-          text: 'Cancel',
-          style: 'cancel' as const,
-        },
-      ]
-    );
+        (buttonIndex) => {
+          if (buttonIndex === 0) {
+            handlePickFromGallery();
+          } else if (buttonIndex === 1) {
+            handleTakePhoto();
+          } else if (logoUrl && buttonIndex === 2) {
+            handleRemovePhoto();
+          }
+        }
+      );
+    } else {
+      Alert.alert(
+        'Profile & Brand Photo',
+        'Choose an option to update your photo',
+        [
+          { text: 'Choose from Photos', onPress: handlePickFromGallery },
+          { text: 'Take Photo', onPress: handleTakePhoto },
+          ...(logoUrl ? [{ text: 'Remove Photo', style: 'destructive' as const, onPress: handleRemovePhoto }] : []),
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
+    }
   };
 
   const handleSave = async () => {
@@ -251,19 +310,26 @@ export default function SettingsScreen() {
                   {businessName || contactName || 'Organization Logo'}
                 </Text>
                 <Text variant="caption" color={colors.textSecondary} style={{ marginTop: 2, marginBottom: 10 }}>
-                  Tap avatar or use button to upload brand icon
+                  Tap photo or use buttons to choose from gallery or camera
                 </Text>
 
                 <View style={styles.avatarBtnRow}>
                   <TouchableOpacity
-                    onPress={handlePickImage}
+                    onPress={handlePickFromGallery}
                     disabled={uploadingLogo}
                     style={[styles.actionChip, { backgroundColor: colors.primary + '18', borderColor: colors.primary + '40' }]}
                   >
-                    <Upload size={12} color={colors.primary} />
-                    <Text style={[styles.actionChipText, { color: colors.primary }]}>
-                      {logoUrl ? 'Change Icon' : 'Upload Icon'}
-                    </Text>
+                    <ImageIcon size={12} color={colors.primary} />
+                    <Text style={[styles.actionChipText, { color: colors.primary }]}>Photos</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={handleTakePhoto}
+                    disabled={uploadingLogo}
+                    style={[styles.actionChip, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                  >
+                    <Camera size={12} color={colors.textPrimary} />
+                    <Text style={[styles.actionChipText, { color: colors.textPrimary }]}>Camera</Text>
                   </TouchableOpacity>
 
                   {logoUrl ? (
