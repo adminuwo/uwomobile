@@ -25,11 +25,13 @@ export default function TeamChatScreen() {
   const { colors } = useTheme();
   const queryClient = useQueryClient();
   const currentUser = useSessionStore((state) => state.user);
+  const userKey = currentUser?.id || currentUser?.email || 'anon';
   const [inputText, setInputText] = useState('');
 
   const { data: messages = [], isLoading, refetch } = useQuery({
-    queryKey: ['teamChatMessages'],
+    queryKey: ['teamChatMessages', userKey],
     queryFn: () => teamApi.getChatMessages(),
+    enabled: !!currentUser,
     refetchInterval: 5000, // Poll every 5 seconds for real-time team chat
   });
 
@@ -37,7 +39,7 @@ export default function TeamChatScreen() {
     mutationFn: (body: string) => teamApi.sendChatMessage(body),
     onSuccess: () => {
       setInputText('');
-      queryClient.invalidateQueries({ queryKey: ['teamChatMessages'] });
+      queryClient.invalidateQueries({ queryKey: ['teamChatMessages', userKey] });
     },
   });
 
@@ -51,7 +53,7 @@ export default function TeamChatScreen() {
       <Header
         title="Team Workspace Chat"
         showBack
-        onBackPress={() => router.back()}
+        onBackPress={() => router.replace('/(app)/home' as any)}
         rightElement={
           <View style={styles.headerBadge}>
             <Users size={16} color={colors.primary} />

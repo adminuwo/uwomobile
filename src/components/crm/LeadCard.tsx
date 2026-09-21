@@ -4,8 +4,10 @@ import { Text } from '../Text';
 import { Avatar } from '../Avatar';
 import { LeadStageBadge } from './LeadStageBadge';
 import { Contact } from '../../api/crm';
+import { resolveChannel } from '../../api/inbox';
+import { ChannelBadge, getChannelColor } from '../inbox/ChannelBadge';
 import { useTheme } from '../../theme';
-import { Phone, Mail, MessageSquare, ChevronRight, Calendar } from 'lucide-react-native';
+import { Phone, Mail, MessageSquare, ChevronRight, Calendar, Tag } from 'lucide-react-native';
 
 interface LeadCardProps {
   contact: Contact;
@@ -14,11 +16,19 @@ interface LeadCardProps {
 }
 
 export const LeadCard: React.FC<LeadCardProps> = ({ contact, onPress, onOpenChat }) => {
-  const { colors } = useTheme();
+  const { colors, mode } = useTheme();
+
+  const channel = resolveChannel(
+    contact.preferred_channel,
+    contact.name,
+    contact.platform_id || contact.phone_number
+  );
+  const channelColor = getChannelColor(channel);
 
   return (
     <TouchableOpacity
       activeOpacity={0.7}
+      delayPressIn={80}
       style={[
         styles.card,
         {
@@ -29,7 +39,12 @@ export const LeadCard: React.FC<LeadCardProps> = ({ contact, onPress, onOpenChat
       onPress={() => onPress(contact)}
     >
       <View style={styles.headerRow}>
-        <Avatar name={contact.name || contact.phone_number || 'Lead'} size="md" />
+        <Avatar
+          name={contact.name || contact.phone_number || 'Lead'}
+          size="md"
+          textColor={channelColor}
+          bgColor={`${channelColor}14`}
+        />
 
         <View style={styles.info}>
           <Text numberOfLines={1} style={[styles.name, { color: colors.textPrimary }]}>
@@ -54,9 +69,33 @@ export const LeadCard: React.FC<LeadCardProps> = ({ contact, onPress, onOpenChat
         <ChevronRight size={18} color={colors.textMuted} />
       </View>
 
+      {/* Tags Row (Rendered separately to avoid overlapping with action buttons) */}
+      {Array.isArray(contact.tags) && contact.tags.length > 0 && (
+        <View style={styles.tagsContainer}>
+          {contact.tags.slice(0, 2).map((t, i) => (
+            <View
+              key={i}
+              style={[
+                styles.tagPill,
+                {
+                  backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9',
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <Tag size={10} color={colors.textMuted} />
+              <Text numberOfLines={1} style={[styles.tagText, { color: colors.textSecondary }]}>
+                {t}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+
       <View style={[styles.footerRow, { borderTopColor: colors.borderMuted || colors.border }]}>
         <View style={styles.badgeAndTags}>
           <LeadStageBadge stage={contact.stage} size="sm" />
+          <ChannelBadge channel={channel} size="sm" />
           {Boolean(contact.follow_ups_count && contact.follow_ups_count > 0) && (
             <View style={[styles.followUpBadge, { backgroundColor: '#F59E0B18', borderColor: '#F59E0B55' }]}>
               <Calendar size={11} color="#D97706" />
@@ -67,26 +106,20 @@ export const LeadCard: React.FC<LeadCardProps> = ({ contact, onPress, onOpenChat
               </Text>
             </View>
           )}
-          {Array.isArray(contact.tags) && contact.tags.length > 0 && (
-            <View style={styles.tagPill}>
-              <Text numberOfLines={1} style={[styles.tagText, { color: colors.textMuted }]}>
-                {contact.tags[0]}
-              </Text>
-            </View>
-          )}
         </View>
 
         {onOpenChat && (
           <TouchableOpacity
             activeOpacity={0.7}
-            style={[styles.chatButton, { backgroundColor: `${colors.primary}18` }]}
+            delayPressIn={80}
+            style={[styles.chatButton, { backgroundColor: `${channelColor}18` }]}
             onPress={(e) => {
-              e.stopPropagation();
+              e?.stopPropagation?.();
               onOpenChat(contact);
             }}
           >
-            <MessageSquare size={14} color={colors.primary} />
-            <Text style={[styles.chatButtonText, { color: colors.primary }]}>Chat</Text>
+            <MessageSquare size={14} color={channelColor} />
+            <Text style={[styles.chatButtonText, { color: channelColor }]}>Chat</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -112,7 +145,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   name: {
-    fontSize: 15,
+    fontSize: 13.5,
     fontWeight: '600',
   },
   iconText: {
@@ -121,7 +154,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   subText: {
-    fontSize: 12,
+    fontSize: 11,
   },
   footerRow: {
     flexDirection: 'row',
@@ -129,6 +162,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: 8,
     borderTopWidth: 1,
+    gap: 8,
   },
   chatButton: {
     flexDirection: 'row',
@@ -137,9 +171,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
+    flexShrink: 0,
   },
   chatButtonText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
   },
   badgeAndTags: {
@@ -147,13 +182,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     flex: 1,
+    flexShrink: 1,
+    overflow: 'hidden',
+  },
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: -4,
   },
   tagPill: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    maxWidth: 120,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+    borderWidth: 1,
+    maxWidth: 220,
   },
   tagText: {
     fontSize: 10,

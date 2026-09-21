@@ -33,6 +33,9 @@ import {
   MessageSquare,
 } from 'lucide-react-native';
 
+import { useChannelAccess } from '../../src/hooks/useChannelAccess';
+import { ComingSoonScreen } from '../../src/components/ComingSoonScreen';
+
 interface TeamContact {
   id: number;
   name: string;
@@ -58,6 +61,17 @@ interface CallHistoryEntry {
 
 export default function CallsScreen() {
   const { colors } = useTheme();
+  const { isChannelComingSoon } = useChannelAccess();
+
+  if (isChannelComingSoon('calls')) {
+    return (
+      <ComingSoonScreen
+        channelName="Voice & Video Calls"
+        category="Communication Channel"
+        description="High-definition WebRTC voice and video calls are currently deactivated by your platform administrator."
+      />
+    );
+  }
   const [activeTab, setActiveTab] = useState<'contacts' | 'history'>('contacts');
   const [contacts, setContacts] = useState<TeamContact[]>([]);
   const [callHistory, setCallHistory] = useState<CallHistoryEntry[]>([]);

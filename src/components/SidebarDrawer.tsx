@@ -6,9 +6,9 @@ import {
   TouchableOpacity,
   ScrollView,
   Modal,
-  SafeAreaView,
   Dimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, usePathname } from 'expo-router';
 import { useTheme } from '../theme';
 import { Text } from './Text';
@@ -23,32 +23,26 @@ import {
   MessageSquare,
   Users,
   Zap,
+  GitBranch,
   UserCheck,
   Package,
   Layers,
-  Settings,
+  Link2,
   LogOut,
   X,
   ChevronRight,
   ShieldCheck,
-  QrCode,
-  Mail,
   Megaphone,
-  Youtube,
   Newspaper,
   FileText,
+  FileCheck,
   ShoppingBag,
-  BookOpen,
   Receipt,
   Wallet,
   Brain,
-  FileSpreadsheet,
-  HelpCircle,
   Bot,
   PhoneCall,
-  CreditCard,
-  Building2,
-  Laptop,
+  Settings,
 } from 'lucide-react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -65,88 +59,83 @@ interface MenuItem {
 export const SidebarDrawer: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
+  const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { t } = useTranslation();
   const { isOpen, closeDrawer } = useDrawerStore();
-  const { user, logout } = useSessionStore();
+  const { user } = useSessionStore();
   const { clientName, logoUri, initial, isLoading } = useTenantBranding();
   const { isChannelComingSoon } = useChannelAccess();
 
   const handleNavigation = (route: string) => {
     closeDrawer();
+    if (route.includes('/connectors')) {
+      const { useConnectorsTabStore } = require('../stores/connectorsTabStore');
+      useConnectorsTabStore.getState().setTargetTab('ALL');
+    }
     router.push(route as any);
   };
 
   const handleLogout = async () => {
     closeDrawer();
-    await logout();
-    router.replace('/(auth)/login');
+    const { logoutAndResetSession } = require('../services/sessionLifecycle');
+    await logoutAndResetSession();
   };
 
-  const channelItems: MenuItem[] = [
+  // ──────────────────────────────────────────────
+  // PRIMARY – Daily-use modules (clean & focused)
+  // ──────────────────────────────────────────────
+  const primaryItems: MenuItem[] = [
     { id: 'home', label: t('drawer.homeDashboard'), icon: Home, route: '/(app)/home' },
     { id: 'inbox', label: t('drawer.inbox'), icon: MessageSquare, route: '/(app)/inbox' },
-    { 
-      id: 'gmail', 
-      label: t('drawer.gmail'), 
-      icon: Mail, 
-      route: '/(app)/gmail',
-      badge: isChannelComingSoon('gmail') ? 'SOON' : undefined
-    },
-    { 
-      id: 'email', 
-      label: t('drawer.emailOutlook'), 
-      icon: Mail, 
-      route: '/(app)/email',
-      badge: isChannelComingSoon('outlook') ? 'SOON' : undefined
-    },
-    { 
-      id: 'youtube', 
-      label: t('drawer.youtubeStudio'), 
-      icon: Youtube, 
-      route: '/(app)/youtube',
-      badge: isChannelComingSoon('youtube') ? 'SOON' : undefined
-    },
-    { 
-      id: 'google-news', 
-      label: t('drawer.googleNewsHub'), 
-      icon: Newspaper, 
-      route: '/(app)/google-news', 
-      badge: isChannelComingSoon('google_news') ? 'SOON' : 'LIVE' 
-    },
+    { id: 'crm', label: t('drawer.crmContacts'), icon: Users, route: '/(app)/crm' },
     { id: 'team', label: t('drawer.teamHub'), icon: UserCheck, route: '/(app)/team', badge: 'QR' },
     { id: 'team-chat', label: t('drawer.teamWorkspaceChat'), icon: MessageSquare, route: '/(app)/team-chat' },
     { id: 'calls', label: t('drawer.voiceVideoCalls'), icon: PhoneCall, route: '/(app)/calls' },
-    { id: 'agency', label: t('drawer.agencyCommandHub'), icon: Building2, route: '/(app)/agency' },
+    {
+      id: 'google-news',
+      label: t('drawer.googleNewsHub'),
+      icon: Newspaper,
+      route: '/(app)/google-news',
+      badge: isChannelComingSoon('google_news') ? 'SOON' : 'LIVE'
+    },
   ];
 
+  // ──────────────────────────────────────────────
+  // AUTOMATION & FLOWS
+  // ──────────────────────────────────────────────
   const automationItems: MenuItem[] = [
     { id: 'broadcasts', label: t('drawer.broadcastCampaigns'), icon: Megaphone, route: '/(app)/broadcasts' },
-    { id: 'workflows', label: t('drawer.workflowsBots'), icon: Zap, route: '/(app)/workflows' },
+    { id: 'workflows', label: t('drawer.workflowsBots'), icon: GitBranch, route: '/(app)/workflows' },
     { id: 'automations', label: t('drawer.keywordAutoReplies'), icon: Bot, route: '/(app)/automations' },
     { id: 'knowledge', label: t('drawer.aiKnowledgeBase'), icon: Brain, route: '/(app)/knowledge' },
-    { id: 'connectors', label: t('drawer.integrationsApps'), icon: Layers, route: '/(app)/connectors' },
+    { id: 'connectors', label: t('drawer.integrationsApps'), icon: Link2, route: '/(app)/connectors' },
   ];
 
+  // ──────────────────────────────────────────────
+  // SALES & COMMERCE
+  // ──────────────────────────────────────────────
   const salesItems: MenuItem[] = [
     { id: 'proposals', label: t('drawer.proposals'), icon: FileText, route: '/(app)/sales/proposals', badge: 'NEW' },
-    { id: 'quotations', label: t('drawer.quotations'), icon: FileText, route: '/(app)/sales/quotations' },
+    { id: 'quotations', label: t('drawer.quotations'), icon: FileCheck, route: '/(app)/sales/quotations' },
     { id: 'invoices', label: t('drawer.gstInvoices'), icon: Receipt, route: '/(app)/sales/invoices' },
-    { id: 'products', label: t('drawer.productsServices'), icon: Package, route: '/(app)/sales/products' },
-    { id: 'orders', label: t('drawer.ordersSales'), icon: ShoppingBag, route: '/(app)/sales/orders' },
+    { id: 'products', label: t('drawer.productsServices'), icon: ShoppingBag, route: '/(app)/sales/products' },
+    { id: 'orders', label: t('drawer.ordersSales'), icon: Receipt, route: '/(app)/sales/orders' },
     { id: 'wallet', label: t('drawer.walletBilling'), icon: Wallet, route: '/(app)/sales/wallet' },
   ];
 
-  const managementItems: MenuItem[] = [
-    { id: 'crm', label: t('drawer.crmContacts'), icon: Users, route: '/(app)/crm' },
-    { id: 'linked-devices', label: t('drawer.linkedDevices'), icon: Laptop, route: '/(app)/linked-devices', badge: 'QR' },
-    { id: 'reports', label: t('drawer.dailyWorkReports'), icon: FileSpreadsheet, route: '/(app)/reports' },
-    { id: 'support', label: t('drawer.supportDesk'), icon: HelpCircle, route: '/(app)/support' },
-    { id: 'guides', label: t('drawer.learningCenter'), icon: BookOpen, route: '/(app)/guides' },
-    { id: 'settings', label: t('drawer.settingsProfile'), icon: Settings, route: '/(app)/settings' },
-    { id: 'plans', label: t('drawer.plansSubscription'), icon: CreditCard, route: '/(app)/plans' },
-    { id: 'more', label: t('drawer.moreWorkspaceMenu'), icon: Settings, route: '/(app)/more' },
-  ];
+  // ─────────────────────────────────────────────────────────────
+  // REMOVED FROM SIDEBAR (hidden, NOT deleted):
+  //   - Gmail          → hidden (integration kept, not in sidebar)
+  //   - Email/Outlook  → hidden (integration kept, not in sidebar)
+  //   - YouTube        → hidden (integration kept, not in sidebar)
+  //   - Agency Hub     → hidden (code kept, not in sidebar)
+  //   - Learning Center→ hidden (code kept, not in mobile nav)
+  //   - Linked Devices → moved into Settings screen
+  //
+  // MOVED TO "MORE" SCREEN:
+  //   - Reports, Support, Plans
+  // ─────────────────────────────────────────────────────────────
 
   // Helper for initials
   const userInitials = (user?.name || user?.first_name || user?.email || 'U')
@@ -168,6 +157,8 @@ export const SidebarDrawer: React.FC = () => {
       {items.map((item) => {
         const IconComponent = item.icon;
         const isActive = pathname === item.route;
+        const isComingSoon = isChannelComingSoon(item.id);
+        const displayBadge = isComingSoon ? 'SOON' : item.badge;
 
         return (
           <TouchableOpacity
@@ -203,10 +194,13 @@ export const SidebarDrawer: React.FC = () => {
               </Text>
             </View>
 
-            {item.badge ? (
-              <View style={[styles.badgePill, { backgroundColor: item.badge === 'LIVE' ? '#DC2626' : colors.primary }]}>
+            {displayBadge ? (
+              <View style={[
+                styles.badgePill, 
+                { backgroundColor: isComingSoon ? '#F59E0B' : displayBadge === 'LIVE' ? '#DC2626' : colors.primary }
+              ]}>
                 <Text variant="caption" weight="bold" color="#FFF" style={{ fontSize: 9 }}>
-                  {item.badge}
+                  {displayBadge}
                 </Text>
               </View>
             ) : (
@@ -218,10 +212,18 @@ export const SidebarDrawer: React.FC = () => {
     </View>
   );
 
+
+  // CRITICAL: When drawer is closed, do NOT render Modal or its absoluteFill backdrop into the DOM/view hierarchy!
+  // Otherwise on Web and mobile, the backdrop intercepts all clicks across the entire screen!
+  if (!isOpen) {
+    return null;
+  }
+
   return (
     <Modal
       visible={isOpen}
       transparent
+      statusBarTranslucent={true}
       animationType="fade"
       onRequestClose={closeDrawer}
     >
@@ -232,13 +234,14 @@ export const SidebarDrawer: React.FC = () => {
           onPress={closeDrawer}
         />
 
-        <SafeAreaView
+        <View
           style={[
             styles.drawerContainer,
             {
               width: DRAWER_WIDTH,
               backgroundColor: colors.surface || '#FFFFFF',
               borderRightColor: colors.border,
+              paddingTop: insets.top > 0 ? insets.top + 4 : 10,
             },
           ]}
         >
@@ -275,11 +278,15 @@ export const SidebarDrawer: React.FC = () => {
             </TouchableOpacity>
           </View>
 
-          <View style={[styles.profileCard, { backgroundColor: `${colors.primary}0D`, borderColor: `${colors.primary}25` }]}>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => handleNavigation('/(app)/settings')}
+            style={[styles.profileCard, { backgroundColor: `${colors.primary}0D`, borderColor: `${colors.primary}25` }]}
+          >
             <View style={styles.profileRow}>
               <ClientLogoBadge
                 logoUri={logoUri}
-                initial={initial}
+                initial={initial || userInitials}
                 isLoading={isLoading}
                 size={38}
               />
@@ -304,38 +311,50 @@ export const SidebarDrawer: React.FC = () => {
                   </Text>
                 </View>
               </View>
+
+              <ChevronRight size={16} color={colors.textMuted} />
             </View>
-          </View>
+          </TouchableOpacity>
 
           <ScrollView style={styles.menuScroll} showsVerticalScrollIndicator={false}>
-            {renderNavGroup(t('drawer.channelsWorkspace'), channelItems)}
+            {renderNavGroup(t('drawer.channelsWorkspace'), primaryItems)}
             {renderNavGroup(t('drawer.automationFlows'), automationItems)}
             {renderNavGroup(t('drawer.salesCommerce'), salesItems)}
-            {renderNavGroup(t('drawer.managementSettings'), managementItems)}
           </ScrollView>
 
-          <View style={[styles.drawerFooter, { borderTopColor: colors.border }]}>
+          {/* ── Footer: Settings + Logout ── */}
+          <View
+            style={[
+              styles.drawerFooter,
+              {
+                borderTopColor: colors.border,
+                paddingBottom: Math.max(insets.bottom + 14, 20),
+                flexDirection: 'row',
+                gap: 8,
+              },
+            ]}
+          >
             <TouchableOpacity
-              style={[styles.footerBtn, { backgroundColor: `${colors.primary}12` }]}
-              onPress={() => handleNavigation('/(app)/linked-devices')}
+              style={[styles.footerBtn, { flex: 1, backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}30`, borderWidth: 1 }]}
+              onPress={() => handleNavigation('/(app)/settings')}
             >
-              <QrCode size={16} color={colors.primary} />
+              <Settings size={15} color={colors.primary} />
               <Text variant="caption" weight="bold" color={colors.primary}>
-                {t('drawer.linkedDevices')}
+                Settings
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.footerBtn, { backgroundColor: '#FEF2F2', marginTop: 8 }]}
+              style={[styles.footerBtn, { flex: 1, backgroundColor: '#FEF2F2' }]}
               onPress={handleLogout}
             >
-              <LogOut size={16} color="#EF4444" />
+              <LogOut size={15} color="#EF4444" />
               <Text variant="caption" weight="bold" color="#EF4444">
                 {t('drawer.logout')}
               </Text>
             </TouchableOpacity>
           </View>
-        </SafeAreaView>
+        </View>
       </View>
     </Modal>
   );
@@ -361,7 +380,8 @@ const styles = StyleSheet.create({
   },
   drawerHeader: {
     paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingTop: 6,
+    paddingBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -375,31 +395,31 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   uwoLogoBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 34,
+    height: 34,
+    borderRadius: 9,
     borderWidth: 1,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 3,
+    padding: 2,
   },
   uwoLogoImage: {
     width: '100%',
     height: '100%',
   },
   closeBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   profileCard: {
     marginHorizontal: 14,
-    marginTop: 12,
-    marginBottom: 8,
-    padding: 12,
+    marginTop: 8,
+    marginBottom: 6,
+    padding: 10,
     borderRadius: 12,
     borderWidth: 1,
   },
@@ -409,9 +429,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   avatarCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -419,7 +439,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 4,
+    marginTop: 3,
   },
   roleBadge: {
     flexDirection: 'row',
@@ -432,26 +452,26 @@ const styles = StyleSheet.create({
   menuScroll: {
     flex: 1,
     paddingHorizontal: 14,
-    paddingTop: 6,
+    paddingTop: 4,
   },
   groupContainer: {
-    marginBottom: 16,
+    marginBottom: 10,
   },
   groupHeader: {
     fontSize: 10,
     letterSpacing: 0.8,
-    marginBottom: 6,
+    marginBottom: 4,
     marginLeft: 4,
   },
   navItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 9,
+    paddingVertical: 7,
     paddingHorizontal: 10,
     borderRadius: 10,
     borderWidth: 1,
-    marginBottom: 4,
+    marginBottom: 3,
   },
   navItemLeft: {
     flexDirection: 'row',

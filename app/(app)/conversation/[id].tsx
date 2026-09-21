@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { View, FlatList, KeyboardAvoidingView, Platform, StyleSheet, TouchableOpacity, ActivityIndicator, BackHandler, Alert, RefreshControl } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Screen } from '../../../src/components/Screen';
@@ -11,7 +11,7 @@ import { WhatsAppTemplateModal } from '../../../src/components/inbox/WhatsAppTem
 import { CustomerProfileModal } from '../../../src/components/inbox/CustomerProfileModal';
 import { TransferModal } from '../../../src/components/inbox/TransferModal';
 import { AuditLogModal, AuditLogItem } from '../../../src/components/inbox/AuditLogModal';
-import { inboxApi, Message } from '../../../src/api/inbox';
+import { inboxApi, Message, resolveChannel } from '../../../src/api/inbox';
 import { templatesApi } from '../../../src/api/templates';
 import { inboxWebSocket } from '../../../src/services/inboxWebSocket';
 import { useTheme } from '../../../src/theme';
@@ -25,10 +25,40 @@ export default function ConversationDetailScreen() {
   const convoId = params.id;
   const targetAddress = params.rawAddress || params.id;
   const contactName = params.name || 'Customer';
-  const channel = params.channel || 'WHATSAPP';
-  const channelColor = getChannelColor(channel);
 
   const [messages, setMessages] = useState<Message[]>([]);
+
+  // Dynamically resolve real channel from DB messages, reel markers, usernames, or route params
+  const effectiveChannel = useMemo(() => {
+    // 1. Check if messages loaded from DB have an explicit channel other than ALL/WHATSAPP
+    const explicitMsg = messages.find(
+      (m) => m.channel && m.channel.toUpperCase() !== 'WHATSAPP' && m.channel.toUpperCase() !== 'ALL'
+    );
+    if (explicitMsg?.channel) {
+      return explicitMsg.channel.toUpperCase();
+    }
+
+    // 2. Check if messages contain Instagram reel/story markers
+    const hasIgMarker = messages.some((m) => {
+      const b = (m.body || '').toLowerCase();
+      return b.includes('[ig_') || b.includes('ig_reel') || b.includes('instagram');
+    });
+    if (hasIgMarker) {
+      return 'INSTAGRAM';
+    }
+
+    // 3. Fallback to first message channel if non-empty
+    const firstMsgChannel = messages[0]?.channel;
+    if (firstMsgChannel && firstMsgChannel.toUpperCase() !== 'ALL') {
+      const resolvedFromFirst = resolveChannel(firstMsgChannel, contactName, targetAddress);
+      if (resolvedFromFirst !== 'WHATSAPP') return resolvedFromFirst;
+    }
+
+    // 4. Resolve via contactName, targetAddress, or passed params
+    return resolveChannel(params.channel, contactName, targetAddress);
+  }, [messages, params.channel, contactName, targetAddress]);
+
+  const channelColor = getChannelColor(effectiveChannel);
   const [activeTab, setActiveTab] = useState<'MESSAGES' | 'NOTES'>('MESSAGES');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -214,7 +244,7 @@ export default function ConversationDetailScreen() {
       from_address: 'Me',
       to_address: targetAddress,
       body: text,
-      channel: channel,
+      channel: effectiveChannel,
       message_type: isNote ? 'INTERNAL' : 'OUTGOING',
       created_at: new Date().toISOString(),
     };
@@ -225,7 +255,7 @@ export default function ConversationDetailScreen() {
       const serverMsg = await inboxApi.sendMessage({
         to_number: targetAddress,
         body: text,
-        channel: channel,
+        channel: effectiveChannel,
         message_type: isNote ? 'INTERNAL' : 'OUTGOING',
       });
 
@@ -326,11 +356,7 @@ export default function ConversationDetailScreen() {
   };
 
   const handleBack = useCallback(() => {
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace('/(app)/inbox' as any);
-    }
+    router.replace('/(app)/inbox' as any);
   }, [router]);
 
   useEffect(() => {
@@ -389,7 +415,7 @@ export default function ConversationDetailScreen() {
               {contactName}
             </Text>
             <View style={styles.subInfoRow}>
-              <ChannelBadge channel={channel} size="sm" showBg={false} />
+              <ChannelBadge channel={effectiveChannel} size="sm" showBg={false} />
             </View>
           </View>
         </TouchableOpacity>
@@ -471,7 +497,11 @@ export default function ConversationDetailScreen() {
               }
               const displayMsg = effectiveStatus !== (item.status || '').toUpperCase() ? { ...item, status: effectiveStatus } : item;
               return (
-                <MessageBubble message={displayMsg} contactName={contactName} channelColor={channelColor} />
+                <MessageBubble
+                  message={displayMsg}
+                  contactName={contactName}
+                  channelColor={getChannelColor(displayMsg.channel || effectiveChannel)}
+                />
               );
             }}
             ListHeaderComponent={
@@ -532,7 +562,7 @@ export default function ConversationDetailScreen() {
         onClose={() => setShowProfileModal(false)}
         contactName={contactName}
         contactPhone={targetAddress}
-        channel={channel}
+        channel={effectiveChannel}
       />
 
       <TransferModal

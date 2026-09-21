@@ -22,7 +22,7 @@ interface SalesDocumentModalProps {
   visible: boolean;
   documentType: DocumentType;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (createdDoc?: any) => void;
 }
 
 export const SalesDocumentModal: React.FC<SalesDocumentModalProps> = ({
@@ -39,6 +39,8 @@ export const SalesDocumentModal: React.FC<SalesDocumentModalProps> = ({
   ]);
   const [notes, setNotes] = useState('Payment due within 15 days.');
   const [submitting, setSubmitting] = useState(false);
+
+  if (!visible) return null;
 
   const addItem = () => {
     setItems((prev) => [...prev, { description: '', quantity: 1, unit_price: 0, tax_rate: 18 }]);
@@ -89,22 +91,25 @@ export const SalesDocumentModal: React.FC<SalesDocumentModalProps> = ({
         status: 'SENT',
       });
 
-      onSuccess();
       onClose();
-      Alert.alert(
-        `${documentType} Generated!`,
-        `${documentType} #${doc.document_number || '1001'} created successfully for ₹${totalAmount.toLocaleString('en-IN')}`,
-        [
-          {
-            text: 'Share PDF Link',
-            onPress: () =>
-              Share.share({
-                message: `View your ${documentType} from ${clientName || 'Unified Web Options'}: https://uwoconnect.aisa24.com/public/${documentType.toLowerCase()}/${doc.id}`,
-              }),
-          },
-          { text: 'OK' },
-        ]
-      );
+      onSuccess(doc);
+
+      if (documentType !== 'PROPOSAL') {
+        Alert.alert(
+          `${documentType} Generated!`,
+          `${documentType} #${doc.document_number || '1001'} created successfully for ₹${totalAmount.toLocaleString('en-IN')}`,
+          [
+            {
+              text: 'Share PDF Link',
+              onPress: () =>
+                Share.share({
+                  message: `View your ${documentType} from ${clientName || 'Unified Web Options'}: https://uwoconnect.aisa24.com/public/${documentType.toLowerCase()}/${doc.id}`,
+                }),
+            },
+            { text: 'OK' },
+          ]
+        );
+      }
     } catch (err: any) {
       Alert.alert('Error', err.message || `Failed to create ${documentType}`);
     } finally {

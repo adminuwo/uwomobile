@@ -20,18 +20,23 @@ export interface Guide {
   slug?: string;
 }
 
+import { useSessionStore } from '../../src/stores/sessionStore';
+
 export default function GuidesScreen() {
   const { colors } = useTheme();
+  const user = useSessionStore((state) => state.user);
+  const userKey = user?.id || user?.email || 'anon';
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
 
   const { data: rawGuides, isLoading, error, refetch, isRefetching } = useQuery({
-    queryKey: ['guides'],
+    queryKey: ['guides', userKey],
     queryFn: async () => {
       const res = await apiClient.get<any>('/api/guides/');
       if (Array.isArray(res)) return res;
       return res?.results || [];
-    }
+    },
+    enabled: !!user,
   });
 
   const guidesList: Guide[] = Array.isArray(rawGuides) ? rawGuides : [];

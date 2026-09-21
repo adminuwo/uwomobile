@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ViewStyle,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
 import { Text } from './Text';
 import { X } from 'lucide-react-native';
@@ -26,6 +27,11 @@ export const Modal: React.FC<ModalProps> = ({
   style,
 }) => {
   const { colors, radius, spacing } = useTheme();
+  const insets = useSafeAreaInsets();
+
+  if (!visible) {
+    return null;
+  }
 
   return (
     <RNModal
@@ -34,7 +40,15 @@ export const Modal: React.FC<ModalProps> = ({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <View style={styles.backdrop}>
+      <View
+        style={[
+          styles.backdrop,
+          {
+            paddingTop: Math.max(insets.top + 16, 20),
+            paddingBottom: Math.max(insets.bottom + 16, 20),
+          },
+        ]}
+      >
         {/* Backdrop tap to close without blocking modal card gestures */}
         <TouchableOpacity
           style={StyleSheet.absoluteFill}

@@ -407,13 +407,16 @@ export default function TeamScreen() {
   const [copiedLink, setCopiedLink] = useState(false);
 
   // ── Fetch Real Data from MongoDB via Backend Endpoints ──
+  const userKey = user?.id || user?.email || 'anon';
+
   const {
     data: apiMembers,
     isLoading: membersLoading,
     refetch: refetchMembers,
   } = useQuery({
-    queryKey: ['teamMembers'],
+    queryKey: ['teamMembers', userKey],
     queryFn: () => teamApi.getMembers(),
+    enabled: !!user,
   });
 
   const {
@@ -421,8 +424,9 @@ export default function TeamScreen() {
     isLoading: projectsLoading,
     refetch: refetchProjects,
   } = useQuery({
-    queryKey: ['teamProjects'],
+    queryKey: ['teamProjects', userKey],
     queryFn: () => teamApi.getProjects(),
+    enabled: !!user,
   });
 
   const {
@@ -430,13 +434,15 @@ export default function TeamScreen() {
     isLoading: tasksLoading,
     refetch: refetchTasks,
   } = useQuery({
-    queryKey: ['teamTasks'],
+    queryKey: ['teamTasks', userKey],
     queryFn: () => teamApi.getTasks(),
+    enabled: !!user,
   });
 
   const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useQuery({
-    queryKey: ['clientStatsTeam'],
+    queryKey: ['clientStatsTeam', userKey],
     queryFn: () => statsApi.getClientStats(),
+    enabled: !!user,
   });
 
   // Map real MongoDB members

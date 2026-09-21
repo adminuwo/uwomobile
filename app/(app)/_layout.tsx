@@ -1,15 +1,16 @@
 import { View, ActivityIndicator } from 'react-native';
 import { Tabs, Redirect } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/theme';
 import { Home, MessageSquare, Users, MoreHorizontal } from 'lucide-react-native';
 import { SidebarDrawer } from '../../src/components/SidebarDrawer';
 import { useSessionStore } from '../../src/stores/sessionStore';
-
 import { useTranslation } from '../../src/i18n';
 
 export default function AppLayout() {
   const { colors } = useTheme();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const status = useSessionStore((state) => state.status);
 
   if (status === 'initializing') {
@@ -26,9 +27,8 @@ export default function AppLayout() {
 
   return (
     <View style={{ flex: 1 }}>
-      <SidebarDrawer />
       <Tabs
-        backBehavior="history"
+        backBehavior="none"
         screenOptions={{
           headerShown: false,
           tabBarActiveTintColor: colors.tabBarActive,
@@ -37,9 +37,9 @@ export default function AppLayout() {
             backgroundColor: colors.tabBarBg,
             borderTopColor: colors.border,
             borderTopWidth: 1,
-            height: 60,
-            paddingBottom: 8,
-            paddingTop: 8,
+            height: 56 + insets.bottom,
+            paddingBottom: insets.bottom > 0 ? insets.bottom : 6,
+            paddingTop: 6,
           },
           tabBarLabelStyle: {
             fontSize: 11,
@@ -113,7 +113,9 @@ export default function AppLayout() {
         <Tabs.Screen name="legal/privacy" options={{ href: null }} />
         <Tabs.Screen name="legal/permissions" options={{ href: null }} />
         <Tabs.Screen name="legal/delete-account" options={{ href: null }} />
+        <Tabs.Screen name="payment-result" options={{ href: null }} />
       </Tabs>
+      <SidebarDrawer />
     </View>
   );
 }

@@ -1,5 +1,6 @@
 import React from 'react';
-import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
+import { FlatList, View, RefreshControl, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ConversationRow } from './ConversationRow';
 import { Conversation } from '../../api/inbox';
 import { Skeleton } from '../Skeleton';
@@ -26,6 +27,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
   onSelectConversation,
   onLoadMore,
 }) => {
+  const insets = useSafeAreaInsets();
   if (loading && !refreshing && conversations.length === 0) {
     return (
       <View style={styles.loadingContainer}>
@@ -81,7 +83,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
       }
       onEndReached={onLoadMore}
       onEndReachedThreshold={0.4}
-      contentContainerStyle={styles.listContent}
+      contentContainerStyle={[styles.listContent, { paddingBottom: 24 + insets.bottom }]}
     />
   );
 };

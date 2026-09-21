@@ -85,11 +85,11 @@ export const GoogleNewsScreen: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
 
-  // Multi-Platform Broadcasting state
+  // WhatsApp Official Broadcasting state
   const [sendChannels, setSendChannels] = useState<Record<string, boolean>>({
     WHATSAPP: true,
-    FACEBOOK: true,
-    INSTAGRAM: true,
+    FACEBOOK: false,
+    INSTAGRAM: false,
   });
   const [broadcasting, setBroadcasting] = useState(false);
 
@@ -888,7 +888,7 @@ export const GoogleNewsScreen: React.FC = () => {
                     ]}
                   />
 
-                  {/* Multi-Platform Channel Selection */}
+                  {/* Official WhatsApp Broadcast Channel */}
                   <View style={styles.channelsSection}>
                     <Text
                       variant="caption"
@@ -896,43 +896,33 @@ export const GoogleNewsScreen: React.FC = () => {
                       color={colors.textMuted}
                       style={{ fontSize: 10, letterSpacing: 0.5, marginBottom: 6 }}
                     >
-                      BROADCAST CHANNELS:
+                      BROADCAST CHANNEL:
                     </Text>
                     <View style={styles.channelsPillsRow}>
                       {[
-                        { id: 'WHATSAPP', label: '📱 WhatsApp', activeBg: '#D1FAE5', activeText: '#065F46', border: '#A7F3D0' },
-                        { id: 'FACEBOOK', label: '💙 Facebook', activeBg: '#DBEAFE', activeText: '#1E40AF', border: '#BFDBFE' },
-                        { id: 'INSTAGRAM', label: '📸 Instagram', activeBg: '#FCE7F3', activeText: '#9D174D', border: '#FBCFE8' },
+                        { id: 'WHATSAPP', label: '📱 WhatsApp (Meta Cloud API)', activeBg: '#D1FAE5', activeText: '#065F46', border: '#A7F3D0' },
                       ].map((ch) => {
                         const isSelected = sendChannels[ch.id];
                         return (
-                          <TouchableOpacity
+                          <View
                             key={ch.id}
-                            onPress={() => toggleChannel(ch.id)}
                             style={[
                               styles.channelTogglePill,
-                              isSelected
-                                ? {
-                                    backgroundColor: ch.activeBg,
-                                    borderColor: ch.border,
-                                  }
-                                : {
-                                    backgroundColor:
-                                      mode === 'dark' ? 'rgba(255,255,255,0.05)' : '#F1F5F9',
-                                    borderColor: colors.border,
-                                    opacity: 0.6,
-                                  },
+                              {
+                                backgroundColor: ch.activeBg,
+                                borderColor: ch.border,
+                              },
                             ]}
                           >
                             <Text
                               variant="caption"
                               weight="bold"
-                              color={isSelected ? ch.activeText : colors.textMuted}
+                              color={ch.activeText}
                               style={{ fontSize: 10 }}
                             >
                               {ch.label}
                             </Text>
-                          </TouchableOpacity>
+                          </View>
                         );
                       })}
                     </View>

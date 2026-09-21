@@ -10,6 +10,12 @@ android/app/build/
 android/.gradle/
 android/local.properties
 ios/build/
+build/
+*.apk
+*.aab
+*.ipa
+release.*
+.DS_Store
 
 # Environment files
 .env

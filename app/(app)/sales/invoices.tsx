@@ -12,19 +12,23 @@ import { useTheme } from '../../../src/theme';
 import { salesDocumentsApi, SalesDocument } from '../../../src/api/salesDocuments';
 import { SalesDocumentModal } from '../../../src/components/sales/SalesDocumentModal';
 import { useTenantBranding } from '../../../src/hooks/useTenantBranding';
+import { useSessionStore } from '../../../src/stores/sessionStore';
 import { Receipt, Plus, Share2, TrendingUp, CheckCircle, Clock } from 'lucide-react-native';
 
 export default function InvoicesScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { clientName } = useTenantBranding();
+  const user = useSessionStore((state) => state.user);
+  const userKey = user?.id || user?.email || 'anon';
   const [modalVisible, setModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
 
   const { data: invoicesData, isLoading, error, refetch } = useQuery({
-    queryKey: ['invoices'],
-    queryFn: () => salesDocumentsApi.getDocuments({ document_type: 'INVOICE' })
+    queryKey: ['invoices', userKey],
+    queryFn: () => salesDocumentsApi.getDocuments({ document_type: 'INVOICE' }),
+    enabled: !!user,
   });
 
   const getStatusColor = (status: string) => {

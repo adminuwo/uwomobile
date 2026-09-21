@@ -75,6 +75,16 @@ class InboxWebSocketService {
     }
   }
 
+  /**
+   * Disconnect and remove ALL listeners.
+   * Used by the session-lifecycle service to ensure no stale WebSocket
+   * events leak into a different user session.
+   */
+  public resetAndDisconnect(): void {
+    this.disconnect();
+    this.listeners.clear();
+  }
+
   public subscribe(listener: WebSocketListener): () => void {
     this.listeners.add(listener);
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {

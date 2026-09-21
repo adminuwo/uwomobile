@@ -73,9 +73,12 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
 import { I18nProvider, useTranslation } from '../src/i18n';
 import { useContentStore } from '../src/stores/contentStore';
 import { MaintenanceOverlay } from '../src/components/MaintenanceOverlay';
+import { trackAppInstallation } from '../src/services/appInstallTracker';
+import { useAndroidBackHandler } from '../src/hooks/useAndroidBackHandler';
 import { AppState } from 'react-native';
 
 function RootLayoutNav() {
+  useAndroidBackHandler();
   const { initialize, status } = useSessionStore();
   const { fetchBrandConfig } = useBrandStore();
   const { syncWithServer: syncTheme } = useTheme();
@@ -85,6 +88,7 @@ function RootLayoutNav() {
   useEffect(() => {
     // Ensure native splash screen is hidden immediately so white JS screen displays
     SplashScreen.hideAsync().catch(() => {});
+    trackAppInstallation().catch(() => {});
     fetchBrandConfig().catch(() => {});
     initialize().catch(() => {});
     initContent().catch(() => {});
@@ -95,6 +99,7 @@ function RootLayoutNav() {
     const subscription = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'active') {
         checkVersionAndSync().catch(() => {});
+        trackAppInstallation().catch(() => {});
       }
     });
     return () => subscription.remove();
@@ -114,6 +119,7 @@ function RootLayoutNav() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="expo-auth-session" options={{ animation: 'none' }} />
+      <Stack.Screen name="payment-result" options={{ animation: 'fade' }} />
       <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
       <Stack.Screen name="(app)" options={{ animation: 'fade' }} />
     </Stack>
@@ -121,20 +127,23 @@ function RootLayoutNav() {
 }
 
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ErrorBoundary>
-        <QueryClientProvider client={queryClient}>
-          <ThemeProvider>
-            <I18nProvider>
-              <RootLayoutNav />
-              <MaintenanceOverlay />
-            </I18nProvider>
-          </ThemeProvider>
-        </QueryClientProvider>
-      </ErrorBoundary>
+      <SafeAreaProvider>
+        <ErrorBoundary>
+          <QueryClientProvider client={queryClient}>
+            <ThemeProvider>
+              <I18nProvider>
+                <RootLayoutNav />
+                <MaintenanceOverlay />
+              </I18nProvider>
+            </ThemeProvider>
+          </QueryClientProvider>
+        </ErrorBoundary>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

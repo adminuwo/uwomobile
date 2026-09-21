@@ -12,13 +12,15 @@ import {
   useWindowDimensions,
   NativeModules,
   PanResponder,
-  GestureResponderEvent
+  GestureResponderEvent,
+  Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Svg, { Path, Circle, Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
 
 import * as ScreenOrientation from 'expo-screen-orientation';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Screen } from '../../src/components/Screen';
 import { Header } from '../../src/components/Header';
 import { Text } from '../../src/components/Text';
@@ -28,6 +30,8 @@ import { useTheme } from '../../src/theme';
 import { authApi } from '../../src/api/auth';
 import { statsApi } from '../../src/api/stats';
 import { useSessionStore } from '../../src/stores/sessionStore';
+import { workflowsApi, WorkflowItem, WorkflowNode, WorkflowEdge } from '../../src/api/workflows';
+export type { WorkflowItem, WorkflowNode, WorkflowEdge };
 import { 
   GitBranch, 
   Plus, 
@@ -39,6 +43,7 @@ import {
   Layers, 
   ChevronRight, 
   CheckCircle2, 
+  AlertCircle,
   X, 
   ShieldCheck,
   MessageSquare,
@@ -106,45 +111,9 @@ const FacebookLogo = ({ size = 20 }: { size?: number }) => (
   </Svg>
 );
 
-export interface WorkflowNode {
-  id: string;
-  stepNumber: number;
-  type: 'TRIGGER' | 'PLAIN_MESSAGE' | 'BUTTONS' | 'IMAGE' | 'VIDEO' | 'CATALOG' | 'GOOGLE_MEET' | 'BRANCH' | 'TALK_TO_HUMAN' | 'AI_CLASSIFIER' | 'MESSAGE' | 'DELAY' | 'WEBHOOK';
-  title: string;
-  subtitle?: string;
-  color: string;
-  detail?: string;
-  configValue: string;
-  buttons?: string[];
-  mediaUrl?: string;
-  x?: number;
-  y?: number;
-}
-
-export interface WorkflowEdge {
-  id: string;
-  source: string;
-  target: string;
-  sourceHandle?: string;
-}
-
-export interface WorkflowItem {
-  id: string;
-  name: string;
-  category: string;
-  channel: 'WHATSAPP' | 'INSTAGRAM' | 'FACEBOOK' | 'MULTI';
-  status: 'ACTIVE' | 'PAUSED';
-  trigger: string;
-  actionsCount: number;
-  totalExecutions: number;
-  lastRun: string;
-  description: string;
-  nodes: WorkflowNode[];
-  edges?: WorkflowEdge[];
-}
-
 export default function WorkflowsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { width, height } = useWindowDimensions();
   const [forceLandscapeLayout, setForceLandscapeLayout] = useState(true);
@@ -454,403 +423,60 @@ export default function WorkflowsScreen() {
     };
   }, [isBuilderModalOpen]);
 
-  const [workflowsList, setWorkflowsList] = useState<WorkflowItem[]>([
-    {
-      id: 'flow-1',
-      name: 'ABC Hospital Lead Router',
-      category: 'Sales',
-      channel: 'WHATSAPP',
-      status: 'ACTIVE',
-      trigger: 'Keyword: HOSPITAL',
-      actionsCount: 14,
-      totalExecutions: 4820,
-      lastRun: '1 min ago',
-      description: 'Multi-branch Interactive WhatsApp Lead Router for Hospital Appointments & Packages',
-      nodes: [
-        {
-          id: 'h1',
-          stepNumber: 1,
-          type: 'TRIGGER',
-          title: 'START FLOW',
-          subtitle: 'Channel: Meta WhatsApp Business API',
-          color: '#059669',
-          detail: 'Triggers when user messages "HOSPITAL"',
-          configValue: 'HOSPITAL',
-          x: 480,
-          y: 20
-        },
-        {
-          id: 'h2',
-          stepNumber: 2,
-          type: 'BUTTONS',
-          title: 'BUTTONS',
-          subtitle: 'Welcome Menu with Quick Action Options',
-          color: '#6366F1',
-          detail: '3 Interactive Options',
-          configValue: 'Hello 🏥 Welcome to ABC Multispeciality Hospital 🏥 We are here to assist you.',
-          buttons: ['BOOK APPOINTMENT', 'HEALTH PACKAGES', 'EMERGENCY & SUPPORT'],
-          x: 480,
-          y: 130
-        },
-        {
-          id: 'h3_1',
-          stepNumber: 3,
-          type: 'BUTTONS',
-          title: 'BUTTONS',
-          subtitle: 'Department Selection',
-          color: '#6366F1',
-          detail: 'Select Specialist Department',
-          configValue: 'Please select the department you wish to visit:',
-          buttons: ['GENERAL PHYSICIAN', 'CARDIOLOGY', 'ORTHOPEDICS'],
-          x: 40,
-          y: 380
-        },
-        {
-          id: 'h4_1a',
-          stepNumber: 4,
-          type: 'MESSAGE',
-          title: 'MESSAGE',
-          subtitle: 'Capture Patient Name',
-          color: '#059669',
-          detail: 'Name prompt',
-          configValue: 'Please enter Patient Name.',
-          x: 40,
-          y: 620
-        },
-        {
-          id: 'h4_1b',
-          stepNumber: 5,
-          type: 'MESSAGE',
-          title: 'MESSAGE',
-          subtitle: 'Capture Patient Age',
-          color: '#059669',
-          detail: 'Age prompt',
-          configValue: 'Please enter Patient Age.',
-          x: 40,
-          y: 770
-        },
-        {
-          id: 'h4_1c',
-          stepNumber: 6,
-          type: 'MESSAGE',
-          title: 'MESSAGE',
-          subtitle: 'Appointment Date',
-          color: '#059669',
-          detail: 'Date prompt',
-          configValue: 'Please share your preferred appointment date.',
-          x: 40,
-          y: 920
-        },
-        {
-          id: 'h4_1d',
-          stepNumber: 7,
-          type: 'MESSAGE',
-          title: 'MESSAGE',
-          subtitle: 'Appointment Summary',
-          color: '#059669',
-          detail: 'Confirmation message',
-          configValue: 'Thank you for sharing the details. 🏥 Appointment Summary Patient Name: {Name} Age: {Age} Department:...',
-          x: 40,
-          y: 1070
-        },
-        {
-          id: 'h3_2',
-          stepNumber: 8,
-          type: 'BUTTONS',
-          title: 'BUTTONS',
-          subtitle: 'Health Package Selection',
-          color: '#6366F1',
-          detail: 'Package list',
-          configValue: 'Choose a package that suits your needs:',
-          buttons: ['BASIC CHECKUP', 'HEART HEALTH', 'FAMILY PACKAGE'],
-          x: 480,
-          y: 380
-        },
-        {
-          id: 'h4_2a',
-          stepNumber: 9,
-          type: 'BUTTONS',
-          title: 'BUTTONS',
-          subtitle: 'Heart Package Details',
-          color: '#6366F1',
-          detail: 'Package details & confirm',
-          configValue: '❣️ Heart Health Package ✓ ECG ✓ Blood Pressure Screening ✓ Cholesterol Test ...',
-          buttons: ['YES', 'CALL ME LATER', 'MAIN MENU'],
-          x: 480,
-          y: 620
-        },
-        {
-          id: 'h4_2b',
-          stepNumber: 10,
-          type: 'MESSAGE',
-          title: 'MESSAGE',
-          subtitle: 'Advisor Confirmation',
-          color: '#059669',
-          detail: 'Advisor callback info',
-          configValue: 'Thank you. Our healthcare advisor will contact you shortly and guide you further.',
-          x: 480,
-          y: 860
-        },
-        {
-          id: 'h3_3',
-          stepNumber: 11,
-          type: 'BUTTONS',
-          title: 'BUTTONS',
-          subtitle: 'Support Options',
-          color: '#6366F1',
-          detail: 'Support & Location',
-          configValue: 'How can we help you?',
-          buttons: ['EMERGENCY', 'LOCATION', 'TALK TO SUPPORT'],
-          x: 920,
-          y: 380
-        },
-        {
-          id: 'h4_3a',
-          stepNumber: 12,
-          type: 'MESSAGE',
-          title: 'MESSAGE',
-          subtitle: 'Emergency Call',
-          color: '#059669',
-          detail: 'Helpline details',
-          configValue: '🚨 Emergency Helpline Call: +91 XXXXX XXXXX Our emergency team is available 24x7.',
-          x: 700,
-          y: 620
-        },
-        {
-          id: 'h4_3b',
-          stepNumber: 13,
-          type: 'MESSAGE',
-          title: 'MESSAGE',
-          subtitle: 'Hospital Location',
-          color: '#059669',
-          detail: 'Maps & location link',
-          configValue: '📍 ABC Multispeciality Hospital Main Road, City Center 📍 Google Maps Location: (Location Link) We look...',
-          x: 920,
-          y: 620
-        },
-        {
-          id: 'h4_3c',
-          stepNumber: 14,
-          type: 'MESSAGE',
-          title: 'MESSAGE',
-          subtitle: 'Live Support',
-          color: '#059669',
-          detail: 'Executive contact',
-          configValue: '📞 👨‍💼 Please briefly describe your concern. Our patient care executive will contact you shortly.',
-          x: 1140,
-          y: 620
-        }
-      ],
-      edges: [
-        { id: 'e1', source: 'h1', target: 'h2' },
-        { id: 'e2', source: 'h2', sourceHandle: 'btn-0', target: 'h3_1' },
-        { id: 'e3', source: 'h2', sourceHandle: 'btn-1', target: 'h3_2' },
-        { id: 'e4', source: 'h2', sourceHandle: 'btn-2', target: 'h3_3' },
-        { id: 'e5', source: 'h3_1', target: 'h4_1a' },
-        { id: 'e6', source: 'h4_1a', target: 'h4_1b' },
-        { id: 'e7', source: 'h4_1b', target: 'h4_1c' },
-        { id: 'e8', source: 'h4_1c', target: 'h4_1d' },
-        { id: 'e9', source: 'h3_2', target: 'h4_2a' },
-        { id: 'e10', source: 'h4_2a', target: 'h4_2b' },
-        { id: 'e11', source: 'h3_3', sourceHandle: 'btn-0', target: 'h4_3a' },
-        { id: 'e12', source: 'h3_3', sourceHandle: 'btn-1', target: 'h4_3b' },
-        { id: 'e13', source: 'h3_3', sourceHandle: 'btn-2', target: 'h4_3c' },
-      ]
-    },
-    {
-      id: 'flow-2',
-      name: 'Instagram Story Bot',
-      category: 'Marketing',
-      channel: 'INSTAGRAM',
-      status: 'ACTIVE',
-      trigger: 'Trigger: Story Tag / Mention / DM',
-      actionsCount: 4,
-      totalExecutions: 890,
-      lastRun: '14 mins ago',
-      description: 'Instant AI DM response to Instagram Story tags with catalog link',
-      nodes: [
-        {
-          id: 'n2-1',
-          stepNumber: 1,
-          type: 'TRIGGER',
-          title: 'Instagram Story Tag or Direct Message',
-          subtitle: 'Channel: Instagram Graph API Webhook',
-          color: '#EC4899',
-          detail: 'Triggers on @mention in Story or IG Direct Message',
-          configValue: 'Trigger on any Story Tag or IG DM',
-        },
-        {
-          id: 'n2-2',
-          stepNumber: 2,
-          type: 'AI_CLASSIFIER',
-          title: 'AI Sentiment & Media Extractor',
-          subtitle: 'Gemini Vision AI Engine',
-          color: '#8B5CF6',
-          detail: 'Analyzes story text & user bio for VIP customer badge',
-          configValue: 'Analyze bio & story text for brand keywords',
-        },
-        {
-          id: 'n2-3',
-          stepNumber: 3,
-          type: 'MESSAGE',
-          title: 'Instant IG Private DM Reply',
-          subtitle: 'Interactive Messenger Card with Promo Code',
-          color: '#0284C7',
-          detail: 'Message: "Thanks for tagging us! Use code INSTA10 for 10% off!"',
-          configValue: 'Thanks for tagging us! Here is your exclusive discount code: INSTA10',
-        },
-        {
-          id: 'n2-4',
-          stepNumber: 4,
-          type: 'WEBHOOK',
-          title: 'CRM Contact Sync & Lead Tagging',
-          subtitle: 'Syncs handle to UwoConnect CRM',
-          color: '#10B981',
-          detail: 'Adds tag: "IG-Story-Advocate" to lead profile',
-          configValue: 'Sync to UwoConnect Lead Database',
-        },
-      ]
-    },
-    {
-      id: 'flow-3',
-      name: 'Facebook Lead Responder',
-      category: 'Lead Gen',
-      channel: 'FACEBOOK',
-      status: 'ACTIVE',
-      trigger: 'Trigger: Facebook Lead Form',
-      actionsCount: 4,
-      totalExecutions: 560,
-      lastRun: '1 hour ago',
-      description: 'Captures Lead Form details & triggers instant WhatsApp welcome message',
-      nodes: [
-        {
-          id: 'n3-1',
-          stepNumber: 1,
-          type: 'TRIGGER',
-          title: 'Meta Facebook Lead Form Submitted',
-          subtitle: 'Channel: Meta Ads Instant Forms',
-          color: '#1877F2',
-          detail: 'Captures Name, Phone, Email & Inquiry interest',
-          configValue: 'FormID: Meta_Lead_Form_Active',
-        },
-        {
-          id: 'n3-2',
-          stepNumber: 2,
-          type: 'WEBHOOK',
-          title: 'Instant CRM Contact Creation',
-          subtitle: 'UwoConnect Multi-Channel CRM',
-          color: '#10B981',
-          detail: 'Creates lead record & assigns to active sales pipeline',
-          configValue: 'Pipeline Stage: New Inbound Lead',
-        },
-        {
-          id: 'n3-3',
-          stepNumber: 3,
-          type: 'MESSAGE',
-          title: 'Outbound WhatsApp Template Message',
-          subtitle: 'Approved Meta Business Template',
-          color: '#0284C7',
-          detail: 'Template: welcome_lead_intro (Variables: {{1}})',
-          configValue: 'Hi {{name}}, thanks for requesting details on Meta! How can we assist you?',
-        },
-        {
-          id: 'n3-4',
-          stepNumber: 4,
-          type: 'DELAY',
-          title: 'Agent Assignment Notification',
-          subtitle: 'Mobile Push & Email Alert',
-          color: '#F59E0B',
-          detail: 'Notifies on-duty sales rep if customer replies',
-          configValue: 'Push alert to assigned agent',
-        },
-      ]
-    },
-    {
-      id: 'flow-4',
-      name: 'WhatsApp Banking Bot',
-      category: 'Support',
-      channel: 'WHATSAPP',
-      status: 'PAUSED',
-      trigger: 'Keywords: order, balance, status',
-      actionsCount: 5,
-      totalExecutions: 3100,
-      lastRun: 'Yesterday',
-      description: '24/7 automated order status lookup & RAG Knowledge Base answers',
-      nodes: [
-        {
-          id: 'n4-1',
-          stepNumber: 1,
-          type: 'TRIGGER',
-          title: 'Customer Banking / Order Inquiry',
-          subtitle: 'Channel: WhatsApp Business API',
-          color: '#10B981',
-          detail: 'Keywords: order, balance, invoice, status, track',
-          configValue: 'order, balance, invoice, status, track',
-        },
-        {
-          id: 'n4-2',
-          stepNumber: 2,
-          type: 'AI_CLASSIFIER',
-          title: 'Secure OTP & Identity Verification',
-          subtitle: '2FA Auth Engine',
-          color: '#8B5CF6',
-          detail: 'Verifies customer registered phone number with database',
-          configValue: 'Verify customer auth phone',
-        },
-        {
-          id: 'n4-3',
-          stepNumber: 3,
-          type: 'WEBHOOK',
-          title: 'Live Backend Django API Data Fetch',
-          subtitle: 'REST API Ingestion',
-          color: '#F59E0B',
-          detail: 'Fetches latest order status, tracking URL & balance',
-          configValue: 'GET /api/orders/lookup?phone={{sender}}',
-        },
-        {
-          id: 'n4-4',
-          stepNumber: 4,
-          type: 'MESSAGE',
-          title: 'Dynamic Data Response Message',
-          subtitle: 'Formatted Text + Quick Link',
-          color: '#0284C7',
-          detail: 'Message: "Your Order #{{order_id}} is OUT FOR DELIVERY via BlueDart!"',
-          configValue: 'Your Order #{{order_id}} status: {{order_status}}. Track here: {{tracking_url}}',
-        },
-        {
-          id: 'n4-5',
-          stepNumber: 5,
-          type: 'MESSAGE',
-          title: 'CSAT Rating & Feedback Survey',
-          subtitle: 'Interactive Rating Buttons',
-          color: '#EC4899',
-          detail: 'Buttons: [ ⭐⭐⭐⭐⭐ Excellent ] [ 💬 Agent Support ]',
-          configValue: 'Rate your conversation experience today:',
-        },
-      ]
-    },
-  ]);
+  const queryClient = useQueryClient();
+  const user = useSessionStore((state) => state.user);
+  const userKey = user?.id || user?.email || 'anon';
+
+  const [workflowsList, setWorkflowsList] = useState<WorkflowItem[]>([]);
+
+  const { 
+    data: apiWorkflows = [], 
+    isLoading: isWorkflowsLoading, 
+    isError: isWorkflowsError,
+    error: workflowsError,
+    refetch: refetchWorkflows 
+  } = useQuery({
+    queryKey: ['workflows', userKey],
+    queryFn: () => workflowsApi.getWorkflows(),
+    retry: 1,
+    staleTime: 5000,
+  });
+
+  useEffect(() => {
+    if (apiWorkflows && apiWorkflows.length > 0) {
+      setWorkflowsList(apiWorkflows);
+    } else if (!isWorkflowsLoading && apiWorkflows) {
+      setWorkflowsList(apiWorkflows);
+    }
+  }, [apiWorkflows, isWorkflowsLoading]);
 
   const { data: profileData, isLoading: profileLoading, refetch: refetchProfile } = useQuery({
-    queryKey: ['userProfile'],
+    queryKey: ['userProfile', userKey],
     queryFn: () => authApi.getProfile(),
+    enabled: !!user,
   });
 
   const { data: clientStats, isLoading: statsLoading, refetch: refetchStats } = useQuery({
-    queryKey: ['clientStats'],
+    queryKey: ['clientStats', userKey],
     queryFn: () => statsApi.getClientStats(),
+    enabled: !!user,
   });
 
   const onRefresh = () => {
     refetchProfile();
     refetchStats();
+    refetchWorkflows();
   };
 
-  const toggleWorkflowStatus = (id: string) => {
+  const toggleWorkflowStatus = async (id: string) => {
+    const target = workflowsList.find(w => w.id === id);
+    if (!target) return;
+    const nextStatus: 'ACTIVE' | 'PAUSED' = target.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
+    const nextEnabled = nextStatus === 'ACTIVE';
+
     setWorkflowsList(prev =>
       prev.map(w => {
         if (w.id === id) {
-          const nextStatus: 'ACTIVE' | 'PAUSED' = w.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
           const updated: WorkflowItem = { ...w, status: nextStatus };
           if (selectedWorkflow?.id === id) {
             setSelectedWorkflow(updated);
@@ -860,6 +486,16 @@ export default function WorkflowsScreen() {
         return w;
       })
     );
+
+    try {
+      await workflowsApi.updateWorkflow(id, { enabled: nextEnabled });
+      queryClient.invalidateQueries({ queryKey: ['workflows', userKey] });
+    } catch (err: any) {
+      console.warn('Failed to toggle workflow status:', err);
+      setWorkflowsList(prev =>
+        prev.map(w => (w.id === id ? { ...w, status: target.status } : w))
+      );
+    }
   };
 
   const requestOpenBuilderInLandscape = async (flow: WorkflowItem) => {
@@ -884,69 +520,93 @@ export default function WorkflowsScreen() {
     });
   };
 
-  const handleStartBuildingWorkflow = () => {
+  const handleStartBuildingWorkflow = async () => {
     setIsCreateModalOpen(false);
 
     const primaryChannel: 'WHATSAPP' | 'INSTAGRAM' | 'FACEBOOK' | 'MULTI' = 
       selectedPlatforms.length > 1 ? 'MULTI' : (selectedPlatforms[0] || 'WHATSAPP');
 
-    const newFlow: WorkflowItem = {
-      id: `flow-${Date.now()}`,
-      name: newWorkflowName.trim() || 'New Automation Workflow',
-      category: newWorkflowCategory,
-      channel: primaryChannel,
-      status: 'ACTIVE',
-      trigger: `Trigger: ${selectedPlatforms.join(', ')} Inbound`,
-      actionsCount: 4,
-      totalExecutions: 0,
-      lastRun: 'Just now',
-      description: `Automated ${newWorkflowCategory} flow running across ${selectedPlatforms.join(', ')}`,
-      nodes: [
-        {
-          id: `n-${Date.now()}-1`,
-          stepNumber: 1,
-          type: 'TRIGGER',
-          title: `Inbound Message Trigger (${selectedPlatforms.join(', ')})`,
-          subtitle: `Platforms: ${selectedPlatforms.join(', ')}`,
-          color: '#10B981',
-          detail: 'Triggers on incoming customer messages or keyword match',
-          configValue: 'hello, price, info, demo, inquiry',
-        },
-        {
-          id: `n-${Date.now()}-2`,
-          stepNumber: 2,
-          type: 'AI_CLASSIFIER',
-          title: 'Gemini 1.5 RAG Intent Classifier',
-          subtitle: 'Knowledge Base: Product Specs & FAQs',
-          color: '#8B5CF6',
-          detail: 'Classifies intent & extracts lead parameters',
-          configValue: `System Prompt: Analyze intent for ${selectedPlatforms.join(', ')} leads`,
-        },
-        {
-          id: `n-${Date.now()}-3`,
-          stepNumber: 3,
-          type: 'MESSAGE',
-          title: 'Automated Response Message',
-          subtitle: 'Interactive Buttons & Media Attachment',
-          color: '#0284C7',
-          detail: 'Sends instant reply to customer',
-          configValue: `Hello {{contact_name}}, welcome to {{brand_name}}! How can we assist you today on ${selectedPlatforms[0]}?`,
-        },
-        {
-          id: `n-${Date.now()}-4`,
-          stepNumber: 4,
-          type: 'DELAY',
-          title: 'Follow-Up Delay Step',
-          subtitle: 'Automated Re-engagement',
-          color: '#EC4899',
-          detail: 'Wait 15 minutes for reply',
-          configValue: '15 Minutes',
-        },
-      ]
-    };
+    const channels = selectedPlatforms.length > 0 ? selectedPlatforms : ['WHATSAPP'];
 
-    setWorkflowsList(prev => [newFlow, ...prev]);
-    requestOpenBuilderInLandscape(newFlow);
+    const initialNodes: WorkflowNode[] = [
+      {
+        id: `n-${Date.now()}-1`,
+        stepNumber: 1,
+        type: 'TRIGGER',
+        title: `Inbound Message Trigger (${channels.join(', ')})`,
+        subtitle: `Platforms: ${channels.join(', ')}`,
+        color: '#10B981',
+        detail: 'Triggers on incoming customer messages or keyword match',
+        configValue: 'hello, price, info, demo, inquiry',
+      },
+      {
+        id: `n-${Date.now()}-2`,
+        stepNumber: 2,
+        type: 'AI_CLASSIFIER',
+        title: 'Gemini 1.5 RAG Intent Classifier',
+        subtitle: 'Knowledge Base: Product Specs & FAQs',
+        color: '#8B5CF6',
+        detail: 'Classifies intent & extracts lead parameters',
+        configValue: `System Prompt: Analyze intent for ${channels.join(', ')} leads`,
+      },
+      {
+        id: `n-${Date.now()}-3`,
+        stepNumber: 3,
+        type: 'MESSAGE',
+        title: 'Automated Response Message',
+        subtitle: 'Interactive Buttons & Media Attachment',
+        color: '#0284C7',
+        detail: 'Sends instant reply to customer',
+        configValue: `Hello {{contact_name}}, welcome! How can we assist you today on ${channels[0]}?`,
+      },
+      {
+        id: `n-${Date.now()}-4`,
+        stepNumber: 4,
+        type: 'DELAY',
+        title: 'Follow-Up Delay Step',
+        subtitle: 'Automated Re-engagement',
+        color: '#EC4899',
+        detail: 'Wait 15 minutes for reply',
+        configValue: '15 Minutes',
+      },
+    ];
+
+    try {
+      const created = await workflowsApi.createWorkflow({
+        name: newWorkflowName.trim() || 'New Automation Workflow',
+        category: newWorkflowCategory,
+        channels,
+        enabled: true,
+        trigger_type: 'KEYWORD',
+        trigger_value: ['hello', 'price', 'info'],
+        steps: {
+          nodes: initialNodes,
+          edges: []
+        }
+      });
+
+      const newFlow: WorkflowItem = {
+        id: String(created?.id || `flow-${Date.now()}`),
+        name: newWorkflowName.trim() || 'New Automation Workflow',
+        category: newWorkflowCategory,
+        channel: primaryChannel,
+        status: 'ACTIVE',
+        trigger: `Trigger: ${channels.join(', ')} Inbound`,
+        actionsCount: initialNodes.length,
+        totalExecutions: 0,
+        lastRun: 'Just now',
+        description: `Automated ${newWorkflowCategory} flow running across ${channels.join(', ')}`,
+        nodes: initialNodes,
+        edges: []
+      };
+
+      setWorkflowsList(prev => [newFlow, ...prev]);
+      queryClient.invalidateQueries({ queryKey: ['workflows', userKey] });
+      requestOpenBuilderInLandscape(newFlow);
+    } catch (err: any) {
+      console.error('Failed to create workflow:', err);
+      Alert.alert('Error', err?.message || 'Failed to create workflow on server.');
+    }
   };
 
   const handleUpdateNodeConfig = (nodeId: string, newConfigValue: string) => {
@@ -1008,14 +668,56 @@ export default function WorkflowsScreen() {
     }, 1900);
   };
 
-  const handleSaveWorkflow = () => {
+  const handleSaveWorkflow = async () => {
+    if (!selectedWorkflow) return;
     setShowSaveSuccess(true);
-    setTimeout(() => {
-      setShowSaveSuccess(false);
-    }, 2000);
+    try {
+      await workflowsApi.updateWorkflow(selectedWorkflow.id, {
+        name: selectedWorkflow.name,
+        category: selectedWorkflow.category,
+        channels: selectedWorkflow.channel === 'MULTI' ? ['WHATSAPP', 'INSTAGRAM', 'FACEBOOK'] : [selectedWorkflow.channel],
+        steps: {
+          nodes: selectedWorkflow.nodes,
+          edges: selectedWorkflow.edges || []
+        }
+      });
+      queryClient.invalidateQueries({ queryKey: ['workflows', userKey] });
+    } catch (err) {
+      console.error('Failed to save workflow:', err);
+      Alert.alert('Save Note', 'Workflow state updated in sandbox.');
+    } finally {
+      setTimeout(() => {
+        setShowSaveSuccess(false);
+      }, 2000);
+    }
   };
 
-  const filteredWorkflows = workflowsList.filter(w => {
+  const handleDeleteWorkflow = (flow: WorkflowItem) => {
+    Alert.alert(
+      'Delete Workflow',
+      `Are you sure you want to delete "${flow.name}"? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setWorkflowsList(prev => prev.filter(w => w.id !== flow.id));
+            try {
+              await workflowsApi.deleteWorkflow(flow.id);
+              queryClient.invalidateQueries({ queryKey: ['workflows', userKey] });
+            } catch (err) {
+              refetchWorkflows();
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const currentList = workflowsList.length > 0 ? workflowsList : (apiWorkflows || []);
+
+  const filteredWorkflows = currentList.filter(w => {
     const matchesSearch = w.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           w.description.toLowerCase().includes(searchQuery.toLowerCase());
     if (!matchesSearch) return false;
@@ -1027,8 +729,8 @@ export default function WorkflowsScreen() {
     return true;
   });
 
-  const activeFlowsCount = workflowsList.filter(w => w.status === 'ACTIVE').length;
-  const totalExecutions = workflowsList.reduce((acc, curr) => acc + curr.totalExecutions, 0);
+  const activeFlowsCount = currentList.filter(w => w.status === 'ACTIVE').length;
+  const totalExecutions = currentList.reduce((acc, curr) => acc + curr.totalExecutions, 0);
 
   const getChannelIcon = (channel: string) => {
     switch (channel) {
@@ -1087,6 +789,7 @@ export default function WorkflowsScreen() {
       />
 
       <ScrollView
+        style={{ flex: 1, backgroundColor: colors.background }}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -1131,38 +834,40 @@ export default function WorkflowsScreen() {
         </View>
 
         {/* Channel & Status Filter Tabs */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
-          {[
-            { id: 'ALL', label: 'All Flows', count: workflowsList.length },
-            { id: 'ACTIVE', label: 'Active', count: activeFlowsCount },
-            { id: 'WHATSAPP', label: 'WhatsApp', count: workflowsList.filter(w => w.channel === 'WHATSAPP').length },
-            { id: 'INSTAGRAM', label: 'Instagram', count: workflowsList.filter(w => w.channel === 'INSTAGRAM').length },
-            { id: 'FACEBOOK', label: 'Facebook', count: workflowsList.filter(w => w.channel === 'FACEBOOK').length },
-          ].map(tab => {
-            const isActive = activeTab === tab.id;
-            return (
-              <TouchableOpacity
-                key={tab.id}
-                style={[
-                  styles.filterPill,
-                  {
-                    backgroundColor: isActive ? colors.primary : colors.surface,
-                    borderColor: isActive ? colors.primary : colors.border,
-                  },
-                ]}
-                onPress={() => setActiveTab(tab.id as any)}
-              >
-                <Text
-                  variant="caption"
-                  weight="bold"
-                  color={isActive ? colors.textInverse : colors.textPrimary}
+        <View style={styles.filterScrollWrapper}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+            {[
+              { id: 'ALL', label: 'All Flows', count: workflowsList.length },
+              { id: 'ACTIVE', label: 'Active', count: activeFlowsCount },
+              { id: 'WHATSAPP', label: 'WhatsApp', count: workflowsList.filter(w => w.channel === 'WHATSAPP').length },
+              { id: 'INSTAGRAM', label: 'Instagram', count: workflowsList.filter(w => w.channel === 'INSTAGRAM').length },
+              { id: 'FACEBOOK', label: 'Facebook', count: workflowsList.filter(w => w.channel === 'FACEBOOK').length },
+            ].map(tab => {
+              const isActive = activeTab === tab.id;
+              return (
+                <TouchableOpacity
+                  key={tab.id}
+                  style={[
+                    styles.filterPill,
+                    {
+                      backgroundColor: isActive ? colors.primary : colors.surface,
+                      borderColor: isActive ? colors.primary : colors.border,
+                    },
+                  ]}
+                  onPress={() => setActiveTab(tab.id as any)}
                 >
-                  {tab.label} ({tab.count})
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+                  <Text
+                    variant="caption"
+                    weight="bold"
+                    color={isActive ? colors.textInverse : colors.textPrimary}
+                  >
+                    {tab.label} ({tab.count})
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
 
         {/* Workflows List */}
         <Text variant="label" style={styles.sectionLabel}>
@@ -1197,8 +902,8 @@ export default function WorkflowsScreen() {
                     <Switch
                       value={item.status === 'ACTIVE'}
                       onValueChange={() => toggleWorkflowStatus(item.id)}
-                      trackColor={{ false: colors.border, true: colors.success + '80' }}
-                      thumbColor={item.status === 'ACTIVE' ? colors.success : colors.textMuted}
+                      trackColor={{ false: colors.border, true: colors.primary }}
+                      style={{ transform: [{ scaleX: 0.72 }, { scaleY: 0.72 }] }}
                     />
                   </View>
                 </View>
@@ -1211,7 +916,7 @@ export default function WorkflowsScreen() {
                   </Text>
                 </View>
 
-                {/* Footer Execution Stats */}
+                {/* Footer Execution Stats & Actions */}
                 <View style={[styles.cardFooter, { borderTopColor: colors.border }]}>
                   <View style={styles.statsCol}>
                     <Text variant="caption" color={colors.textMuted}>
@@ -1219,36 +924,94 @@ export default function WorkflowsScreen() {
                     </Text>
                   </View>
 
-                  <View style={styles.openBuilderBtn}>
-                    <Text variant="caption" weight="bold" color={colors.primary}>
-                      View Builder
-                    </Text>
-                    <ChevronRight size={16} color={colors.primary} />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                    <TouchableOpacity
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      onPress={() => handleDeleteWorkflow(item)}
+                    >
+                      <Trash2 size={16} color={colors.error || '#EF4444'} />
+                    </TouchableOpacity>
+
+                    <View style={styles.openBuilderBtn}>
+                      <Text variant="caption" weight="bold" color={colors.primary}>
+                        View Builder
+                      </Text>
+                      <ChevronRight size={16} color={colors.primary} />
+                    </View>
                   </View>
                 </View>
               </Card>
             </TouchableOpacity>
           ))
-        ) : (
-          <Card variant="outlined" style={styles.emptyCard}>
-            <Text variant="caption" color={colors.textMuted}>
-              No workflows found for this filter tab.
-            </Text>
-          </Card>
-        )}
-
-        {/* Security Vault Banner */}
-        <Card variant="outlined" style={styles.noteCard}>
-          <View style={styles.noteHeader}>
-            <ShieldCheck size={18} color={colors.primary} />
-            <Text variant="label" weight="bold" color={colors.primary}>
-              Real-Time AI Execution Engine
+        ) : isWorkflowsLoading ? (
+          <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text variant="caption" color={colors.textMuted} style={{ marginTop: 12 }}>
+              Loading your workspace workflows...
             </Text>
           </View>
-          <Text variant="caption" color={colors.textMuted}>
-            All active workflows are executed asynchronously with sub-second response latency across Meta Cloud APIs.
-          </Text>
-        </Card>
+        ) : isWorkflowsError ? (
+          <Card variant="outlined" style={styles.emptyCard}>
+            <View style={{ alignItems: 'center', paddingVertical: 16 }}>
+              <AlertCircle size={38} color={colors.error || '#EF4444'} style={{ marginBottom: 12 }} />
+              <Text variant="body" weight="bold" color={colors.textPrimary} style={{ marginBottom: 6 }}>
+                Failed to Load Workflows
+              </Text>
+              <Text variant="caption" color={colors.textMuted} align="center" style={{ maxWidth: 280, marginBottom: 16 }}>
+                {(workflowsError as any)?.message || 'Unable to connect to workflows service. Please check your network.'}
+              </Text>
+              <TouchableOpacity
+                style={{
+                  backgroundColor: colors.primary,
+                  paddingHorizontal: 18,
+                  paddingVertical: 10,
+                  borderRadius: 8,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+                onPress={() => refetchWorkflows()}
+              >
+                <RotateCcw size={16} color="#FFF" />
+                <Text variant="caption" weight="bold" color="#FFF">
+                  Retry Loading
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </Card>
+        ) : (
+          <Card variant="outlined" style={styles.emptyCard}>
+            <View style={{ alignItems: 'center', paddingVertical: 16 }}>
+              <GitBranch size={38} color={colors.primary} style={{ marginBottom: 12, opacity: 0.8 }} />
+              <Text variant="body" weight="bold" color={colors.textPrimary} style={{ marginBottom: 6 }}>
+                No Workflows In This Account
+              </Text>
+              <Text variant="caption" color={colors.textMuted} align="center" style={{ maxWidth: 280, marginBottom: 16 }}>
+                You have not created any workflows for this login ID yet. Build your first bot or configure an automated trigger.
+              </Text>
+              <TouchableOpacity
+                style={{
+                  backgroundColor: colors.primary,
+                  paddingHorizontal: 18,
+                  paddingVertical: 10,
+                  borderRadius: 8,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+                onPress={() => {
+                  setCreateStep(1);
+                  setIsCreateModalOpen(true);
+                }}
+              >
+                <Plus size={16} color="#FFF" />
+                <Text variant="caption" weight="bold" color="#FFF">
+                  Create Your First Workflow
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </Card>
+        )}
       </ScrollView>
 
       {/* ========================================================================= */}
@@ -2524,7 +2287,7 @@ export default function WorkflowsScreen() {
 const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
-    paddingBottom: 40,
+    paddingBottom: 96,
   },
   addFlowBtn: {
     flexDirection: 'row',
@@ -2573,13 +2336,18 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
   },
+  filterScrollWrapper: {
+    marginHorizontal: -16,
+    marginBottom: 10,
+  },
   filterScroll: {
+    paddingHorizontal: 16,
     gap: 8,
-    paddingBottom: 12,
+    paddingBottom: 4,
   },
   filterPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 13,
+    paddingVertical: 7,
     borderRadius: 20,
     borderWidth: 1,
   },

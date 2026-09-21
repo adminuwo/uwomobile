@@ -91,12 +91,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   name: {
-    fontSize: 15,
+    fontSize: 13.5,
     fontWeight: '600',
     flex: 1,
   },
   time: {
-    fontSize: 12,
+    fontSize: 11,
   },
   footerRow: {
     flexDirection: 'row',
@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   lastMessage: {
-    fontSize: 13,
+    fontSize: 12,
     flex: 1,
   },
   badgeContainer: {
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   },
   unreadText: {
     color: '#FFFFFF',
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '700',
   },
 });

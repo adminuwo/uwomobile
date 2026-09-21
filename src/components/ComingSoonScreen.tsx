@@ -38,7 +38,7 @@ export const ComingSoonScreen: React.FC<ComingSoonScreenProps> = ({
       <Header
         title={channelName}
         showBack={true}
-        onBackPress={() => router.back()}
+        onBackPress={() => router.navigate('/(app)/home')}
       />
 
       <ScrollView contentContainerStyle={styles.container}>
@@ -117,7 +117,7 @@ export const ComingSoonScreen: React.FC<ComingSoonScreenProps> = ({
 
           <TouchableOpacity
             style={styles.secondaryButton}
-            onPress={() => router.back()}
+            onPress={() => router.navigate('/(app)/home')}
             activeOpacity={0.7}
           >
             <Text style={[styles.secondaryButtonText, { color: colors.textSecondary }]}>Back</Text>

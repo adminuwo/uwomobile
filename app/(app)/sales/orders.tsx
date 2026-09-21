@@ -12,19 +12,24 @@ import { useTheme } from '../../../src/theme';
 import { ordersApi, Order } from '../../../src/api/orders';
 import { ShoppingBag, DollarSign, CheckCircle2, Clock, AlertCircle, Tag } from 'lucide-react-native';
 
+import { useSessionStore } from '../../../src/stores/sessionStore';
+
 export default function OrdersScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const user = useSessionStore((state) => state.user);
+  const userKey = user?.id || user?.email || 'anon';
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
 
   const { data: rawOrders, isLoading, error, refetch, isRefetching } = useQuery({
-    queryKey: ['orders'],
+    queryKey: ['orders', userKey],
     queryFn: async () => {
       const res = await ordersApi.getOrders();
       if (Array.isArray(res)) return res;
       return res?.results || [];
-    }
+    },
+    enabled: !!user,
   });
 
   const ordersList: Order[] = Array.isArray(rawOrders) ? rawOrders : [];

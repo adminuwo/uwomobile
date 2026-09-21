@@ -13,71 +13,58 @@ export interface EnvConfig {
   GOOGLE_IOS_CLIENT_ID: string;
 }
 
-const DEFAULT_PRODUCTION_URL = 'https://uwoconnectforrb-743928421487.asia-south1.run.app';
+export const PRODUCTION_DOMAIN = 'https://uwoconnect.aisa24.com';
+export const LIVE_BACKEND_URL = 'https://aisaconnectback-anaqbuapb6c6apgy.centralindia-01.azurewebsites.net';
+const DEFAULT_PRODUCTION_URL = LIVE_BACKEND_URL;
 
 const getDynamicApiUrl = (): string => {
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    if (Platform.OS === 'android' && !Constants.isDevice) {
-      const url = process.env.EXPO_PUBLIC_API_URL;
-      if (url.includes('192.168.') || url.includes('localhost') || url.includes('127.0.0.1')) {
-        return url.replace(/https?:\/\/[^:/]+/, 'http://10.0.2.2');
-      }
-    }
-    return process.env.EXPO_PUBLIC_API_URL;
-  }
-
-  if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:8000';
-  }
-
-  const hostUri = 
-    Constants.expoConfig?.hostUri || 
-    (Constants as any).manifest2?.extra?.expoGo?.debuggerHost || 
-    (Constants as any).manifest?.debuggerHost;
-
-  if (hostUri) {
-    const host = hostUri.split(':')[0];
-    if (host && host !== 'localhost' && host !== '127.0.0.1') {
-      return `http://${host}:8000`;
-    }
-  }
-
-  if (Constants.linkingUri) {
-    try {
-      const parsed = new URL(Constants.linkingUri);
-      if (parsed.hostname && parsed.hostname !== 'localhost' && parsed.hostname !== '127.0.0.1') {
-        return `http://${parsed.hostname}:8000`;
-      }
-    } catch {}
-  }
-
-  return 'http://10.0.2.2:8000';
+  return LIVE_BACKEND_URL;
 };
 
+
+const isLocalAddress = (url?: string | null): boolean => {
+  if (!url) return true;
+  return (
+    url.includes('localhost') ||
+    url.includes('127.0.0.1') ||
+    url.includes('10.0.2.2') ||
+    url.includes('192.168.') ||
+    url.includes('10.') ||
+    url.includes('172.16.')
+  );
+};
 
 const getEnv = (): EnvConfig => {
   const extra = Constants.expoConfig?.extra || {};
   const processEnv = process.env;
 
-  // __DEV__ is false in compiled production/release APK builds
+  // __DEV__ is false in compiled production/release APK & AAB builds
   const isDevelopmentBuild = typeof __DEV__ !== 'undefined' ? __DEV__ : false;
 
   const appEnv = (processEnv.EXPO_PUBLIC_APP_ENV || extra.APP_ENV || (isDevelopmentBuild ? 'development' : 'production')) as AppEnvironment;
   const isDev = isDevelopmentBuild && appEnv === 'development';
 
-  // In development, automatically connect to the local Django server on port 8080
-  let apiBaseUrl = isDev
-    ? getDynamicApiUrl()
-    : (process.env.EXPO_PUBLIC_API_URL || process.env.API_BASE_URL || extra.API_BASE_URL || DEFAULT_PRODUCTION_URL);
+  let apiBaseUrl: string;
+  if (isDev) {
+    apiBaseUrl = getDynamicApiUrl();
+  } else {
+    // Production / Release Build: ensure we NEVER bake in a private local IP
+    const candidateUrl =
+      process.env.PROD_API_BASE_URL ||
+      process.env.EXPO_PUBLIC_PROD_API_URL ||
+      (!isLocalAddress(process.env.EXPO_PUBLIC_API_URL) ? process.env.EXPO_PUBLIC_API_URL : null) ||
+      (!isLocalAddress(process.env.API_BASE_URL) ? process.env.API_BASE_URL : null) ||
+      extra.API_BASE_URL ||
+      DEFAULT_PRODUCTION_URL;
+    apiBaseUrl = candidateUrl;
+  }
 
   return {
     APP_ENV: appEnv,
     API_BASE_URL: apiBaseUrl.replace(/\/$/, ''),
     APP_VERSION: Constants.expoConfig?.version || '1.0.0',
     IS_DEV: isDev,
-    GOOGLE_WEB_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID === '876129590251-lok6bi4ut8f2nhl63hh79mghd1ccuf6j.apps.googleusercontent.com' 
-      ? process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID 
-      : '876129590251-lok6bi4ut8f2nhl63hh79mghd1ccuf6j.apps.googleusercontent.com',
+    GOOGLE_WEB_CLIENT_ID: '876129590251-lok6bi4ut8f2nhl63hh79mghd1ccuf6j.apps.googleusercontent.com',
     GOOGLE_ANDROID_CLIENT_ID: '876129590251-34k98ip577urgvt89s5hrihgg3aigme6.apps.googleusercontent.com',
     GOOGLE_IOS_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || extra.GOOGLE_IOS_CLIENT_ID || '',
   };

@@ -34,6 +34,8 @@ export const CustomerProfileModal: React.FC<CustomerProfileModalProps> = ({
   channel = 'WHATSAPP',
   status = 'OPEN',
 }) => {
+  if (!visible) return null;
+
   const { colors, spacing } = useTheme();
   const [currentStage, setCurrentStage] = useState(status);
   const [updating, setUpdating] = useState(false);

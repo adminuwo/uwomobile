@@ -1,5 +1,5 @@
-import React, { ReactNode, useEffect } from 'react';
-import { View, TouchableOpacity, StyleSheet, ViewStyle, BackHandler } from 'react-native';
+import React, { ReactNode } from 'react';
+import { View, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { useTheme } from '../theme';
 import { Text } from './Text';
@@ -55,42 +55,10 @@ export const Header: React.FC<HeaderProps> = ({
     }
     if (router.canGoBack()) {
       router.back();
-    } else {
-      // Intelligent fallback based on path
-      if (pathname.includes('/lead') || pathname.includes('/crm')) {
-        router.replace('/(app)/crm');
-      } else if (pathname.includes('/conversation') || pathname.includes('/inbox')) {
-        router.replace('/(app)/inbox');
-      } else if (
-        pathname.includes('/sales') || 
-        pathname.includes('/team') || 
-        pathname.includes('/settings') ||
-        pathname.includes('/connectors') ||
-        pathname.includes('/workflows') ||
-        pathname.includes('/broadcasts') ||
-        pathname.includes('/knowledge') ||
-        pathname.includes('/reports') ||
-        pathname.includes('/support') ||
-        pathname.includes('/guides') ||
-        pathname.includes('/agency') ||
-        pathname.includes('/plans')
-      ) {
-        router.replace('/(app)/more');
-      } else {
-        router.replace('/(app)/home');
-      }
+      return;
     }
+    router.replace('/(app)/home' as any);
   };
-
-  // Hardware BackHandler on Android for screens with a back button
-  useEffect(() => {
-    if (!shouldShowBack) return;
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      handleBackPress();
-      return true;
-    });
-    return () => sub.remove();
-  }, [shouldShowBack, onBackPress, pathname]);
 
   // Title to display: Prefer specific screen title if passed, else tenant client company name
   const displayTitle = title || clientName;
@@ -183,8 +151,8 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   brandTitleText: {
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 14.5,
+    lineHeight: 20,
   },
   rightContainer: {
     flexDirection: 'row',

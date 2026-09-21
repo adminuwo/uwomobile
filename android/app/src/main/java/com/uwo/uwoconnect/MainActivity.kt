@@ -2,6 +2,7 @@ package com.uwo.uwoconnect
 
 import android.os.Build
 import android.os.Bundle
+import androidx.activity.OnBackPressedCallback
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
@@ -17,6 +18,20 @@ class MainActivity : ReactActivity() {
     // This is required for expo-splash-screen.
     setTheme(R.style.AppTheme);
     super.onCreate(null)
+
+    // Ensure Android OnBackPressedDispatcher properly forwards hardware back press to React Native JS
+    onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+      override fun handleOnBackPressed() {
+        val host = (application as? com.facebook.react.ReactApplication)?.reactNativeHost
+        if (host != null && host.hasInstance()) {
+          host.reactInstanceManager.onBackPressed()
+          return
+        }
+        isEnabled = false
+        onBackPressedDispatcher.onBackPressed()
+        isEnabled = true
+      }
+    })
   }
 
   /**

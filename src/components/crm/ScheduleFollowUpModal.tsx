@@ -39,6 +39,8 @@ const QUICK_TIMES = [
 ];
 
 export function ScheduleFollowUpModal({ visible, onClose, onSave }: ScheduleFollowUpModalProps) {
+  if (!visible) return null;
+
   const { colors } = useTheme();
   const [selectedType, setSelectedType] = useState<FollowUpType>('CALL');
   const [title, setTitle] = useState('');

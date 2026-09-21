@@ -19,13 +19,28 @@ export function useTenantBranding(): TenantBranding {
 
   const client = user?.client;
 
+  // Helper to filter dummy/placeholder names like 'Test'
+  const isInvalidName = (n?: string | null) => !n || !n.trim() || n.trim().toLowerCase() === 'test';
+
+  const validClientBusinessName = !isInvalidName(client?.business_name) ? client!.business_name.trim() : null;
+  const validClientCompanyName = !isInvalidName(client?.company_name) ? client!.company_name.trim() : null;
+  const validUserCompanyName = !isInvalidName(user?.company_name) ? user!.company_name.trim() : null;
+  const validBrandName =
+    !isInvalidName(brand?.brand_name) &&
+    brand?.brand_name !== 'UwoConnect' &&
+    brand?.brand_name !== 'UWO Connect'
+      ? brand!.brand_name.trim()
+      : null;
+  const validUserName = !isInvalidName(user?.name) ? user!.name.trim() : (!isInvalidName(user?.first_name) ? user!.first_name.trim() : null);
+
   // Resolve Client Company Name (Prefer authenticated client business/company name)
   const resolvedClientName =
-    client?.business_name ||
-    client?.company_name ||
-    user?.company_name ||
-    (brand?.brand_name && brand.brand_name !== 'UwoConnect' && brand.brand_name !== 'UWO Connect' ? brand.brand_name : null) ||
-    'Workspace';
+    validClientBusinessName ||
+    validClientCompanyName ||
+    validUserCompanyName ||
+    validBrandName ||
+    validUserName ||
+    'UWO Connect';
 
   // Resolve Logo URL (Check authenticated client logo fields, user logo fields, and active whitelabel config)
   const rawLogo =

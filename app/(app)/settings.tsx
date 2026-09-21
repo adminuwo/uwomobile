@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 import { Screen } from '../../src/components/Screen';
 import { Header } from '../../src/components/Header';
 import { Text } from '../../src/components/Text';
 import { Card } from '../../src/components/Card';
 import { Button } from '../../src/components/Button';
+import { Avatar } from '../../src/components/Avatar';
 import { useTheme } from '../../src/theme';
 import { useSessionStore } from '../../src/stores/sessionStore';
+import { useBrandStore } from '../../src/stores/brandStore';
 import { apiClient } from '../../src/api/client';
 import { useRouter } from 'expo-router';
-import { Building2, User, Phone, MapPin, Shield, Save, CheckCircle2, Activity, RefreshCw, Server, Database, Laptop, ChevronRight, QrCode, ShieldCheck, Trash2 } from 'lucide-react-native';
+import { Building2, User, Phone, MapPin, Shield, Save, CheckCircle2, Activity, RefreshCw, Server, Database, Laptop, ChevronRight, QrCode, ShieldCheck, Trash2, Camera, Upload, ImageIcon } from 'lucide-react-native';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -23,6 +27,8 @@ export default function SettingsScreen() {
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [taxGst, setTaxGst] = useState('');
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   const [healthData, setHealthData] = useState<{
     status: string;
@@ -73,6 +79,7 @@ export default function SettingsScreen() {
       setPhone(clientData.phone_number || userData.phone_number || '');
       setAddress(clientData.address || '');
       setTaxGst(clientData.tax_id_gstin || '');
+      setLogoUrl(clientData.company_logo_url || clientData.white_label_logo || null);
     } catch (err) {
       console.warn('Failed to load profile:', err);
     } finally {
@@ -80,16 +87,118 @@ export default function SettingsScreen() {
     }
   };
 
+  const handlePickImage = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['image/*'],
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        return;
+      }
+
+      const asset = result.assets[0];
+      setUploadingLogo(true);
+
+      const base64Data = await FileSystem.readAsStringAsync(asset.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      const mimeType = asset.mimeType || 'image/jpeg';
+      const dataUri = `data:${mimeType};base64,${base64Data}`;
+
+      setLogoUrl(dataUri);
+
+      // Auto-save immediately to backend profile
+      await apiClient.patch('/api/profile', {
+        company_logo_url: dataUri,
+        client: {
+          company_logo_url: dataUri,
+        },
+      });
+
+      // Synchronize brand store
+      useBrandStore.getState().fetchBrandConfig().catch(() => {});
+      Alert.alert('Profile Updated', 'Profile icon updated successfully.');
+    } catch (err: any) {
+      console.error('Error selecting or saving profile icon:', err);
+      Alert.alert('Upload Error', err?.message || 'Failed to update profile photo.');
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    Alert.alert(
+      'Remove Photo',
+      'Are you sure you want to remove your profile / brand logo?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setUploadingLogo(true);
+              setLogoUrl(null);
+              await apiClient.patch('/api/profile', {
+                company_logo_url: '',
+                client: {
+                  company_logo_url: '',
+                },
+              });
+              useBrandStore.getState().fetchBrandConfig().catch(() => {});
+              Alert.alert('Removed', 'Profile icon removed successfully.');
+            } catch (err: any) {
+              Alert.alert('Error', 'Failed to remove profile icon.');
+            } finally {
+              setUploadingLogo(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const showPhotoOptions = () => {
+    Alert.alert(
+      'Profile & Brand Icon',
+      'Choose an option to update your profile photo or company logo',
+      [
+        {
+          text: 'Select Image / Photo',
+          onPress: () => handlePickImage(),
+        },
+        ...(logoUrl
+          ? [
+              {
+                text: 'Remove Photo',
+                style: 'destructive' as const,
+                onPress: handleRemovePhoto,
+              },
+            ]
+          : []),
+        {
+          text: 'Cancel',
+          style: 'cancel' as const,
+        },
+      ]
+    );
+  };
+
   const handleSave = async () => {
     if (saving) return;
     setSaving(true);
     try {
       await apiClient.patch('/api/profile', {
+        company_logo_url: logoUrl || '',
         client: {
           business_name: businessName.trim(),
           phone_number: phone.trim(),
           address: address.trim(),
           tax_id_gstin: taxGst.trim(),
+          company_logo_url: logoUrl || '',
         },
         user: {
           name: contactName.trim(),
@@ -114,6 +223,64 @@ export default function SettingsScreen() {
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           
+          {/* Profile & Brand Avatar Card */}
+          <Text variant="label" style={styles.sectionLabel}>Profile & Brand Icon</Text>
+          <Card style={styles.avatarCard}>
+            <View style={styles.avatarRow}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={showPhotoOptions}
+                style={styles.avatarWrapper}
+              >
+                <Avatar
+                  uri={logoUrl}
+                  name={businessName || contactName || 'UWO'}
+                  size="xl"
+                />
+                <View style={[styles.cameraBadge, { backgroundColor: colors.primary }]}>
+                  {uploadingLogo ? (
+                    <ActivityIndicator size={12} color="#FFFFFF" />
+                  ) : (
+                    <Camera size={13} color="#FFFFFF" />
+                  )}
+                </View>
+              </TouchableOpacity>
+
+              <View style={styles.avatarMeta}>
+                <Text variant="body" weight="bold" color={colors.textPrimary} numberOfLines={1}>
+                  {businessName || contactName || 'Organization Logo'}
+                </Text>
+                <Text variant="caption" color={colors.textSecondary} style={{ marginTop: 2, marginBottom: 10 }}>
+                  Tap avatar or use button to upload brand icon
+                </Text>
+
+                <View style={styles.avatarBtnRow}>
+                  <TouchableOpacity
+                    onPress={handlePickImage}
+                    disabled={uploadingLogo}
+                    style={[styles.actionChip, { backgroundColor: colors.primary + '18', borderColor: colors.primary + '40' }]}
+                  >
+                    <Upload size={12} color={colors.primary} />
+                    <Text style={[styles.actionChipText, { color: colors.primary }]}>
+                      {logoUrl ? 'Change Icon' : 'Upload Icon'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {logoUrl ? (
+                    <TouchableOpacity
+                      onPress={handleRemovePhoto}
+                      disabled={uploadingLogo}
+                      style={[styles.actionChip, { backgroundColor: colors.error + '12', borderColor: colors.error + '30' }]}
+                    >
+                      <Trash2 size={12} color={colors.error} />
+                      <Text style={[styles.actionChipText, { color: colors.error }]}>Remove</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              </View>
+            </View>
+          </Card>
+
           {/* Organization Settings */}
           <Text variant="label" style={styles.sectionLabel}>Organization Information</Text>
           <Card style={styles.card}>
@@ -359,5 +526,56 @@ const styles = StyleSheet.create({
   },
   saveBtn: {
     marginTop: 24,
+  },
+  avatarCard: {
+    padding: 16,
+  },
+  avatarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  avatarWrapper: {
+    position: 'relative',
+  },
+  cameraBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+  avatarMeta: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  avatarBtnRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  actionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  actionChipText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

@@ -47,6 +47,9 @@ export const PipelineView: React.FC<PipelineViewProps> = ({ contacts, onSelectLe
               )}
               contentContainerStyle={styles.columnContent}
               showsVerticalScrollIndicator={false}
+              nestedScrollEnabled={true}
+              scrollEnabled={true}
+              bounces={true}
             />
           </View>
         );
@@ -80,7 +83,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   countText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
   },
   columnContent: {

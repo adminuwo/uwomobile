@@ -74,16 +74,23 @@ export const resolveChannel = (
     return ch;
   }
 
-  if (n.includes('INSTAGRAM') || pid.includes('instagram') || pid.startsWith('ig_')) {
+  if (
+    n.includes('INSTAGRAM') ||
+    n.includes('INSTA') ||
+    n.includes('REEL') ||
+    n.startsWith('@') ||
+    pid.includes('instagram') ||
+    pid.startsWith('ig_')
+  ) {
     return 'INSTAGRAM';
   }
-  if (n.includes('FACEBOOK') || pid.includes('facebook') || pid.startsWith('fb_')) {
+  if (n.includes('FACEBOOK') || n.includes('FB_') || pid.includes('facebook') || pid.startsWith('fb_')) {
     return 'FACEBOOK';
   }
-  if (n.includes('YOUTUBE') || pid.includes('youtube') || pid.startsWith('yt_')) {
+  if (n.includes('YOUTUBE') || n.includes('YT_') || pid.includes('youtube') || pid.startsWith('yt_')) {
     return 'YOUTUBE';
   }
-  if (pid.includes('@')) {
+  if (pid.includes('@') && !n.startsWith('@')) {
     return 'GMAIL';
   }
 

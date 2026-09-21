@@ -7,6 +7,7 @@ import {
   ViewStyle,
   TouchableWithoutFeedback,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
 import { Text } from './Text';
 import { X } from 'lucide-react-native';
@@ -27,6 +28,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   style,
 }) => {
   const { colors, radius, spacing } = useTheme();
+  const insets = useSafeAreaInsets();
 
   return (
     <RNModal
@@ -47,6 +49,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
                   borderTopLeftRadius: radius.xl,
                   borderTopRightRadius: radius.xl,
                   padding: spacing.lg,
+                  paddingBottom: Math.max(insets.bottom + 16, 24),
                 },
                 style,
               ]}

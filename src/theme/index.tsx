@@ -61,12 +61,29 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           secureStorage.getItem(STORAGE_KEYS.CUSTOM_BASE),
         ]);
 
-        if (storedMode === 'dark' || storedMode === 'light' || storedMode === 'custom') {
-          setModeState(storedMode);
+        // If stale custom/slate theme is found, reset immediately to official UwoConnect green
+        if (
+          storedMode === 'custom' ||
+          storedPrimary === '#334155' ||
+          storedPrimary === '#64748b' ||
+          (storedPrimary && !storedPrimary.startsWith('#05') && !storedPrimary.startsWith('#10') && !storedPrimary.startsWith('#34'))
+        ) {
+          setModeState('light');
+          setPrimaryColor(DEFAULT_PRIMARY);
+          setAccentColor(DEFAULT_ACCENT);
+          await Promise.all([
+            secureStorage.setItem(STORAGE_KEYS.MODE, 'light'),
+            secureStorage.setItem(STORAGE_KEYS.PRIMARY, DEFAULT_PRIMARY),
+            secureStorage.setItem(STORAGE_KEYS.ACCENT, DEFAULT_ACCENT),
+          ]);
+        } else {
+          if (storedMode === 'dark' || storedMode === 'light') {
+            setModeState(storedMode);
+          }
+          if (storedPrimary) setPrimaryColor(storedPrimary);
+          if (storedAccent) setAccentColor(storedAccent);
+          if (storedBase === 'dark' || storedBase === 'light') setCustomBase(storedBase);
         }
-        if (storedPrimary) setPrimaryColor(storedPrimary);
-        if (storedAccent) setAccentColor(storedAccent);
-        if (storedBase === 'dark' || storedBase === 'light') setCustomBase(storedBase);
       } catch (err) {
         console.warn('[Theme] Failed to load local theme cache:', err);
       }
@@ -74,21 +91,26 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     loadStoredTheme();
   }, []);
 
-  // Compute theme colors dynamically
+  // Compute theme colors dynamically - official UwoConnect Green is preserved
   let baseColors: ThemeColors;
-  if (mode === 'custom') {
-    baseColors = createCustomThemeColors(customBase, primaryColor, accentColor);
-  } else if (mode === 'dark') {
+  if (mode === 'dark') {
     baseColors = darkThemeColors;
   } else {
     baseColors = lightThemeColors;
   }
 
-  // Apply dynamic white-label brand overrides if standard theme and configured
-  const colors: ThemeColors = mode === 'custom' ? baseColors : {
+  // Strictly enforce official UwoConnect emerald green brand colors
+  const brandPrimary = (brand.primary_color && brand.primary_color !== '#334155' && brand.primary_color !== '#64748b') 
+    ? brand.primary_color 
+    : baseColors.primary;
+  const brandSecondary = (brand.secondary_color && brand.secondary_color !== '#64748b') 
+    ? brand.secondary_color 
+    : baseColors.secondary;
+
+  const colors: ThemeColors = {
     ...baseColors,
-    primary: brand.primary_color || baseColors.primary,
-    secondary: brand.secondary_color || baseColors.secondary,
+    primary: brandPrimary,
+    secondary: brandSecondary,
   };
 
   const syncToBackend = async (themeMode: ThemeMode, primary: string, accent: string) => {
@@ -156,16 +178,21 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       const serverPrefs = await preferencesApi.getPreferences();
       if (serverPrefs) {
         if (serverPrefs.theme_mode) {
-          setModeState(serverPrefs.theme_mode);
-          await secureStorage.setItem(STORAGE_KEYS.MODE, serverPrefs.theme_mode);
+          const resolvedMode = (serverPrefs.theme_mode === 'dark' || serverPrefs.theme_mode === 'light') ? serverPrefs.theme_mode : 'light';
+          setModeState(resolvedMode);
+          await secureStorage.setItem(STORAGE_KEYS.MODE, resolvedMode);
         }
         if (serverPrefs.primary_color) {
-          setPrimaryColor(serverPrefs.primary_color);
-          await secureStorage.setItem(STORAGE_KEYS.PRIMARY, serverPrefs.primary_color);
+          const isGreen = serverPrefs.primary_color.startsWith('#05') || serverPrefs.primary_color.startsWith('#10') || serverPrefs.primary_color.startsWith('#34');
+          const resolvedPrimary = isGreen ? serverPrefs.primary_color : DEFAULT_PRIMARY;
+          setPrimaryColor(resolvedPrimary);
+          await secureStorage.setItem(STORAGE_KEYS.PRIMARY, resolvedPrimary);
         }
         if (serverPrefs.accent_color) {
-          setAccentColor(serverPrefs.accent_color);
-          await secureStorage.setItem(STORAGE_KEYS.ACCENT, serverPrefs.accent_color);
+          const isAccentGreen = serverPrefs.accent_color.startsWith('#0d') || serverPrefs.accent_color.startsWith('#14') || serverPrefs.accent_color.startsWith('#10');
+          const resolvedAccent = isAccentGreen ? serverPrefs.accent_color : DEFAULT_ACCENT;
+          setAccentColor(resolvedAccent);
+          await secureStorage.setItem(STORAGE_KEYS.ACCENT, resolvedAccent);
         }
       }
     } catch (err) {

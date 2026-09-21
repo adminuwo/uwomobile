@@ -18,6 +18,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.uwo.uwoconnect",
+      "buildNumber": "2",
       "infoPlist": {
         "NSCameraUsageDescription": "UwoConnect requires camera access to attach media to messages and CRM contacts.",
         "NSPhotoLibraryUsageDescription": "UwoConnect requires photo library access to upload media."
@@ -29,7 +30,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.uwo.uwoconnect",
-      "versionCode": 14,
+      "versionCode": 17,
       "usesCleartextTraffic": true,
       "intentFilters": [
         {
@@ -60,6 +61,7 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      "expo-apple-authentication",
       [
         "expo-camera",
         {

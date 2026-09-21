@@ -6,6 +6,33 @@ import { ApiErrorResponse } from '../types/auth';
 
 import { Platform } from 'react-native';
 
+// ──────────────────────────────────────────────────
+// AbortController registry – every request gets a signal
+// so we can cancel all in-flight requests on logout.
+// ──────────────────────────────────────────────────
+const activeControllers = new Set<AbortController>();
+
+/**
+ * Cancel every in-flight Axios request tracked by this module.
+ * Called by the session-lifecycle service on logout.
+ */
+export function cancelAllPendingRequests(): void {
+  activeControllers.forEach((controller) => {
+    try {
+      controller.abort();
+    } catch {
+      // already aborted – safe to ignore
+    }
+  });
+  activeControllers.clear();
+}
+
+// Flag to prevent recursive 401 → logout → 401 loops
+let isLoggingOut = false;
+export function setLoggingOutFlag(value: boolean): void {
+  isLoggingOut = value;
+}
+
 class ApiClient {
   private instance: AxiosInstance;
 
@@ -23,13 +50,28 @@ class ApiClient {
   }
 
   private setupInterceptors(): void {
-    // Request Interceptor: Attach JWT Bearer token from SecureStore
+    // Request Interceptor: Attach JWT Bearer token from SecureStore + AbortController
     this.instance.interceptors.request.use(
       async (config) => {
+        // Always read the freshest token (important after account switch)
         const token = await secureStorage.getAccessToken();
         if (token && config.headers) {
           config.headers.Authorization = `Bearer ${token}`;
+        } else if (!token && config.headers && config.headers.Authorization && !config.url?.includes('/auth/')) {
+          delete config.headers.Authorization;
         }
+
+        // Attach an AbortController signal so we can cancel mid-flight
+        if (!config.signal) {
+          const controller = new AbortController();
+          config.signal = controller.signal;
+          activeControllers.add(controller);
+
+          // Automatically clean up once request settles
+          const cleanup = () => activeControllers.delete(controller);
+          config.signal.addEventListener('abort', cleanup, { once: true });
+        }
+
         console.log(`[ApiClient] Request -> ${config.method?.toUpperCase()} ${config.baseURL || ''}${config.url}`);
         return config;
       },
@@ -42,6 +84,12 @@ class ApiClient {
     // Response Interceptor: Standardized Error Handling with ADB / LAN Tunnel Fallback
     this.instance.interceptors.response.use(
       (response: AxiosResponse) => {
+        // Remove controller from active set on success
+        if (response.config.signal) {
+          activeControllers.forEach((c) => {
+            if (c.signal === response.config.signal) activeControllers.delete(c);
+          });
+        }
         console.log(`[ApiClient] Response <- ${response.status} ${response.config.url}`);
         return response;
       },
@@ -49,14 +97,27 @@ class ApiClient {
         const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
         console.log(`[ApiClient] Request failed: ${error.config?.baseURL || ''}${error.config?.url} | status: ${error.response?.status || 'NO_RESPONSE'}`);
 
+        // ── 401 Auto-logout ────────────────────────────
+        if (
+          error.response?.status === 401 &&
+          !isLoggingOut &&
+          !originalRequest?._retry
+        ) {
+          // Lazy import to avoid circular dependency at module load time
+          try {
+            const { logoutAndResetSession } = require('../services/sessionLifecycle');
+            logoutAndResetSession().catch(() => {});
+          } catch {
+            // sessionLifecycle not yet loaded – ignore
+          }
+        }
+
         // If network error occurred and not retried yet, try fallback candidates in development mode only
         if (env.IS_DEV && !error.response && originalRequest && !originalRequest._retry) {
           originalRequest._retry = true;
           const currentBase = this.instance.defaults.baseURL || '';
 
-          const candidates = Platform.OS === 'android'
-            ? ['http://10.0.2.2:8000', 'https://uwoconnectforrb-743928421487.asia-south1.run.app']
-            : ['http://127.0.0.1:8000', 'https://uwoconnectforrb-743928421487.asia-south1.run.app'];
+          const candidates = ['https://aisaconnectback-anaqbuapb6c6apgy.centralindia-01.azurewebsites.net'];
 
           for (const fallbackUrl of candidates) {
             if (fallbackUrl !== currentBase) {
@@ -65,15 +126,12 @@ class ApiClient {
               try {
                 const res = await this.instance(originalRequest);
                 console.log(`[ApiClient] Retried successfully with: ${fallbackUrl}`);
-                this.instance.defaults.baseURL = fallbackUrl;
                 return res;
               } catch (retryErr: any) {
                 // Try next
               }
             }
           }
-          // Restore base URL if no candidates worked
-          this.instance.defaults.baseURL = currentBase;
         }
 
         const formattedError = this.handleApiError(error);
@@ -192,4 +250,3 @@ class ApiClient {
 
 export const apiClient = new ApiClient();
 export const client = apiClient;
-

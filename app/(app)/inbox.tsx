@@ -9,6 +9,7 @@ import { ConversationList } from '../../src/components/inbox/ConversationList';
 import { inboxApi, Conversation, resolveChannel } from '../../src/api/inbox';
 import { inboxWebSocket } from '../../src/services/inboxWebSocket';
 import { useTranslation } from '../../src/i18n';
+import { useSessionStore } from '../../src/stores/sessionStore';
 
 export default function InboxScreen() {
   const router = useRouter();
@@ -19,6 +20,9 @@ export default function InboxScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const user = useSessionStore((state) => state.user);
+  const token = useSessionStore((state) => state.token);
+  const userKey = user?.id || user?.email || 'anon';
 
   const loadConversations = useCallback(async (isRefresh = false) => {
     try {
@@ -37,7 +41,7 @@ export default function InboxScreen() {
       });
 
       console.log('[InboxScreen] Got conversations:', res?.conversations?.length);
-      setConversations(res.conversations);
+      setConversations(res.conversations || []);
     } catch (err: any) {
       console.warn('[InboxScreen] Load error:', err);
       setError(err.message || 'Failed to load conversations');
@@ -48,6 +52,10 @@ export default function InboxScreen() {
     }
   }, [selectedChannel, searchQuery]);
 
+  useEffect(() => {
+    setConversations([]);
+    loadConversations();
+  }, [userKey, token, loadConversations]);
 
   useFocusEffect(
     useCallback(() => {

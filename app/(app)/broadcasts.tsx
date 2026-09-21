@@ -22,7 +22,8 @@ import { Input } from '../../src/components/Input';
 import { useTheme } from '../../src/theme';
 import { apiClient } from '../../src/api/client';
 import { templatesApi, WhatsAppTemplate } from '../../src/api/templates';
-import { Megaphone, Plus, CheckCircle2, Check, Send, Trash2 } from 'lucide-react-native';
+import { Megaphone, Plus, CheckCircle2, Check, Send, Trash2, FileSpreadsheet, Users } from 'lucide-react-native';
+import { ExcelImportSection, ImportedRecipient } from '../../src/components/broadcasts/ExcelImportSection';
 
 export type BroadcastChannel =
   | 'WHATSAPP'
@@ -152,14 +153,18 @@ const ChannelLogo: React.FC<{ channel: BroadcastChannel | string; size?: number 
   return <Megaphone size={size} color="#64748B" />;
 };
 
+export const ALL_CHANNELS: { id: BroadcastChannel; name: string; subtitle: string; color: string; bgColor: string }[] = [
+  { id: 'WHATSAPP', name: 'WhatsApp', subtitle: 'Meta Cloud API', color: '#00AB56', bgColor: '#E8F8F0' },
+  { id: 'INSTAGRAM', name: 'Instagram', subtitle: 'Business DMs', color: '#E1306C', bgColor: '#FDEBF2' },
+  { id: 'FACEBOOK', name: 'Facebook', subtitle: 'Page Inbox', color: '#0084FF', bgColor: '#EBF4FE' },
+  { id: 'GMAIL', name: 'Email', subtitle: 'Gmail / Mass', color: '#EA4335', bgColor: '#FDF0ED' },
+  { id: 'SMS', name: 'SMS', subtitle: 'Cellular Gateway', color: '#3B82F6', bgColor: '#EFF6FF' },
+  { id: 'TELEGRAM', name: 'Telegram', subtitle: 'Bot Channel', color: '#229ED9', bgColor: '#E9F5FB' },
+  { id: 'LINKEDIN', name: 'LinkedIn', subtitle: 'InMail B2B', color: '#0A66C2', bgColor: '#EBF1F7' },
+];
+
 export const CHANNELS: { id: BroadcastChannel; name: string; subtitle: string; color: string; bgColor: string }[] = [
-  { id: 'WHATSAPP', name: 'WhatsApp', subtitle: 'Official Meta Cloud API', color: '#00AB56', bgColor: '#E8F8F0' },
-  { id: 'INSTAGRAM', name: 'Instagram Direct', subtitle: 'IG Business Inbound & DMs', color: '#E1306C', bgColor: '#FDEBF2' },
-  { id: 'FACEBOOK', name: 'Facebook Messenger', subtitle: 'Page Inbox & Chats', color: '#0084FF', bgColor: '#EBF4FE' },
-  { id: 'GMAIL', name: 'Email (Gmail & Outlook)', subtitle: 'Transactional & Mass Mail', color: '#EA4335', bgColor: '#FDF0ED' },
-  { id: 'SMS', name: 'SMS Gateway', subtitle: 'Direct Cellular SMS', color: '#3B82F6', bgColor: '#EFF6FF' },
-  { id: 'TELEGRAM', name: 'Telegram Bot', subtitle: 'Channels & Direct Broadcast', color: '#229ED9', bgColor: '#E9F5FB' },
-  { id: 'LINKEDIN', name: 'LinkedIn InMail', subtitle: 'Lead Gen & B2B InMail', color: '#0A66C2', bgColor: '#EBF1F7' },
+  { id: 'WHATSAPP', name: 'WhatsApp', subtitle: 'Meta Cloud API', color: '#00AB56', bgColor: '#E8F8F0' },
 ];
 
 export default function BroadcastsScreen() {
@@ -171,7 +176,11 @@ export default function BroadcastsScreen() {
 
   // New Campaign Form
   const [name, setName] = useState('');
-  const [channel, setChannel] = useState<BroadcastChannel>('WHATSAPP');
+  const [selectedPlatforms, setSelectedPlatforms] = useState<BroadcastChannel[]>(['WHATSAPP']);
+  const [audienceMode, setAudienceMode] = useState<'EXCEL' | 'CRM'>('EXCEL');
+  const [importedRecipients, setImportedRecipients] = useState<ImportedRecipient[]>([]);
+  const [importedFilename, setImportedFilename] = useState<string | undefined>();
+  const [whatsappMode, setWhatsappMode] = useState<'TEMPLATE' | 'DIRECT'>('TEMPLATE');
   const [messageBody, setMessageBody] = useState('');
   const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
@@ -198,26 +207,73 @@ export default function BroadcastsScreen() {
     templatesApi.getTemplates().then(setTemplates).catch(() => setTemplates([]));
   }, [fetchCampaigns]);
 
+  const togglePlatform = (chId: BroadcastChannel) => {
+    if (selectedPlatforms.includes(chId)) {
+      if (selectedPlatforms.length > 1) {
+        setSelectedPlatforms(selectedPlatforms.filter((p) => p !== chId));
+      } else {
+        Alert.alert('Selection Required', 'At least one broadcast channel must remain selected.');
+      }
+    } else {
+      setSelectedPlatforms([...selectedPlatforms, chId]);
+    }
+  };
+
   const handleCreateCampaign = async () => {
     if (!name.trim() || sending) return;
+
+    if (audienceMode === 'EXCEL' && importedRecipients.length === 0) {
+      Alert.alert(
+        'Excel File Required',
+        'Please select an Excel (.xlsx) or CSV file with valid phone numbers before launching the broadcast.'
+      );
+      return;
+    }
+
+    const activePlatforms = selectedPlatforms.length > 0 ? selectedPlatforms : ['WHATSAPP'];
+    const primaryChannel = activePlatforms[0] || 'WHATSAPP';
+
+    if (activePlatforms.includes('WHATSAPP') && whatsappMode === 'TEMPLATE' && !selectedTemplate) {
+      Alert.alert(
+        'Template Required',
+        'Please select an approved Meta template for WhatsApp, or switch to Direct Custom Message.'
+      );
+      return;
+    }
+
+    if ((!activePlatforms.includes('WHATSAPP') || whatsappMode === 'DIRECT' || activePlatforms.length > 1) && !messageBody.trim()) {
+      Alert.alert(
+        'Message Required',
+        'Please enter the campaign message text before launching.'
+      );
+      return;
+    }
 
     try {
       setSending(true);
       await apiClient.post('/api/campaigns/', {
         name: name.trim(),
-        channel,
-        template_name: channel === 'WHATSAPP' ? (selectedTemplate || undefined) : undefined,
+        channel: primaryChannel,
+        platforms: activePlatforms,
+        template_name: activePlatforms.includes('WHATSAPP') && whatsappMode === 'TEMPLATE' ? selectedTemplate : undefined,
         message: messageBody.trim() || undefined,
         status: 'SCHEDULED',
+        imported_recipients: audienceMode === 'EXCEL' ? importedRecipients : undefined,
       });
 
       setCreateModalVisible(false);
       setName('');
       setMessageBody('');
       setSelectedTemplate('');
+      setImportedRecipients([]);
+      setImportedFilename(undefined);
+      setWhatsappMode('TEMPLATE');
+      setSelectedPlatforms(['WHATSAPP']);
       fetchCampaigns(true);
-    } catch (err) {
+    } catch (err: any) {
       console.warn('Failed to launch campaign:', err);
+      const errDetail = err?.response?.data?.error || err?.response?.data?.message || 'Failed to launch broadcast campaign.';
+      Alert.alert('Broadcast Error', errDetail);
     } finally {
       setSending(false);
     }
@@ -261,7 +317,7 @@ export default function BroadcastsScreen() {
   };
 
   const getChannelMeta = (chId: string) => {
-    const found = CHANNELS.find((c) => c.id === chId || (chId === 'EMAIL' && c.id === 'GMAIL'));
+    const found = ALL_CHANNELS.find((c) => c.id === chId || (chId === 'EMAIL' && c.id === 'GMAIL'));
     return found || { id: chId as any, name: chId, color: colors.primary, bgColor: `${colors.primary}15`, subtitle: '' };
   };
 
@@ -298,7 +354,7 @@ export default function BroadcastsScreen() {
                 No Mass Broadcasts Found
               </Text>
               <Text variant="caption" color={colors.textMuted} align="center" style={{ marginTop: 4 }}>
-                Launch WhatsApp, Instagram, Messenger, Email & SMS broadcasts to engage customer leads instantly.
+                Launch verified WhatsApp broadcasts to engage customer leads instantly.
               </Text>
             </Card>
           ) : null
@@ -388,96 +444,251 @@ export default function BroadcastsScreen() {
       {/* Create Broadcast Modal */}
       <Modal
         visible={createModalVisible}
-        title="Create New Mass Broadcast"
+        title="New Broadcast"
         onClose={() => setCreateModalVisible(false)}
       >
-        <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+        <ScrollView style={styles.cleanModalBody} showsVerticalScrollIndicator={false}>
+          {/* Campaign Name */}
           <Input
             label="Campaign Name"
-            placeholder="e.g. Festival Special Offer Broadcast"
+            placeholder="e.g. Festival Special Offer"
             value={name}
             onChangeText={setName}
           />
 
-          <View style={{ marginTop: 6, marginBottom: 4 }}>
-            <Text variant="caption" weight="bold" color={colors.textPrimary}>
-              Select Broadcast Channel ({CHANNELS.length} Available)
-            </Text>
-            <Text variant="caption" color={colors.textMuted} style={{ fontSize: 11 }}>
-              Choose the network through which to dispatch this campaign
-            </Text>
-          </View>
-
-          {/* 7 Channel Selector Grid */}
-          <View style={styles.channelGrid}>
-            {CHANNELS.map((ch) => {
-              const isSelected = channel === ch.id;
-              return (
-                <TouchableOpacity
-                  key={ch.id}
-                  style={[
-                    styles.channelGridCard,
-                    { borderColor: isSelected ? ch.color : '#E2E8F0', backgroundColor: isSelected ? ch.bgColor : '#FFF' },
-                  ]}
-                  onPress={() => setChannel(ch.id)}
-                  activeOpacity={0.7}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <ChannelLogo channel={ch.id} size={24} />
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        variant="caption"
-                        weight="bold"
-                        color={isSelected ? ch.color : colors.textPrimary}
-                        numberOfLines={1}
-                      >
-                        {ch.name}
-                      </Text>
-                      <Text variant="caption" color={colors.textMuted} style={{ fontSize: 9 }} numberOfLines={1}>
-                        {ch.subtitle}
-                      </Text>
-                    </View>
-                  </View>
-                  {isSelected && (
-                    <View style={[styles.selectedCheckBadge, { backgroundColor: ch.color }]}>
-                      <Check size={10} color="#FFF" />
-                    </View>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          {channel === 'WHATSAPP' && templates.length > 0 && (
-            <View style={{ marginTop: 10 }}>
-              <Text variant="caption" weight="bold" color={colors.textPrimary} style={{ marginBottom: 6 }}>
-                Select Approved Meta Template
+          {/* Audience Source Selector */}
+          <View style={{ marginTop: 10, marginBottom: 8 }}>
+            <View style={styles.cleanLabelRow}>
+              <Text variant="caption" weight="bold" color={colors.textPrimary}>
+                Audience Source
               </Text>
-              <ScrollView style={styles.templateList} nestedScrollEnabled>
-                {templates.map((t) => (
-                  <TouchableOpacity
-                    key={t.id || t.name}
-                    style={[
-                      styles.templateOption,
-                      selectedTemplate === t.name && { borderColor: colors.primary, backgroundColor: `${colors.primary}15` },
-                    ]}
-                    onPress={() => setSelectedTemplate(t.name)}
-                  >
-                    <Text variant="body" weight="bold" color={colors.textPrimary}>
-                      {t.name}
-                    </Text>
-                    <Badge label={t.category} variant="info" />
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+            </View>
+            <View style={[styles.compactTabRow, { backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.06)' : '#F1F5F9' }]}>
+              <TouchableOpacity
+                style={[
+                  styles.compactTabBtn,
+                  audienceMode === 'EXCEL' && { backgroundColor: colors.primary },
+                ]}
+                onPress={() => setAudienceMode('EXCEL')}
+                activeOpacity={0.8}
+              >
+                <FileSpreadsheet size={13} color={audienceMode === 'EXCEL' ? '#FFF' : colors.textPrimary} />
+                <Text
+                  variant="caption"
+                  weight="bold"
+                  color={audienceMode === 'EXCEL' ? '#FFF' : colors.textPrimary}
+                  style={{ marginLeft: 5, fontSize: 11 }}
+                >
+                  Excel / CSV
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.compactTabBtn,
+                  audienceMode === 'CRM' && { backgroundColor: colors.primary },
+                ]}
+                onPress={() => setAudienceMode('CRM')}
+                activeOpacity={0.8}
+              >
+                <Users size={13} color={audienceMode === 'CRM' ? '#FFF' : colors.textPrimary} />
+                <Text
+                  variant="caption"
+                  weight="bold"
+                  color={audienceMode === 'CRM' ? '#FFF' : colors.textPrimary}
+                  style={{ marginLeft: 5, fontSize: 11 }}
+                >
+                  CRM Contacts
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {audienceMode === 'EXCEL' ? (
+            <ExcelImportSection
+              recipientsCount={importedRecipients.length}
+              onRecipientsChange={(recipients, filename) => {
+                setImportedRecipients(recipients);
+                setImportedFilename(filename);
+                if (!name && filename) {
+                  const clean = filename.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
+                  setName(`${clean.charAt(0).toUpperCase() + clean.slice(1)} Broadcast`);
+                }
+              }}
+            />
+          ) : (
+            <View style={[styles.cleanCrmBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Users size={14} color={colors.primary} />
+              <Text variant="caption" color={colors.textSecondary} style={{ flex: 1, fontSize: 11 }}>
+                Will dispatch to all active leads saved in your CRM.
+              </Text>
             </View>
           )}
 
-          {channel !== 'WHATSAPP' && (
-            <View style={{ marginTop: 10 }}>
-              <Text variant="caption" weight="bold" color={colors.textPrimary} style={{ marginBottom: 6 }}>
-                Broadcast Message Content
+          {/* Send Channel: WhatsApp Cloud API exclusively */}
+          <View style={{ marginTop: 10, marginBottom: 8 }}>
+            <View style={styles.cleanLabelRow}>
+              <Text variant="caption" weight="bold" color={colors.textPrimary}>
+                Broadcast Channel
               </Text>
+              <Text variant="caption" weight="bold" color={colors.primary} style={{ fontSize: 11 }}>
+                ✓ Official WhatsApp Only
+              </Text>
+            </View>
+
+            <View style={styles.cleanPillRow}>
+              <View
+                style={[
+                  styles.cleanPill,
+                  {
+                    flex: 1,
+                    borderColor: colors.primary,
+                    backgroundColor: mode === 'dark' ? `${colors.primary}20` : '#ECFDF5',
+                    justifyContent: 'space-between',
+                  },
+                ]}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <ChannelLogo channel="WHATSAPP" size={16} />
+                  <Text
+                    variant="caption"
+                    weight="bold"
+                    color={colors.primary}
+                    style={{ marginLeft: 6, fontSize: 12 }}
+                  >
+                    WhatsApp (Meta Cloud API)
+                  </Text>
+                </View>
+                <View style={[styles.cleanCheckDot, { backgroundColor: colors.primary }]}>
+                  <Check size={8} color="#FFF" strokeWidth={3.5} />
+                </View>
+              </View>
+            </View>
+            <Text variant="caption" color={colors.textMuted} style={{ fontSize: 10, marginTop: 4 }}>
+              * Meta Policy: Mass marketing broadcasts are supported exclusively via official WhatsApp verified numbers. Instagram and Facebook do not permit unsolicited mass broadcasts.
+            </Text>
+          </View>
+
+          {/* WhatsApp Template Selector (Only when WhatsApp is the ONLY selected channel) */}
+          {selectedPlatforms.length === 1 && selectedPlatforms[0] === 'WHATSAPP' && templates.length > 0 && (
+            <View style={{ marginBottom: 8 }}>
+              <View style={[styles.compactTabRow, { backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.06)' : '#F1F5F9', marginBottom: 6 }]}>
+                <TouchableOpacity
+                  style={[
+                    styles.compactTabBtn,
+                    whatsappMode === 'TEMPLATE' && { backgroundColor: colors.primary },
+                  ]}
+                  onPress={() => setWhatsappMode('TEMPLATE')}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    variant="caption"
+                    weight="bold"
+                    color={whatsappMode === 'TEMPLATE' ? '#FFF' : colors.textSecondary}
+                    style={{ fontSize: 11 }}
+                  >
+                    Approved Template ({templates.length})
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.compactTabBtn,
+                    whatsappMode === 'DIRECT' && { backgroundColor: colors.primary },
+                  ]}
+                  onPress={() => {
+                    setWhatsappMode('DIRECT');
+                    setSelectedTemplate('');
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    variant="caption"
+                    weight="bold"
+                    color={whatsappMode === 'DIRECT' ? '#FFF' : colors.textSecondary}
+                    style={{ fontSize: 11 }}
+                  >
+                    Custom Text
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {whatsappMode === 'TEMPLATE' && (
+                <ScrollView
+                  style={[styles.cleanTemplateList, { borderColor: colors.border }]}
+                  nestedScrollEnabled
+                  showsVerticalScrollIndicator={false}
+                >
+                  {templates.map((t) => {
+                    const isSelected = selectedTemplate === t.name;
+                    return (
+                      <TouchableOpacity
+                        key={t.id || t.name}
+                        style={[
+                          styles.cleanTemplateOption,
+                          {
+                            borderColor: isSelected ? colors.primary : colors.border,
+                            backgroundColor: isSelected
+                              ? (mode === 'dark' ? 'rgba(0, 171, 86, 0.15)' : '#E8F8F0')
+                              : (mode === 'dark' ? colors.surface : '#FFFFFF'),
+                          },
+                        ]}
+                        onPress={() => setSelectedTemplate(isSelected ? '' : t.name)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={{ flex: 1, marginRight: 8, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                          {isSelected && <Check size={12} color={colors.primary} strokeWidth={2.5} />}
+                          <Text
+                            variant="caption"
+                            weight="bold"
+                            color={isSelected ? colors.primary : colors.textPrimary}
+                            numberOfLines={1}
+                            style={{ flexShrink: 1, fontSize: 12 }}
+                          >
+                            {t.name}
+                          </Text>
+                        </View>
+                        <Badge
+                          label={t.category || 'TEMPLATE'}
+                          variant={isSelected ? 'success' : 'info'}
+                        />
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              )}
+            </View>
+          )}
+
+          {/* Message Text Input */}
+          {(selectedPlatforms.length > 1 || !selectedPlatforms.includes('WHATSAPP') || whatsappMode === 'DIRECT') && (
+            <View style={{ marginBottom: 8 }}>
+              <View style={styles.cleanLabelRow}>
+                <Text variant="caption" weight="bold" color={colors.textPrimary}>
+                  Message Text
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <TouchableOpacity
+                    style={[styles.miniVarChip, { borderColor: colors.border }]}
+                    onPress={() => setMessageBody((prev) => (prev ? prev + ' {{name}}' : '{{name}}'))}
+                    activeOpacity={0.7}
+                  >
+                    <Text variant="caption" weight="bold" color={colors.primary} style={{ fontSize: 10 }}>
+                      + {'{{name}}'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.miniVarChip, { borderColor: colors.border }]}
+                    onPress={() => setMessageBody((prev) => (prev ? prev + ' {{phone}}' : '{{phone}}'))}
+                    activeOpacity={0.7}
+                  >
+                    <Text variant="caption" weight="bold" color={colors.primary} style={{ fontSize: 10 }}>
+                      + {'{{phone}}'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
               <TextInput
                 placeholder="Enter campaign message text here..."
                 placeholderTextColor={colors.textMuted}
@@ -486,18 +697,26 @@ export default function BroadcastsScreen() {
                 multiline
                 numberOfLines={3}
                 style={[
-                  styles.messageInput,
+                  styles.cleanMessageInput,
                   { borderColor: colors.border, color: colors.textPrimary, backgroundColor: colors.surface },
                 ]}
               />
             </View>
           )}
 
-          <View style={{ marginTop: 16, marginBottom: 10 }}>
+          {/* Launch Button */}
+          <View style={{ marginTop: 6, marginBottom: 8 }}>
             <Button
-              title="Launch Broadcast Campaign"
+              title={
+                sending
+                  ? 'Dispatching Campaign...'
+                  : audienceMode === 'EXCEL' && importedRecipients.length > 0
+                  ? `🚀 Broadcast to ${importedRecipients.length} Contacts`
+                  : 'Launch WhatsApp Broadcast'
+              }
               loading={sending}
               onPress={handleCreateCampaign}
+              disabled={sending || (audienceMode === 'EXCEL' && importedRecipients.length === 0)}
             />
           </View>
         </ScrollView>
@@ -567,48 +786,87 @@ const styles = StyleSheet.create({
   statBox: {
     alignItems: 'center',
   },
-  modalBody: {
-    maxHeight: 480,
+  cleanModalBody: {
+    maxHeight: 520,
   },
-  channelGrid: {
-    gap: 8,
-    marginTop: 6,
-  },
-  channelGridCard: {
-    position: 'relative',
-    padding: 10,
-    borderRadius: 10,
-    borderWidth: 1.5,
-  },
-  selectedCheckBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  templateList: {
-    maxHeight: 140,
-    marginBottom: 10,
-  },
-  templateOption: {
+  cleanLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    marginBottom: 6,
+    marginBottom: 5,
   },
-  messageInput: {
+  compactTabRow: {
+    flexDirection: 'row',
+    padding: 3,
+    borderRadius: 8,
+  },
+  compactTabBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  cleanCrmBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginVertical: 4,
+  },
+  cleanPillRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginVertical: 3,
+  },
+  cleanPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 7,
+    paddingHorizontal: 4,
+    borderRadius: 8,
+    borderWidth: 1.5,
+  },
+  cleanCheckDot: {
+    marginLeft: 4,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cleanTemplateList: {
+    maxHeight: 120,
+    borderRadius: 8,
+    borderWidth: 1,
+    padding: 4,
+  },
+  cleanTemplateOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    marginBottom: 4,
+  },
+  miniVarChip: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+  },
+  cleanMessageInput: {
     borderWidth: 1,
     borderRadius: 8,
-    padding: 10,
-    minHeight: 80,
+    padding: 8,
+    minHeight: 65,
     textAlignVertical: 'top',
     fontSize: 13,
   },

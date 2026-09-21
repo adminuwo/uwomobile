@@ -13,19 +13,25 @@ import { paymentsApi } from '../../../src/api/payments';
 import { AddMoneyModal } from '../../../src/components/sales/AddMoneyModal';
 import { Wallet, ArrowDownRight, ArrowUpRight, Plus } from 'lucide-react-native';
 
+import { useSessionStore } from '../../../src/stores/sessionStore';
+
 export default function WalletScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const user = useSessionStore((state) => state.user);
+  const userKey = user?.id || user?.email || 'anon';
   const [modalVisible, setModalVisible] = useState(false);
 
   const { data: walletData, isLoading: walletLoading, error: walletError, refetch: refetchWallet } = useQuery({
-    queryKey: ['walletDashboard'],
-    queryFn: () => paymentsApi.getWalletDashboard()
+    queryKey: ['walletDashboard', userKey],
+    queryFn: () => paymentsApi.getWalletDashboard(),
+    enabled: !!user,
   });
 
   const { data: historyData, isLoading: historyLoading, refetch: refetchHistory } = useQuery({
-    queryKey: ['paymentHistory'],
-    queryFn: () => paymentsApi.getPaymentHistory()
+    queryKey: ['paymentHistory', userKey],
+    queryFn: () => paymentsApi.getPaymentHistory(),
+    enabled: !!user,
   });
 
   const isLoading = walletLoading || historyLoading;

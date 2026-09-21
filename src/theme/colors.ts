@@ -130,8 +130,8 @@ export const THEME_PRESETS: ThemePreset[] = [
   { id: 'azure', name: 'Pacific Azure', primary: '#0284c7', accent: '#38bdf8' },
   { id: 'violet', name: 'Royal Amethyst', primary: '#7c3aed', accent: '#a855f7' },
   { id: 'rose', name: 'Rose Terracotta', primary: '#e11d48', accent: '#fb7185' },
-  { id: 'amber', name: 'Warm Amber', primary: '#d97706', accent: '#fbbf24' },
-  { id: 'slate', name: 'Nordic Slate', primary: '#334155', accent: '#64748b' },
+  { id: 'mint', name: 'Emerald Mint', primary: '#059669', accent: '#34d399' },
+  { id: 'forest', name: 'Forest Jade', primary: '#047857', accent: '#10b981' },
 ];
 
 export function createCustomThemeColors(

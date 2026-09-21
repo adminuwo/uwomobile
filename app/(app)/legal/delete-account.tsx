@@ -248,7 +248,7 @@ export default function DeleteAccountScreen() {
 
           <TouchableOpacity
             style={styles.cancelBtn}
-            onPress={() => router.back()}
+            onPress={() => router.replace('/(app)/more')}
             disabled={deleting}
           >
             <Text variant="body" weight="bold" color={colors.textSecondary}>

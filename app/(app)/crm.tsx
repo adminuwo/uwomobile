@@ -15,13 +15,16 @@ import { ExportLeadsModal } from '../../src/components/crm/ExportLeadsModal';
 import { EmptyState } from '../../src/components/EmptyState';
 import { ErrorState } from '../../src/components/ErrorState';
 import { crmApi, Contact, LeadStage } from '../../src/api/crm';
+import { resolveChannel } from '../../src/api/inbox';
 import { useSessionStore } from '../../src/stores/sessionStore';
 import { useTheme } from '../../src/theme';
 import { useTranslation } from '../../src/i18n';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Users, LayoutGrid, List, Plus, Upload, Download } from 'lucide-react-native';
 
 export default function CRMScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { t } = useTranslation();
   const authStatus = useSessionStore((state) => state.status);
@@ -42,6 +45,9 @@ export default function CRMScreen() {
   const [newEmail, setNewEmail] = useState('');
   const [creating, setCreating] = useState(false);
 
+  const user = useSessionStore((state) => state.user);
+  const userKey = user?.id || user?.email || 'anon';
+
   const loadContacts = useCallback(async (isRefresh = false) => {
     try {
       if (isRefresh) {
@@ -61,6 +67,11 @@ export default function CRMScreen() {
     }
   }, [searchQuery]);
 
+  useEffect(() => {
+    setContacts([]);
+    loadContacts();
+  }, [userKey, token, loadContacts]);
+
   useFocusEffect(
     useCallback(() => {
       loadContacts();
@@ -76,13 +87,14 @@ export default function CRMScreen() {
 
   const handleOpenChat = (contact: Contact) => {
     const rawAddress = contact.platform_id || contact.phone_number || contact.id;
+    const dynamicChannel = resolveChannel(contact.preferred_channel, contact.name, rawAddress);
     router.push({
       pathname: '/conversation/[id]' as any,
       params: {
         id: contact.id,
         rawAddress: rawAddress,
         name: contact.name || contact.phone_number || 'Customer',
-        channel: contact.preferred_channel || 'WHATSAPP',
+        channel: dynamicChannel,
       },
     });
   };
@@ -121,18 +133,18 @@ export default function CRMScreen() {
               activeOpacity={0.75}
               style={[styles.actionIconBtn, { borderColor: colors.border, backgroundColor: colors.card }]}
               onPress={() => setImportModalVisible(true)}
+              hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
             >
-              <Upload size={14} color={colors.textPrimary} />
-              <Text style={[styles.actionIconText, { color: colors.textPrimary }]}>{t('crm.import')}</Text>
+              <Upload size={15} color={colors.textPrimary} />
             </TouchableOpacity>
 
             <TouchableOpacity
               activeOpacity={0.75}
               style={[styles.actionIconBtn, { borderColor: colors.border, backgroundColor: colors.card }]}
               onPress={() => setExportModalVisible(true)}
+              hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
             >
-              <Download size={14} color={colors.textPrimary} />
-              <Text style={[styles.actionIconText, { color: colors.textPrimary }]}>{t('crm.export')}</Text>
+              <Download size={15} color={colors.textPrimary} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -140,7 +152,7 @@ export default function CRMScreen() {
               style={[styles.addButton, { backgroundColor: colors.primary }]}
               onPress={() => setAddModalVisible(true)}
             >
-              <Plus size={16} color="#FFFFFF" />
+              <Plus size={15} color="#FFFFFF" />
               <Text style={styles.addButtonText}>{t('crm.addLead')}</Text>
             </TouchableOpacity>
           </View>
@@ -177,37 +189,44 @@ export default function CRMScreen() {
       </View>
 
       {/* Content Area */}
-      {error && contacts.length === 0 ? (
-        <ErrorState message={error} onRetry={() => loadContacts(true)} />
-      ) : viewMode === 'pipeline' ? (
-        <PipelineView
-          contacts={contacts}
-          onSelectLead={handleSelectLead}
-          onOpenChat={handleOpenChat}
-        />
-      ) : (
-        <FlatList
-          style={{ flex: 1 }}
-          data={contacts}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <LeadCard contact={item} onPress={handleSelectLead} onOpenChat={handleOpenChat} />
-          )}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => loadContacts(true)} tintColor={colors.primary} />
-          }
-          ListEmptyComponent={
-            !loading ? (
-              <EmptyState
-                icon={Users}
-                title={t('crm.noLeadsTitle')}
-                description={t('crm.noLeadsDesc')}
-              />
-            ) : null
-          }
-          contentContainerStyle={styles.listContent}
-        />
-      )}
+      <View style={styles.listWrapper}>
+        {error && contacts.length === 0 ? (
+          <ErrorState message={error} onRetry={() => loadContacts(true)} />
+        ) : viewMode === 'pipeline' ? (
+          <PipelineView
+            contacts={contacts}
+            onSelectLead={handleSelectLead}
+            onOpenChat={handleOpenChat}
+          />
+        ) : (
+          <FlatList
+            style={styles.flatList}
+            data={contacts}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <LeadCard contact={item} onPress={handleSelectLead} onOpenChat={handleOpenChat} />
+            )}
+            showsVerticalScrollIndicator={false}
+            scrollEnabled={true}
+            bounces={true}
+            alwaysBounceVertical={true}
+            keyboardShouldPersistTaps="handled"
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={() => loadContacts(true)} tintColor={colors.primary} />
+            }
+            ListEmptyComponent={
+              !loading ? (
+                <EmptyState
+                  icon={Users}
+                  title={t('crm.noLeadsTitle')}
+                  description={t('crm.noLeadsDesc')}
+                />
+              ) : null
+            }
+            contentContainerStyle={[styles.listContent, { flexGrow: 1, paddingBottom: 80 + insets.bottom }]}
+          />
+        )}
+      </View>
 
       {/* Add Lead Modal */}
       <Modal
@@ -265,17 +284,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   actionIconBtn: {
-    flexDirection: 'row',
+    width: 32,
+    height: 32,
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
+    justifyContent: 'center',
     borderRadius: 8,
     borderWidth: 1,
-  },
-  actionIconText: {
-    fontSize: 11,
-    fontWeight: '600',
   },
   addButton: {
     flexDirection: 'row',
@@ -309,6 +323,13 @@ const styles = StyleSheet.create({
   toggleBtn: {
     padding: 8,
     borderRadius: 8,
+  },
+  listWrapper: {
+    flex: 1,
+    minHeight: 0,
+  },
+  flatList: {
+    flex: 1,
   },
   listContent: {
     padding: 16,

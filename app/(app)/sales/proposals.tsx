@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Share } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
@@ -11,20 +11,26 @@ import { SearchBar } from '../../../src/components/SearchBar';
 import { useTheme } from '../../../src/theme';
 import { salesDocumentsApi, SalesDocument } from '../../../src/api/salesDocuments';
 import { SalesDocumentModal } from '../../../src/components/sales/SalesDocumentModal';
+import { SendProposalModal } from '../../../src/components/sales/SendProposalModal';
 import { useTenantBranding } from '../../../src/hooks/useTenantBranding';
-import { FileText, Plus, Share2, TrendingUp, CheckCircle, Clock } from 'lucide-react-native';
+import { useSessionStore } from '../../../src/stores/sessionStore';
+import { FileText, Plus, Share2, TrendingUp, CheckCircle, Clock, Send } from 'lucide-react-native';
 
 export default function ProposalsScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { clientName } = useTenantBranding();
+  const user = useSessionStore((state) => state.user);
+  const userKey = user?.id || user?.email || 'anon';
   const [modalVisible, setModalVisible] = useState(false);
+  const [selectedProposalForSend, setSelectedProposalForSend] = useState<SalesDocument | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
 
   const { data: proposalsData, isLoading, error, refetch } = useQuery({
-    queryKey: ['proposals'],
-    queryFn: () => salesDocumentsApi.getDocuments({ document_type: 'PROPOSAL' })
+    queryKey: ['proposals', userKey],
+    queryFn: () => salesDocumentsApi.getDocuments({ document_type: 'PROPOSAL' }),
+    enabled: !!user,
   });
 
   const getStatusColor = (status: string) => {
@@ -38,10 +44,8 @@ export default function ProposalsScreen() {
     }
   };
 
-  const handleShare = (id: string, num: string) => {
-    Share.share({
-      message: `View Proposal #${num} from ${clientName || 'Workspace'}: https://uwoconnect.aisa24.com/public/proposal/${id}`,
-    });
+  const handleOpenSend = (proposal: SalesDocument) => {
+    setSelectedProposalForSend(proposal);
   };
 
   const allProposals = proposalsData?.results || [];
@@ -215,36 +219,42 @@ export default function ProposalsScreen() {
           onRefresh={refetch}
           renderItem={({ item }: { item: SalesDocument }) => (
             <Card style={styles.card}>
-              <View style={styles.row}>
-                <View style={styles.content}>
-                  <Text variant="h3" weight="bold">{item.document_number || 'PROP-1001'}</Text>
-                  <Text variant="body" weight="medium" style={{ marginTop: 4 }}>
-                    {item.customer_name || item.customer || 'Client'}
-                  </Text>
-                  <View style={styles.metaRow}>
-                    <Clock size={12} color={colors.textMuted} />
-                    <Text variant="caption" color={colors.textMuted} style={{ marginLeft: 4 }}>
-                      Issued: {new Date(item.issue_date || item.created_at || Date.now()).toLocaleDateString()}
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => handleOpenSend(item)}
+              >
+                <View style={styles.row}>
+                  <View style={styles.content}>
+                    <Text variant="h3" weight="bold">{item.document_number || 'PROP-1001'}</Text>
+                    <Text variant="body" weight="medium" style={{ marginTop: 4 }}>
+                      {item.customer_name || item.customer || 'Client'}
                     </Text>
+                    <View style={styles.metaRow}>
+                      <Clock size={12} color={colors.textMuted} />
+                      <Text variant="caption" color={colors.textMuted} style={{ marginLeft: 4 }}>
+                        Issued: {new Date(item.issue_date || item.created_at || Date.now()).toLocaleDateString()}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.rightContent}>
+                    <Text variant="h3" color={colors.primary} weight="bold">
+                      ₹{Number(item.total_amount ?? item.grand_total ?? 0).toLocaleString('en-IN')}
+                    </Text>
+                    <View style={styles.actionsRow}>
+                      <Badge 
+                        label={item.status || 'DRAFT'} 
+                        variant={getStatusColor(item.status) as any} 
+                      />
+                      <View style={[styles.sendProposalBtn, { backgroundColor: colors.primary }]}>
+                        <Send size={11} color="#FFFFFF" />
+                        <Text variant="caption" weight="bold" color="#FFFFFF" style={{ marginLeft: 4, fontSize: 11 }}>
+                          Send
+                        </Text>
+                      </View>
+                    </View>
                   </View>
                 </View>
-                <View style={styles.rightContent}>
-                  <Text variant="h3" color={colors.primary} weight="bold">
-                    ₹{Number(item.total_amount ?? item.grand_total ?? 0).toLocaleString('en-IN')}
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.shareRow}
-                    onPress={() => handleShare(item.id, item.document_number)}
-                    activeOpacity={0.7}
-                  >
-                    <Badge 
-                      label={item.status || 'DRAFT'} 
-                      variant={getStatusColor(item.status) as any} 
-                    />
-                    <Share2 size={16} color={colors.primary} />
-                  </TouchableOpacity>
-                </View>
-              </View>
+              </TouchableOpacity>
             </Card>
           )}
         />
@@ -254,7 +264,21 @@ export default function ProposalsScreen() {
         visible={modalVisible}
         documentType="PROPOSAL"
         onClose={() => setModalVisible(false)}
-        onSuccess={refetch}
+        onSuccess={(createdDoc) => {
+          refetch();
+          if (createdDoc) {
+            setSelectedProposalForSend(createdDoc);
+          }
+        }}
+      />
+
+      <SendProposalModal
+        visible={!!selectedProposalForSend}
+        proposal={selectedProposalForSend}
+        onClose={() => setSelectedProposalForSend(null)}
+        onSentSuccess={() => {
+          refetch();
+        }}
       />
     </Screen>
   );
@@ -352,6 +376,18 @@ const styles = StyleSheet.create({
   rightContent: {
     alignItems: 'flex-end',
     gap: 8,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  sendProposalBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
   shareRow: {
     flexDirection: 'row',

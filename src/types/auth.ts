@@ -6,13 +6,23 @@ export interface ClientInfo {
   company_name?: string;
   email?: string;
   phone?: string;
+  phone_number?: string;
   logo_url?: string;
   company_logo_url?: string;
   logo?: string;
   company_logo?: string;
   whatsapp_phone_number_id?: string;
+  whatsapp_waba_id?: string;
   whatsapp_access_token?: string;
+  whatsapp_config?: Record<string, any>;
+  facebook_config?: Record<string, any>;
+  instagram_config?: Record<string, any>;
+  gmail_config?: Record<string, any>;
+  outlook_config?: Record<string, any>;
+  youtube_config?: Record<string, any>;
+  settings?: Record<string, any>;
   automation_enabled?: boolean;
+  whatsapp_enabled?: boolean;
   instagram_enabled?: boolean;
   facebook_enabled?: boolean;
   gmail_enabled?: boolean;
@@ -33,6 +43,8 @@ export interface ClientInfo {
   effective_connectors?: Record<string, any>;
   channel_access?: Record<string, boolean>;
   meta_portfolio_name?: string;
+  plan?: string;
+  assigned_plan?: any;
 }
 
 export interface UserProfile {
@@ -40,6 +52,7 @@ export interface UserProfile {
   email: string;
   name?: string;
   first_name?: string;
+  last_name?: string;
   username?: string;
   role?: UserRole;
   phone?: string;
@@ -58,6 +71,7 @@ export interface UserProfile {
   global_connectors?: Record<string, boolean>;
   effective_connectors?: Record<string, any>;
   meta_portfolio_eligible?: boolean;
+  plan?: string;
   meta_portfolio_name?: string;
 }
 

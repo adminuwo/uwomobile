@@ -36,6 +36,8 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   const [imageUrl, setImageUrl] = useState(productToEdit?.image_url || '');
   const [submitting, setSubmitting] = useState(false);
 
+  if (!visible) return null;
+
   const handleSave = async () => {
     if (!name.trim() || !price || submitting) return;
 

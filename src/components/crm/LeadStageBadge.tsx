@@ -52,10 +52,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   text: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '600',
   },
   textMd: {
-    fontSize: 13,
+    fontSize: 12,
   },
 });

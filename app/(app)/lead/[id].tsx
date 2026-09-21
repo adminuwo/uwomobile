@@ -12,6 +12,8 @@ import { LeadStageBadge } from '../../../src/components/crm/LeadStageBadge';
 import { FollowUpCard } from '../../../src/components/crm/FollowUpCard';
 import { ScheduleFollowUpModal } from '../../../src/components/crm/ScheduleFollowUpModal';
 import { crmApi, Contact, LeadStage, ContactFollowUp, FollowUpStatus, CreateFollowUpPayload } from '../../../src/api/crm';
+import { resolveChannel } from '../../../src/api/inbox';
+import { ChannelBadge, getChannelColor } from '../../../src/components/inbox/ChannelBadge';
 import { useTheme } from '../../../src/theme';
 import { Phone, Mail, MessageSquare, Calendar, Tag, FileText, ArrowLeft, Save, Plus, Bell } from 'lucide-react-native';
 
@@ -119,6 +121,13 @@ export default function LeadDetailScreen() {
     }
   };
 
+  const dynamicChannel = resolveChannel(
+    contact?.preferred_channel,
+    contact?.name,
+    contact?.platform_id || contact?.phone_number
+  );
+  const channelColor = getChannelColor(dynamicChannel);
+
   const handleOpenChat = () => {
     if (!contact) return;
     const rawAddress = contact.platform_id || contact.phone_number || contact.id;
@@ -128,7 +137,7 @@ export default function LeadDetailScreen() {
         id: contact.id,
         rawAddress: rawAddress,
         name: contact.name || contact.phone_number || 'Customer',
-        channel: contact.preferred_channel || 'WHATSAPP',
+        channel: dynamicChannel,
       },
     });
   };
@@ -151,15 +160,23 @@ export default function LeadDetailScreen() {
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         {/* Profile Card */}
         <Card style={styles.profileCard}>
-          <Avatar name={contact.name || contact.phone_number || 'Lead'} size="lg" />
+          <Avatar
+            name={contact.name || contact.phone_number || 'Lead'}
+            size="lg"
+            textColor={channelColor}
+            bgColor={`${channelColor}14`}
+          />
           <Text style={[styles.name, { color: colors.textPrimary }]}>{contact.name || 'Unnamed Lead'}</Text>
-          <LeadStageBadge stage={contact.stage} size="md" />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginVertical: 4 }}>
+            <LeadStageBadge stage={contact.stage} size="md" />
+            <ChannelBadge channel={dynamicChannel} size="md" />
+          </View>
 
           <Button
             title="Open Conversation"
             icon={<MessageSquare size={16} color="#FFFFFF" />}
             onPress={handleOpenChat}
-            style={styles.chatButton}
+            style={[styles.chatButton, { backgroundColor: channelColor }]}
           />
         </Card>
 
@@ -291,7 +308,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   name: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
   },
   chatButton: {
@@ -311,7 +328,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   stageChipText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '600',
   },
   infoRow: {
@@ -321,11 +338,11 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   infoLabel: {
-    fontSize: 13,
+    fontSize: 11.5,
     width: 60,
   },
   infoValue: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     flex: 1,
   },

@@ -25,6 +25,8 @@ export const WhatsAppTemplateModal: React.FC<WhatsAppTemplateModalProps> = ({
   onClose,
   onSendTemplate,
 }) => {
+  if (!visible) return null;
+
   const { colors, spacing } = useTheme();
   const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
   const [loading, setLoading] = useState(false);

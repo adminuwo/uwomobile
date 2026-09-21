@@ -21,6 +21,7 @@ import { Button } from '../../src/components/Button';
 import { Input } from '../../src/components/Input';
 import { useTheme } from '../../src/theme';
 import { automationsApi, AutomationRule } from '../../src/api/automations';
+import { useSessionStore } from '../../src/stores/sessionStore';
 import {
   Zap,
   Plus,
@@ -51,9 +52,14 @@ export default function AutomationsScreen() {
   const [button2, setButton2] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const { data: rules = [], isLoading, refetch } = useQuery({
-    queryKey: ['automations'],
+  const user = useSessionStore((state) => state.user);
+  const userKey = user?.id || user?.email || 'anon';
+
+  const { data: rules = [], isLoading, isError, refetch, isFetching } = useQuery({
+    queryKey: ['automations', userKey],
     queryFn: () => automationsApi.getAutomations(),
+    retry: 1,
+    staleTime: 5000,
   });
 
   const handleOpenAdd = () => {
@@ -80,16 +86,17 @@ export default function AutomationsScreen() {
 
   const handleToggle = async (rule: AutomationRule) => {
     const newEnabled = !rule.enabled;
-    // Optimistic cache update
-    queryClient.setQueryData<AutomationRule[]>(['automations'], (old) =>
+    // Optimistic cache update scoped to current user
+    queryClient.setQueryData<AutomationRule[]>(['automations', userKey], (old) =>
       old ? old.map((r) => (r.id === rule.id ? { ...r, enabled: newEnabled } : r)) : []
     );
 
     try {
       await automationsApi.updateAutomation(rule.id, { enabled: newEnabled });
+      queryClient.invalidateQueries({ queryKey: ['automations', userKey] });
     } catch (err: any) {
       // Revert if error
-      queryClient.setQueryData<AutomationRule[]>(['automations'], (old) =>
+      queryClient.setQueryData<AutomationRule[]>(['automations', userKey], (old) =>
         old ? old.map((r) => (r.id === rule.id ? { ...r, enabled: rule.enabled } : r)) : []
       );
       Alert.alert('Error', err.message || 'Failed to toggle rule');
@@ -103,15 +110,16 @@ export default function AutomationsScreen() {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
-          const prevRules = queryClient.getQueryData<AutomationRule[]>(['automations']);
-          queryClient.setQueryData<AutomationRule[]>(['automations'], (old) =>
+          const prevRules = queryClient.getQueryData<AutomationRule[]>(['automations', userKey]);
+          queryClient.setQueryData<AutomationRule[]>(['automations', userKey], (old) =>
             old ? old.filter((r) => r.id !== id) : []
           );
 
           try {
             await automationsApi.deleteAutomation(id);
+            queryClient.invalidateQueries({ queryKey: ['automations', userKey] });
           } catch (err: any) {
-            if (prevRules) queryClient.setQueryData(['automations'], prevRules);
+            if (prevRules) queryClient.setQueryData(['automations', userKey], prevRules);
             Alert.alert('Error', err.message || 'Failed to delete rule');
           }
         },
@@ -167,15 +175,16 @@ export default function AutomationsScreen() {
   return (
     <Screen safeAreaEdges={['top', 'left', 'right']}>
       <Header
-        title="Keyword Auto-Replies"
-        showMenu={true}
+        title="Auto-Replies"
+        showBack={true}
         rightElement={
           <TouchableOpacity
             style={[styles.addHeaderBtn, { backgroundColor: colors.primary }]}
             onPress={handleOpenAdd}
+            activeOpacity={0.8}
           >
-            <Plus size={16} color="#FFF" />
-            <Text variant="caption" weight="bold" color="#FFF">
+            <Plus size={13} color="#FFF" />
+            <Text variant="caption" weight="bold" color="#FFF" style={{ fontSize: 11 }}>
               New Rule
             </Text>
           </TouchableOpacity>
@@ -188,13 +197,26 @@ export default function AutomationsScreen() {
           placeholder="Search keywords or reply text..."
           value={search}
           onChangeText={setSearch}
-          leftIcon={<Search size={18} color={colors.textMuted} />}
+          leftIcon={<Search size={16} color={colors.textMuted} />}
         />
       </View>
 
       {isLoading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.primary} />
+          <Text variant="caption" color={colors.textMuted} style={{ marginTop: 12 }}>
+            Loading auto-reply rules...
+          </Text>
+        </View>
+      ) : isError ? (
+        <View style={styles.emptyState}>
+          <Text variant="h3" color={colors.textPrimary}>
+            Unable to Load Rules
+          </Text>
+          <Text variant="caption" color={colors.textMuted} style={{ marginTop: 8, marginBottom: 16, textAlign: 'center' }}>
+            Check your network connection and try again.
+          </Text>
+          <Button title="Retry" onPress={() => refetch()} />
         </View>
       ) : filteredRules.length === 0 ? (
         <View style={styles.emptyState}>
@@ -211,20 +233,20 @@ export default function AutomationsScreen() {
           data={filteredRules}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
-          refreshing={isLoading}
+          refreshing={isFetching}
           onRefresh={refetch}
           renderItem={({ item }) => (
             <Card style={styles.card}>
               <View style={styles.cardHeader}>
                 <View style={styles.titleRow}>
-                  <Bot size={20} color={colors.primary} />
+                  <Bot size={18} color={colors.primary} />
                   <Text
                     variant="h3"
                     weight="bold"
                     color={colors.textPrimary}
                     numberOfLines={1}
                     ellipsizeMode="tail"
-                    style={{ flex: 1 }}
+                    style={{ flex: 1, fontSize: 13.5 }}
                   >
                     {item.name}
                   </Text>
@@ -234,12 +256,13 @@ export default function AutomationsScreen() {
                     value={item.enabled}
                     onValueChange={() => handleToggle(item)}
                     trackColor={{ true: colors.primary }}
+                    style={styles.switchControl}
                   />
                   <TouchableOpacity style={styles.iconBtn} onPress={() => handleOpenEdit(item)}>
-                    <Edit2 size={16} color={colors.textMuted} />
+                    <Edit2 size={15} color={colors.textMuted} />
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.iconBtn} onPress={() => handleDelete(item.id)}>
-                    <Trash2 size={16} color={colors.error} />
+                    <Trash2 size={15} color={colors.error} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -365,9 +388,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4.5,
+    borderRadius: 7,
+  },
+  switchControl: {
+    transform: [{ scaleX: 0.72 }, { scaleY: 0.72 }],
+    marginRight: -3,
   },
   searchBox: {
     paddingHorizontal: 16,
@@ -380,6 +407,7 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: 16,
+    paddingBottom: 96,
   },
   card: {
     marginBottom: 12,

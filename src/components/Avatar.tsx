@@ -14,6 +14,8 @@ interface AvatarProps {
   size?: AvatarSize;
   isOnline?: boolean;
   style?: ViewStyle;
+  textColor?: string;
+  bgColor?: string;
 }
 
 export const Avatar: React.FC<AvatarProps> = ({
@@ -23,9 +25,13 @@ export const Avatar: React.FC<AvatarProps> = ({
   size = 'md',
   isOnline,
   style,
+  textColor,
+  bgColor,
 }) => {
   const { colors, radius } = useTheme();
   const validUri = resolveValidImageUri(uri);
+  const effectiveTextColor = textColor || colors.primary;
+  const effectiveBgColor = bgColor || colors.surface;
 
   const getDimensions = (): number => {
     switch (size) {
@@ -69,15 +75,15 @@ export const Avatar: React.FC<AvatarProps> = ({
               width: dim,
               height: dim,
               borderRadius: dim / 2,
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
+              backgroundColor: effectiveBgColor,
+              borderColor: textColor ? `${textColor}40` : colors.border,
             },
           ]}
         >
           <Text
             variant={size === 'sm' ? 'caption' : size === 'xl' ? 'h2' : 'body'}
             weight="bold"
-            color={colors.primary}
+            color={effectiveTextColor}
           >
             {getInitials(name)}
           </Text>

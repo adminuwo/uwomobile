@@ -12,15 +12,20 @@ import { productsApi, Product } from '../../../src/api/products';
 import { AddProductModal } from '../../../src/components/sales/AddProductModal';
 import { PackageOpen, Plus, Edit2 } from 'lucide-react-native';
 
+import { useSessionStore } from '../../../src/stores/sessionStore';
+
 export default function ProductsScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const user = useSessionStore((state) => state.user);
+  const userKey = user?.id || user?.email || 'anon';
   const [modalVisible, setModalVisible] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const { data: products, isLoading, error, refetch } = useQuery({
-    queryKey: ['products'],
-    queryFn: () => productsApi.getProducts()
+    queryKey: ['products', userKey],
+    queryFn: () => productsApi.getProducts(),
+    enabled: !!user,
   });
 
   const handleOpenAdd = () => {

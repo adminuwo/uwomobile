@@ -12,17 +12,21 @@ import { useBrandStore } from '../../src/stores/brandStore';
 import { useGoogleAuth } from '../../src/hooks/useGoogleAuth';
 import { useTheme } from '../../src/theme';
 import { ShieldCheck, Mail, Lock, AlertCircle, ArrowRight } from 'lucide-react-native';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import Svg, { Path } from 'react-native-svg';
+
 
 export default function LoginScreen() {
   const router = useRouter();
   const { colors, spacing, radius } = useTheme();
-  const { login, isLoading, error, clearError } = useSessionStore();
+  const { login, loginWithApple, isLoading, error, clearError } = useSessionStore();
   const { promptGoogleLogin, isGoogleLoading, googleError, clearGoogleError } = useGoogleAuth();
   const brand = useBrandStore((state) => state.brand);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [validationError, setValidationError] = useState('');
+  const [isAppleLoading, setIsAppleLoading] = useState(false);
 
   const handleLogin = async () => {
     clearError();
@@ -51,8 +55,64 @@ export default function LoginScreen() {
     await promptGoogleLogin();
   };
 
+  const handleApplePress = async () => {
+    clearError();
+    clearGoogleError();
+    setValidationError('');
+    setIsAppleLoading(true);
+
+    try {
+      const isAvailable = await AppleAuthentication.isAvailableAsync();
+      if (!isAvailable) {
+        setValidationError(
+          Platform.OS === 'ios'
+            ? 'Apple Sign-In is not available on this device. Please sign in to your Apple Account in iOS Settings.'
+            : 'Apple Sign-In is only supported on iOS devices.'
+        );
+        return;
+      }
+
+      const result = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      if (!result?.identityToken) {
+        setValidationError('Apple Sign-In failed: No identity token received.');
+        return;
+      }
+
+      const fullName = result.fullName
+        ? [result.fullName.givenName, result.fullName.familyName].filter(Boolean).join(' ')
+        : undefined;
+
+      const success = await loginWithApple(result.identityToken, {
+        name: fullName || (result.email ? result.email.split('@')[0] : undefined),
+      });
+
+      if (success) {
+        router.replace('/(app)/home');
+      }
+    } catch (e: any) {
+      console.log('[AppleAuth] Error:', e);
+      if (
+        e?.code === 'ERR_CANCELED' ||
+        e?.code === 'ERR_REQUEST_CANCELED' ||
+        e?.message?.toLowerCase?.().includes('cancel')
+      ) {
+        // User cancelled Apple sign-in dialog
+      } else {
+        setValidationError(e?.message || 'Apple Sign-In failed. Please try again.');
+      }
+    } finally {
+      setIsAppleLoading(false);
+    }
+  };
+
   const displayError = validationError || error || googleError;
-  const isActionLoading = isLoading || isGoogleLoading;
+  const isActionLoading = isLoading || isGoogleLoading || isAppleLoading;
 
   return (
     <Screen safeAreaEdges={['top', 'bottom', 'left', 'right']}>
@@ -89,13 +149,15 @@ export default function LoginScreen() {
           </View>
 
           {/* Form Card */}
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.xl }]}>
-            <Text variant="h2" weight="bold" style={styles.formTitle}>
-              Sign In
-            </Text>
-            <Text variant="caption" color={colors.textMuted} style={styles.formSubtitle}>
-              Enter your email and password to continue.
-            </Text>
+          <View style={[styles.card, { backgroundColor: colors.surface || '#FFFFFF', borderColor: colors.border }]}>
+            <View style={styles.cardHeader}>
+              <Text variant="h1" weight="bold" align="center" style={[styles.formTitle, { color: colors.primary }]}>
+                Sign In
+              </Text>
+              <Text variant="caption" color={colors.textMuted} align="center" style={styles.formSubtitle}>
+                Enter your email and password to access your workspace.
+              </Text>
+            </View>
 
             {displayError ? (
               <View style={[styles.errorContainer, { backgroundColor: colors.errorBg, borderColor: colors.error }]}>
@@ -105,42 +167,6 @@ export default function LoginScreen() {
                 </Text>
               </View>
             ) : null}
-
-            {/* Google Login Button */}
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={handleGooglePress}
-              disabled={isActionLoading}
-              style={[
-                styles.googleButton,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.border,
-                  borderRadius: radius.md,
-                  opacity: isActionLoading ? 0.6 : 1,
-                },
-              ]}
-            >
-              {isGoogleLoading ? (
-                <ActivityIndicator size="small" color={colors.primary} style={styles.googleIconContainer} />
-              ) : (
-                <View style={styles.googleIconContainer}>
-                  <GoogleIcon size={20} />
-                </View>
-              )}
-              <Text variant="body" weight="semibold" color={colors.textPrimary}>
-                {isGoogleLoading ? 'Connecting to Google...' : 'Continue with Google'}
-              </Text>
-            </TouchableOpacity>
-
-            {/* Divider */}
-            <View style={styles.dividerContainer}>
-              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-              <Text variant="caption" color={colors.textMuted} style={styles.dividerText}>
-                OR CONTINUE WITH EMAIL
-              </Text>
-              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-            </View>
 
             <Input
               label="Email Address"
@@ -191,6 +217,71 @@ export default function LoginScreen() {
               style={styles.submitBtn}
             />
 
+            {/* Divider */}
+            <View style={styles.dividerContainer}>
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+              <View style={[styles.dividerPill, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <Text variant="caption" color={colors.textMuted} style={styles.dividerText}>
+                  OR CONTINUE WITH
+                </Text>
+              </View>
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+            </View>
+
+            {/* Social Buttons Row */}
+            <View style={styles.socialRow}>
+              {/* Google */}
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={handleGooglePress}
+                disabled={isActionLoading}
+                style={[
+                  styles.socialButton,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                    opacity: isActionLoading ? 0.6 : 1,
+                  },
+                ]}
+              >
+                {isGoogleLoading ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <GoogleIcon size={20} />
+                )}
+                <Text variant="body" weight="bold" color={colors.textPrimary} style={{ marginLeft: 8 }}>
+                  Google
+                </Text>
+              </TouchableOpacity>
+
+              {/* Apple */}
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={handleApplePress}
+                disabled={isActionLoading}
+                style={[
+                  styles.socialButton,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                    opacity: isActionLoading ? 0.6 : 1,
+                  },
+                ]}
+              >
+                {isAppleLoading ? (
+                  <ActivityIndicator size="small" color={colors.textPrimary} />
+                ) : (
+                  <Svg viewBox="0 0 814 1000" width={18} height={18} fill={colors.textPrimary}>
+                    <Path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76.5 0-103.7 40.8-165.9 40.8s-105-47.4-155.5-127.4C46 790.8 0 663 0 541.8c0-207.8 135.4-318 269-318 69.4 0 126.9 45.3 170.8 45.3 42 0 109.2-47.4 185.6-47.4 29.8 0 108.2 2.6 168.5 80.1zm-84.7-217.5c39.5-46.8 67.8-112.5 67.8-178.2 0-9-1-18.1-2.6-25.8-64.3 2.6-140.7 43.4-186.5 93.6-36.5 40.8-70.3 106.5-70.3 173.1 0 10.3 1.9 20.6 2.6 23.9 3.9.6 10.3 1.3 16.6 1.3 57.8 0 129.8-38.8 172.4-87.9z" />
+                  </Svg>
+                )}
+                <Text variant="body" weight="bold" color={colors.textPrimary} style={{ marginLeft: 8 }}>
+                  Apple
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+
             {/* Create Account link */}
             <View style={styles.registerLinkContainer}>
               <Text variant="caption" color={colors.textSecondary}>
@@ -208,8 +299,8 @@ export default function LoginScreen() {
             </View>
 
             {/* Legal Notice */}
-            <View style={styles.legalNoticeContainer}>
-              <Text variant="caption" color={colors.textMuted} align="center" style={{ lineHeight: 16 }}>
+            <View style={[styles.legalNoticeContainer, { backgroundColor: `${colors.border}25` }]}>
+              <Text variant="caption" color={colors.textMuted} align="center" style={styles.legalNoticeText}>
                 By signing in, you agree to our{' '}
                 <Text
                   variant="caption"
@@ -232,13 +323,6 @@ export default function LoginScreen() {
               </Text>
             </View>
           </View>
-
-          {/* Footer note */}
-          <View style={styles.footer}>
-            <Text variant="caption" color={colors.textMuted} align="center">
-              Secured by UwoConnect • v1.0.0
-            </Text>
-          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </Screen>
@@ -251,42 +335,68 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    padding: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 24,
     justifyContent: 'center',
   },
   brandHeader: {
     alignItems: 'center',
-    marginBottom: 28,
+    marginBottom: 24,
   },
   logoBadge: {
-    width: 68,
-    height: 68,
-    borderRadius: 20,
+    width: 72,
+    height: 72,
+    borderRadius: 22,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
   logoImage: {
-    width: 48,
-    height: 48,
+    width: 50,
+    height: 50,
     resizeMode: 'contain',
   },
   brandTitle: {
+    fontSize: 26,
+    letterSpacing: -0.5,
     marginBottom: 4,
   },
   brandSubtitle: {
-    maxWidth: 280,
+    maxWidth: 290,
+    fontSize: 12,
   },
   card: {
-    padding: 20,
+    padding: 22,
     borderWidth: 1,
+    borderRadius: 24,
+    shadowColor: '#059669',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 5,
+  },
+  cardHeader: {
+    alignItems: 'center',
+    marginBottom: 20,
   },
   formTitle: {
-    marginBottom: 4,
+    fontSize: 24,
+    fontWeight: '800',
+    letterSpacing: -0.4,
+    textAlign: 'center',
+    marginBottom: 6,
   },
   formSubtitle: {
-    marginBottom: 20,
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
+    maxWidth: 280,
   },
   errorContainer: {
     flexDirection: 'row',
@@ -308,51 +418,73 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   submitBtn: {
-    marginTop: 4,
-  },
-  registerLinkContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 18,
-  },
-  googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    marginBottom: 16,
-    minHeight: 50,
-  },
-  googleIconContainer: {
-    marginRight: 10,
-    width: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+    marginTop: 2,
+    height: 50,
+    borderRadius: 14,
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 3,
   },
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 16,
+    marginVertical: 18,
+    position: 'relative',
   },
   dividerLine: {
     flex: 1,
     height: 1,
   },
+  dividerPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginHorizontal: 8,
+  },
   dividerText: {
-    paddingHorizontal: 12,
-    fontSize: 10,
+    fontSize: 9,
     letterSpacing: 0.8,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  socialRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 4,
+  },
+  socialButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 13,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderRadius: 14,
+    minHeight: 50,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+
+  registerLinkContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
   },
   legalNoticeContainer: {
-    marginTop: 18,
-    paddingHorizontal: 4,
+    marginTop: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
   },
-  footer: {
-    marginTop: 32,
+  legalNoticeText: {
+    fontSize: 11,
+    lineHeight: 16,
   },
 });

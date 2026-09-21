@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     height: '100%',
-    fontSize: 14,
+    fontSize: 12.5,
     paddingVertical: 0,
   },
   clearButton: {

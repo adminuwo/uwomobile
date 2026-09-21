@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Modal, TextInput, ActivityIndicator, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import Svg, { Path, Circle, Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
+import { useConnectorsTabStore, ConnectorsTargetTab } from '../../src/stores/connectorsTabStore';
 import { Screen } from '../../src/components/Screen';
 import { Header } from '../../src/components/Header';
 import { Text } from '../../src/components/Text';
@@ -10,6 +12,7 @@ import { Card } from '../../src/components/Card';
 import { Badge } from '../../src/components/Badge';
 import { useTheme } from '../../src/theme';
 import { authApi } from '../../src/api/auth';
+import { channelAuthApi } from '../../src/api/channelAuth';
 import { statsApi } from '../../src/api/stats';
 import { useSessionStore } from '../../src/stores/sessionStore';
 import { useChannelAccess } from '../../src/hooks/useChannelAccess';
@@ -262,25 +265,122 @@ export interface ChannelConnectorItem {
 
 export default function ConnectorsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{ tab?: string }>();
   const { colors, spacing, radius } = useTheme();
   const user = useSessionStore((state) => state.user);
+  const storeTab = useConnectorsTabStore((state) => state.targetTab);
+  const setStoreTab = useConnectorsTabStore((state) => state.setTargetTab);
   const { isChannelComingSoon } = useChannelAccess();
-  const [activeFilter, setActiveFilter] = useState<FilterTab>('ALL');
+
+  const getInitialTab = (): FilterTab => {
+    const fromParam = params?.tab?.toUpperCase();
+    if (fromParam && ['ALL', 'CHANNELS', 'CONNECTORS', 'FEATURES', 'ACTIVE'].includes(fromParam)) {
+      return fromParam as FilterTab;
+    }
+    if (storeTab && ['ALL', 'CHANNELS', 'CONNECTORS', 'FEATURES', 'ACTIVE'].includes(storeTab)) {
+      return storeTab as FilterTab;
+    }
+    return 'ALL';
+  };
+
+  const [activeFilter, setActiveFilter] = useState<FilterTab>(getInitialTab);
+
+  useFocusEffect(
+    useCallback(() => {
+      const fromParam = params?.tab?.toUpperCase();
+      const target = (fromParam && ['ALL', 'CHANNELS', 'CONNECTORS', 'FEATURES', 'ACTIVE'].includes(fromParam))
+        ? fromParam
+        : storeTab;
+      if (target && ['ALL', 'CHANNELS', 'CONNECTORS', 'FEATURES', 'ACTIVE'].includes(target)) {
+        setActiveFilter(target as FilterTab);
+      }
+    }, [params?.tab, storeTab])
+  );
 
   const [selectedItem, setSelectedItem] = useState<ChannelConnectorItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showToken, setShowToken] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isMetaConnecting, setIsMetaConnecting] = useState(false);
+  const [metaTab, setMetaTab] = useState<'AUTO' | 'MANUAL'>('AUTO');
   const [formFields, setFormFields] = useState<Record<string, string>>({});
 
+  const isMetaChannel = Boolean(
+    selectedItem && ['whatsapp', 'facebook', 'instagram'].includes(selectedItem.id)
+  );
+
+  const handleMetaOnboarding = async (channelId: 'whatsapp' | 'facebook' | 'instagram') => {
+    setIsMetaConnecting(true);
+    try {
+      if (channelId === 'whatsapp') {
+        const res = await channelAuthApi.startWhatsAppMetaOnboarding();
+        if (res.success) {
+          await refetchProfile();
+          await refetchStats();
+          setIsModalOpen(false);
+          Alert.alert(
+            'WhatsApp Connected! 🎉',
+            res.data?.message || 'Your WhatsApp Business Account has been connected successfully via Meta Cloud API.'
+          );
+        } else if (res.cancelled) {
+          // User dismissed or closed window
+        } else {
+          Alert.alert('Meta Connection Failed', res.error || 'Failed to complete WhatsApp onboarding with Meta.');
+        }
+      } else if (channelId === 'facebook') {
+        const res = await channelAuthApi.startFacebookMetaOnboarding();
+        if (res.success) {
+          await refetchProfile();
+          await refetchStats();
+          setIsModalOpen(false);
+          Alert.alert(
+            'Facebook Page Connected! 🎉',
+            res.data?.message || 'Your Facebook Page has been connected successfully.'
+          );
+        } else if (res.cancelled) {
+          // User dismissed
+        } else {
+          Alert.alert('Meta Connection Failed', res.error || 'Failed to complete Facebook onboarding with Meta.');
+        }
+      } else if (channelId === 'instagram') {
+        const res = await channelAuthApi.startInstagramMetaOnboarding();
+        if (res.success) {
+          await refetchProfile();
+          await refetchStats();
+          setIsModalOpen(false);
+          Alert.alert(
+            'Instagram Connected! 🎉',
+            res.data?.message || 'Your Instagram Account has been connected successfully.'
+          );
+        } else if (res.cancelled) {
+          // User dismissed
+        } else {
+          Alert.alert('Meta Connection Failed', res.error || 'Failed to complete Instagram onboarding with Meta.');
+        }
+      }
+    } catch (err: any) {
+      console.error('[Meta Onboarding Error]:', err);
+      Alert.alert('Connection Error', err?.message || 'An unexpected error occurred during onboarding.');
+    } finally {
+      setIsMetaConnecting(false);
+    }
+  };
+
+  const userKey = user?.id || user?.email || 'anon';
+
   const { data: profileData, isLoading: profileLoading, refetch: refetchProfile } = useQuery({
-    queryKey: ['userProfile'],
+    queryKey: ['userProfile', userKey],
     queryFn: () => authApi.getProfile(),
+    retry: 1,
+    staleTime: 5000,
   });
 
   const { data: clientStats, isLoading: statsLoading, refetch: refetchStats } = useQuery({
-    queryKey: ['clientStats'],
+    queryKey: ['clientStats', userKey],
     queryFn: () => statsApi.getClientStats(),
+    retry: 1,
+    staleTime: 5000,
   });
 
   const onRefresh = () => {
@@ -300,9 +400,16 @@ export default function ConnectorsScreen() {
       description: 'Official Meta Cloud API for 24/7 AI auto-replies, broadcasts & CRM sync',
       icon: <WhatsAppLogo size={44} />,
       color: '#25D366',
-      isConnected: Boolean(client?.whatsapp_phone_number_id || client?.whatsapp_access_token || client?.automation_enabled),
+      isConnected: !isChannelComingSoon('whatsapp') && Boolean(
+        (client?.whatsapp_phone_number_id || client?.whatsapp_config?.phone_number_id || client?.whatsapp_access_token) &&
+        client?.whatsapp_enabled !== false
+      ),
       isSvg: true,
-      details: client?.whatsapp_phone_number_id ? `Phone ID: ${client.whatsapp_phone_number_id}` : 'Official Meta Cloud API Connected',
+      details: isChannelComingSoon('whatsapp')
+        ? 'Coming Soon'
+        : (client?.phone_number || client?.whatsapp_phone_number_id || client?.whatsapp_config?.display_phone_number)
+        ? `Phone: ${client?.phone_number || client?.whatsapp_phone_number_id || client?.whatsapp_config?.display_phone_number}`
+        : (client?.whatsapp_access_token ? 'Credentials Configured' : 'Connect WhatsApp Cloud API'),
     },
     {
       id: 'instagram',
@@ -312,9 +419,16 @@ export default function ConnectorsScreen() {
       description: 'Auto-reply to Story mentions, DMs & Lead generation automation',
       icon: <InstagramLogo size={44} />,
       color: '#E4405F',
-      isConnected: Boolean(client?.instagram_enabled),
+      isConnected: !isChannelComingSoon('instagram') && Boolean(
+        client?.instagram_enabled &&
+        (client?.instagram_config?.page_id || client?.instagram_config?.access_token || client?.instagram_config?.username || client?.instagram_enabled)
+      ),
       isSvg: true,
-      details: client?.instagram_enabled ? 'Active Meta Graph Sync' : 'Connect Meta Page Account',
+      details: isChannelComingSoon('instagram')
+        ? 'Coming Soon'
+        : client?.instagram_config?.username
+        ? `@${client.instagram_config.username}`
+        : (client?.instagram_enabled ? 'Active Meta Graph Sync' : 'Connect Instagram Account'),
     },
     {
       id: 'facebook',
@@ -324,9 +438,16 @@ export default function ConnectorsScreen() {
       description: 'Auto-respond to Page messages, Lead Ads & customer inquiries',
       icon: <FacebookLogo size={44} />,
       color: '#1877F2',
-      isConnected: Boolean(client?.facebook_enabled),
+      isConnected: !isChannelComingSoon('facebook') && Boolean(
+        client?.facebook_enabled &&
+        (client?.facebook_config?.page_id || client?.facebook_config?.access_token || client?.facebook_config?.page_name || client?.facebook_enabled)
+      ),
       isSvg: true,
-      details: client?.facebook_enabled ? 'Facebook Page Connected' : 'Connect Facebook Page',
+      details: isChannelComingSoon('facebook')
+        ? 'Coming Soon'
+        : client?.facebook_config?.page_name
+        ? client.facebook_config.page_name
+        : (client?.facebook_enabled ? 'Facebook Page Connected' : 'Connect Facebook Page'),
     },
     {
       id: 'youtube',
@@ -336,9 +457,16 @@ export default function ConnectorsScreen() {
       description: 'Auto AI replies to channel comments, video lead tracking & analytics',
       icon: <YouTubeLogo size={44} />,
       color: '#FF0000',
-      isConnected: Boolean(client?.youtube_enabled),
+      isConnected: !isChannelComingSoon('youtube') && Boolean(
+        client?.youtube_enabled &&
+        (client?.youtube_config?.channel_id || client?.youtube_enabled)
+      ),
       isSvg: true,
-      details: client?.youtube_enabled ? 'Channel Analytics Active' : 'Connect YouTube Channel',
+      details: isChannelComingSoon('youtube')
+        ? 'Coming Soon'
+        : client?.youtube_config?.channel_title
+        ? client.youtube_config.channel_title
+        : (client?.youtube_enabled ? 'Channel Analytics Active' : 'Connect YouTube Channel'),
     },
 
     // ══════════════════ 2. CONNECTORS (Email & Cloud Integration Logos) ══════════════════
@@ -350,9 +478,16 @@ export default function ConnectorsScreen() {
       description: 'AI Email Auto-responder, Lead extraction & Smart Inbox sync',
       icon: <GmailLogo size={44} />,
       color: '#EA4335',
-      isConnected: Boolean(client?.gmail_enabled),
+      isConnected: !isChannelComingSoon('gmail') && Boolean(
+        client?.gmail_enabled &&
+        (client?.gmail_config?.email || client?.gmail_config?.access_token || client?.gmail_enabled)
+      ),
       isSvg: true,
-      details: client?.gmail_enabled ? 'OAuth Account Connected' : 'Google Workspace OAuth',
+      details: isChannelComingSoon('gmail')
+        ? 'Coming Soon'
+        : client?.gmail_config?.email
+        ? client.gmail_config.email
+        : (client?.gmail_enabled ? 'OAuth Account Connected' : 'Google Workspace OAuth'),
     },
     {
       id: 'outlook',
@@ -362,9 +497,16 @@ export default function ConnectorsScreen() {
       description: 'Corporate Email integration & Teams communication assistant',
       icon: <OutlookLogo size={44} />,
       color: '#0078D4',
-      isConnected: Boolean(client?.outlook_enabled),
+      isConnected: !isChannelComingSoon('outlook') && Boolean(
+        client?.outlook_enabled &&
+        (client?.outlook_config?.email || client?.outlook_config?.access_token || client?.outlook_enabled)
+      ),
       isSvg: true,
-      details: client?.outlook_enabled ? 'Microsoft Graph Connected' : 'Connect 365 Account',
+      details: isChannelComingSoon('outlook')
+        ? 'Coming Soon'
+        : client?.outlook_config?.email
+        ? client.outlook_config.email
+        : (client?.outlook_enabled ? 'Microsoft Graph Connected' : 'Connect 365 Account'),
     },
     {
       id: 'google_calendar',
@@ -374,9 +516,11 @@ export default function ConnectorsScreen() {
       description: 'Auto-book meetings, demo appointments & sync CRM schedules',
       icon: <GoogleCalendarLogo size={44} />,
       color: '#4285F4',
-      isConnected: Boolean(client?.google_calendar_enabled),
+      isConnected: !isChannelComingSoon('google_calendar') && Boolean(client?.google_calendar_enabled),
       isSvg: true,
-      details: client?.google_calendar_enabled ? 'Calendar Sync Active' : 'Connect Google Calendar',
+      details: isChannelComingSoon('google_calendar')
+        ? 'Coming Soon'
+        : (client?.google_calendar_enabled ? 'Calendar Sync Active' : 'Connect Google Calendar'),
     },
     {
       id: 'google_sheets',
@@ -386,9 +530,11 @@ export default function ConnectorsScreen() {
       description: 'Real-time Lead export to Google Sheets & auto row appending',
       icon: <GoogleSheetsLogo size={44} />,
       color: '#34A853',
-      isConnected: Boolean(client?.google_sheets_enabled),
+      isConnected: !isChannelComingSoon('google_sheets') && Boolean(client?.google_sheets_enabled),
       isSvg: true,
-      details: client?.google_sheets_enabled ? 'Live Spreadsheet Sync' : 'Connect Google Sheets',
+      details: isChannelComingSoon('google_sheets')
+        ? 'Coming Soon'
+        : (client?.google_sheets_enabled ? 'Live Spreadsheet Sync' : 'Connect Google Sheets'),
     },
     {
       id: 'google_docs',
@@ -398,9 +544,11 @@ export default function ConnectorsScreen() {
       description: 'Auto-generate AI Proposals, Pitch decks & Sales summaries',
       icon: <GoogleDocsLogo size={44} />,
       color: '#4285F4',
-      isConnected: Boolean(client?.google_docs_enabled || client?.google_slides_enabled),
+      isConnected: !isChannelComingSoon('google_docs') && Boolean(client?.google_docs_enabled || client?.google_slides_enabled),
       isSvg: true,
-      details: (client?.google_docs_enabled || client?.google_slides_enabled) ? 'Docs Generator Active' : 'Connect Google Docs',
+      details: isChannelComingSoon('google_docs')
+        ? 'Coming Soon'
+        : ((client?.google_docs_enabled || client?.google_slides_enabled) ? 'Docs Generator Active' : 'Connect Google Docs'),
     },
     {
       id: 'onedrive',
@@ -410,9 +558,11 @@ export default function ConnectorsScreen() {
       description: 'Cloud document indexing for Knowledge Base AI training',
       icon: <OneDriveLogo size={44} />,
       color: '#0078D4',
-      isConnected: Boolean(client?.onedrive_enabled),
+      isConnected: !isChannelComingSoon('onedrive') && Boolean(client?.onedrive_enabled),
       isSvg: true,
-      details: client?.onedrive_enabled ? 'OneDrive Sync Active' : 'Connect OneDrive',
+      details: isChannelComingSoon('onedrive')
+        ? 'Coming Soon'
+        : (client?.onedrive_enabled ? 'OneDrive Sync Active' : 'Connect OneDrive'),
     },
 
     // ══════════════════ 3. FEATURES (Platform Modules & AI Capabilities Logos) ══════════════════
@@ -424,9 +574,9 @@ export default function ConnectorsScreen() {
       description: 'Manage active team agents, supervisors, roles & permissions',
       icon: <TeamWorkspaceLogo size={44} />,
       color: '#8B5CF6',
-      isConnected: true,
+      isConnected: !isChannelComingSoon('team_dashboard'),
       isSvg: true,
-      details: 'Active Team Workspace',
+      details: isChannelComingSoon('team_dashboard') ? 'Coming Soon' : 'Active Team Workspace',
       route: '/more',
     },
     {
@@ -437,9 +587,9 @@ export default function ConnectorsScreen() {
       description: 'Create, track & send digital price quotes to leads',
       icon: <QuotationsLogo size={44} />,
       color: '#3B82F6',
-      isConnected: true,
+      isConnected: !isChannelComingSoon('quotation_engine'),
       isSvg: true,
-      details: 'Active Sales Quotations',
+      details: isChannelComingSoon('quotation_engine') ? 'Coming Soon' : 'Active Sales Quotations',
       route: '/sales/quotations',
     },
     {
@@ -450,9 +600,9 @@ export default function ConnectorsScreen() {
       description: 'Generate compliant GST invoices, receipts & track payments',
       icon: <GSTInvoicesLogo size={44} />,
       color: '#10B981',
-      isConnected: true,
+      isConnected: !isChannelComingSoon('invoice_system'),
       isSvg: true,
-      details: 'Active Billing Engine',
+      details: isChannelComingSoon('invoice_system') ? 'Coming Soon' : 'Active Billing Engine',
       route: '/sales/invoices',
     },
     {
@@ -463,9 +613,9 @@ export default function ConnectorsScreen() {
       description: 'Crystal-clear in-app HD Voice & Video calls with customers',
       icon: <VoiceVideoLogo size={44} />,
       color: '#EC4899',
-      isConnected: true,
+      isConnected: !isChannelComingSoon('voice_video_calling'),
       isSvg: true,
-      details: 'Active WebRTC Calling Engine',
+      details: isChannelComingSoon('voice_video_calling') ? 'Coming Soon' : 'Active WebRTC Calling Engine',
     },
     {
       id: 'auto_reply_engine',
@@ -475,9 +625,9 @@ export default function ConnectorsScreen() {
       description: 'Automated AI response bot, RAG knowledge answers & workflows',
       icon: <AutoReplyBotLogo size={44} />,
       color: '#059669',
-      isConnected: true,
+      isConnected: !isChannelComingSoon('auto_reply_engine'),
       isSvg: true,
-      details: 'Active RAG & Flow Engine',
+      details: isChannelComingSoon('auto_reply_engine') ? 'Coming Soon' : 'Active RAG & Flow Engine',
       route: '/workflows',
     },
     {
@@ -488,9 +638,11 @@ export default function ConnectorsScreen() {
       description: 'Bi-directional Contact sync, lead status & pipeline tracking',
       icon: <ZohoLogo size={44} />,
       color: '#E03131',
-      isConnected: Boolean(client?.zoho_enabled),
+      isConnected: !isChannelComingSoon('zoho_crm_pipeline') && Boolean(client?.zoho_enabled),
       isSvg: true,
-      details: client?.zoho_enabled ? 'Zoho CRM Active' : 'Connect Zoho Account',
+      details: isChannelComingSoon('zoho_crm_pipeline')
+        ? 'Coming Soon'
+        : (client?.zoho_enabled ? 'Zoho CRM Active' : 'Connect Zoho Account'),
       route: '/crm',
     },
     {
@@ -501,9 +653,11 @@ export default function ConnectorsScreen() {
       description: 'Accept UPI, Cards, NetBanking payments & instant wallet recharges',
       icon: <RazorpayLogo size={44} />,
       color: '#0078D4',
-      isConnected: true,
+      isConnected: !isChannelComingSoon('razorpay_gateway') && Boolean((client?.settings as any)?.razorpay_key_id || client?.assigned_plan),
       isSvg: true,
-      details: 'Active Payment Gateway',
+      details: isChannelComingSoon('razorpay_gateway')
+        ? 'Coming Soon'
+        : ((client?.settings as any)?.razorpay_key_id ? 'Active Payment Gateway' : 'Ready to Connect'),
       route: '/sales/wallet',
     },
     {
@@ -514,9 +668,9 @@ export default function ConnectorsScreen() {
       description: 'Manage products, inventory, prices & send catalog in chat',
       icon: <EcommerceCatalogLogo size={44} />,
       color: '#F59E0B',
-      isConnected: true,
+      isConnected: !isChannelComingSoon('ecommerce_catalog'),
       isSvg: true,
-      details: 'Active Product Catalog',
+      details: isChannelComingSoon('ecommerce_catalog') ? 'Coming Soon' : 'Active Product Catalog',
       route: '/sales/products',
     },
     {
@@ -527,9 +681,9 @@ export default function ConnectorsScreen() {
       description: 'AI-assisted client proposal generation & interactive pitch decks',
       icon: <ProposalBuilderLogo size={44} />,
       color: '#6366F1',
-      isConnected: true,
+      isConnected: !isChannelComingSoon('proposal_builder'),
       isSvg: true,
-      details: 'Active Proposal Generator',
+      details: isChannelComingSoon('proposal_builder') ? 'Coming Soon' : 'Active Proposal Generator',
     },
     {
       id: 'google_news_radar',
@@ -539,19 +693,49 @@ export default function ConnectorsScreen() {
       description: 'Real-time industry news feed, competitor tracking & AI summaries',
       icon: <GoogleNewsLogo size={44} />,
       color: '#4285F4',
-      isConnected: Boolean(client?.google_news_enabled ?? true),
+      isConnected: !isChannelComingSoon('google_news_radar') && Boolean(client?.google_news_enabled ?? true),
       isSvg: true,
-      details: 'Live RSS & AI Intelligence Feed',
+      details: isChannelComingSoon('google_news_radar') ? 'Coming Soon' : 'Live RSS & AI Intelligence Feed',
     },
   ];
 
-  const channelsCount = connectorsList.filter(c => c.type === 'channel').length;
-  const connectorsCount = connectorsList.filter(c => c.type === 'connector').length;
-  const featuresCount = connectorsList.filter(c => c.type === 'feature').length;
+  const channelsList = connectorsList.filter(c => c.type === 'channel');
+  const connectorsOnlyList = connectorsList.filter(c => c.type === 'connector');
+  const featuresOnlyList = connectorsList.filter(c => c.type === 'feature');
+
+  // Available (non-coming-soon) lists strictly excluding Coming Soon items
+  const availableChannels = channelsList.filter(c => !isChannelComingSoon(c.id));
+  const availableConnectors = connectorsOnlyList.filter(c => !isChannelComingSoon(c.id));
+  const availableFeatures = featuresOnlyList.filter(c => !isChannelComingSoon(c.id));
+  const totalAvailableCount = availableChannels.length + availableConnectors.length + availableFeatures.length;
+
+  const channelsCount = availableChannels.length;
+  const connectedChannelsCount = channelsList.filter(c => c.isConnected).length;
+
+  const connectorsCount = availableConnectors.length;
+  const connectedConnectorsCount = connectorsOnlyList.filter(c => c.isConnected).length;
+
+  const featuresCount = availableFeatures.length;
+  const connectedFeaturesCount = featuresOnlyList.filter(c => c.isConnected).length;
+
   const connectedCount = connectorsList.filter(c => c.isConnected).length;
 
+  const channelsSummaryText = availableChannels.length > 0
+    ? availableChannels.map(c => c.name.split(' ')[0]).join(', ')
+    : 'Omnichannel Messaging Hub';
+
+  const connectorsSummaryText = availableConnectors.length > 0
+    ? availableConnectors.slice(0, 4).map(c => c.name.split(' ')[0]).join(', ')
+    : 'Google Workspace, 365, Zoho & Cloud';
+
+  const featuresSummaryText = availableFeatures.length > 0
+    ? availableFeatures.slice(0, 4).map(f => f.name.split(' ')[0]).join(', ')
+    : 'Workflows, CRM, Billing & AI Automation';
+
+  const isDedicatedMode = activeFilter === 'CHANNELS' || activeFilter === 'CONNECTORS' || activeFilter === 'FEATURES';
+
   const filterTabs = [
-    { id: 'ALL', label: 'All', count: connectorsList.length, icon: <Layers size={14} /> },
+    { id: 'ALL', label: 'All', count: totalAvailableCount, icon: <Layers size={14} /> },
     { id: 'CHANNELS', label: 'Channels', count: channelsCount, icon: <Share2 size={14} /> },
     { id: 'CONNECTORS', label: 'Connectors', count: connectorsCount, icon: <Database size={14} /> },
     { id: 'FEATURES', label: 'Features', count: featuresCount, icon: <Sparkles size={14} /> },
@@ -561,11 +745,11 @@ export default function ConnectorsScreen() {
   const getFilteredItems = (): ChannelConnectorItem[] => {
     switch (activeFilter) {
       case 'CHANNELS':
-        return connectorsList.filter(item => item.type === 'channel');
+        return channelsList;
       case 'CONNECTORS':
-        return connectorsList.filter(item => item.type === 'connector');
+        return connectorsOnlyList;
       case 'FEATURES':
-        return connectorsList.filter(item => item.type === 'feature');
+        return featuresOnlyList;
       case 'ACTIVE':
         return connectorsList.filter(item => item.isConnected);
       case 'ALL':
@@ -593,56 +777,146 @@ export default function ConnectorsScreen() {
 
     setSelectedItem(item);
     setShowToken(false);
+    setMetaTab('AUTO');
 
     if (item.id === 'whatsapp') {
       setFormFields({
-        displayName: client?.business_name || client?.company_name || 'Workspace',
-        wabaId: '947532301669617',
-        phoneId: client?.whatsapp_phone_number_id || '1144355915438778',
-        phoneNumber: client?.phone || '8358990909',
-        portfolioId: '847294871904729',
-        accessToken: client?.whatsapp_access_token || 'EAAGkn02834710928374901823901823901823908129038',
+        displayName: client?.business_name || client?.company_name || user?.name || '',
+        wabaId: client?.whatsapp_waba_id || (client?.whatsapp_config?.waba_id as string) || '',
+        phoneId: client?.whatsapp_phone_number_id || (client?.whatsapp_config?.phone_number_id as string) || '',
+        phoneNumber: client?.phone_number || client?.phone || '',
+        portfolioId: (client?.settings as any)?.business_portfolio_id || client?.meta_portfolio_name || '',
+        accessToken: client?.whatsapp_access_token || '',
       });
     } else if (item.id === 'instagram') {
       setFormFields({
-        displayName: client?.business_name || 'UwoConnect Instagram',
-        instagramHandle: '@uwoconnect_official',
-        pageId: '1092837492019',
-        accessToken: 'EAAGkn02834710928374901823901823901823908129038',
+        displayName: client?.instagram_config?.page_name || client?.business_name || '',
+        instagramHandle: client?.instagram_config?.username || client?.instagram_config?.instagram_handle || '',
+        pageId: client?.instagram_config?.page_id || client?.instagram_config?.ig_user_id || '',
+        accessToken: client?.instagram_config?.access_token || '',
       });
     } else if (item.id === 'facebook') {
       setFormFields({
-        displayName: client?.business_name || 'UwoConnect Official Page',
-        pageId: '84920192837',
-        accessToken: 'EAAGkn02834710928374901823901823901823908129038',
+        displayName: client?.facebook_config?.page_name || client?.business_name || '',
+        pageId: client?.facebook_config?.page_id || '',
+        accessToken: client?.facebook_config?.access_token || '',
+      });
+    } else if (item.id === 'youtube') {
+      setFormFields({
+        channelTitle: client?.youtube_config?.channel_title || '',
+        channelId: client?.youtube_config?.channel_id || '',
+        status: client?.youtube_enabled ? 'Connected & Active' : 'Ready to Connect',
       });
     } else if (item.id === 'gmail') {
       setFormFields({
-        emailAccount: client?.email || 'support@uwoconnect.com',
-        oauthStatus: 'Active Google Workspace OAuth2',
-        scopes: 'Mail.Read, Mail.Send, Leads.Extract',
+        emailAccount: client?.gmail_config?.email || client?.email || '',
+        oauthStatus: client?.gmail_enabled ? 'Active Google Workspace OAuth2' : 'Not Connected',
+        scopes: client?.gmail_enabled ? 'Mail.Read, Mail.Send, Leads.Extract' : 'None',
       });
     } else if (item.id === 'outlook') {
       setFormFields({
-        emailAccount: client?.email || 'support@uwoconnect.com',
-        oauthStatus: 'Active Microsoft Graph v1.0',
-        tenantId: '92837492-3847-2910-8273-918273645192',
+        emailAccount: client?.outlook_config?.email || client?.email || '',
+        oauthStatus: client?.outlook_enabled ? 'Active Microsoft Graph v1.0' : 'Not Connected',
+        tenantId: client?.outlook_config?.tenant_id || '',
       });
     } else if (item.id === 'razorpay_gateway') {
       setFormFields({
-        keyId: 'rzp_live_839201928374',
-        keySecret: '••••••••••••••••••••••••',
-        webhookStatus: 'Active & Verified',
+        keyId: (client?.settings as any)?.razorpay_key_id || '',
+        keySecret: (client?.settings as any)?.razorpay_key_secret ? '••••••••••••••••••••••••' : '',
+        webhookStatus: (client?.settings as any)?.razorpay_key_id ? 'Active & Verified' : 'Ready to Connect',
       });
     } else {
       setFormFields({
-        displayName: client?.business_name || client?.company_name || 'Workspace Account',
-        accountEmail: client?.email || 'support@uwoconnect.com',
+        displayName: client?.business_name || client?.company_name || user?.name || '',
+        accountEmail: client?.email || user?.email || '',
         status: item.isConnected ? 'Connected & Synced' : 'Ready to Connect',
       });
     }
 
     setIsModalOpen(true);
+  };
+
+  const handleSaveConfiguration = async () => {
+    if (!selectedItem) return;
+    setIsSaving(true);
+    try {
+      let payload: Record<string, any> = {};
+
+      if (selectedItem.id === 'whatsapp') {
+        payload = {
+          business_name: formFields.displayName || client?.business_name,
+          phone_number: formFields.phoneNumber,
+          whatsapp_waba_id: formFields.wabaId,
+          whatsapp_phone_number_id: formFields.phoneId,
+          whatsapp_enabled: Boolean(formFields.phoneId || formFields.wabaId || formFields.phoneNumber),
+          ...(formFields.accessToken ? { whatsapp_access_token: formFields.accessToken } : {}),
+          ...(formFields.portfolioId ? { meta_portfolio_name: formFields.portfolioId } : {}),
+          settings: {
+            ...(client?.settings || {}),
+            ...(formFields.portfolioId ? { business_portfolio_id: formFields.portfolioId } : {}),
+            api_version: 'v20.0',
+            last_connected: new Date().toISOString(),
+          }
+        };
+      } else if (selectedItem.id === 'instagram') {
+        payload = {
+          instagram_enabled: Boolean(formFields.pageId || formFields.accessToken || formFields.instagramHandle || formFields.displayName),
+          instagram_config: {
+            ...(client?.instagram_config || {}),
+            page_name: formFields.displayName,
+            username: formFields.instagramHandle ? formFields.instagramHandle.replace(/^@/, '') : '',
+            page_id: formFields.pageId,
+            ...(formFields.accessToken ? { access_token: formFields.accessToken } : {}),
+          }
+        };
+      } else if (selectedItem.id === 'facebook') {
+        payload = {
+          facebook_enabled: Boolean(formFields.pageId || formFields.accessToken || formFields.displayName),
+          facebook_config: {
+            ...(client?.facebook_config || {}),
+            page_name: formFields.displayName,
+            page_id: formFields.pageId,
+            ...(formFields.accessToken ? { access_token: formFields.accessToken } : {}),
+          }
+        };
+      } else if (selectedItem.id === 'gmail') {
+        payload = {
+          gmail_enabled: Boolean(formFields.emailAccount),
+          gmail_config: {
+            ...(client?.gmail_config || {}),
+            email: formFields.emailAccount,
+          }
+        };
+      } else if (selectedItem.id === 'outlook') {
+        payload = {
+          outlook_enabled: Boolean(formFields.emailAccount),
+          outlook_config: {
+            ...(client?.outlook_config || {}),
+            email: formFields.emailAccount,
+            tenant_id: formFields.tenantId,
+          }
+        };
+      } else {
+        payload = {
+          business_name: formFields.displayName || client?.business_name,
+        };
+      }
+
+      await authApi.updateProfile(payload);
+      await refetchProfile();
+      await refetchStats();
+
+      setIsModalOpen(false);
+      Alert.alert(
+        'Configuration Saved',
+        `${selectedItem.name} credentials updated successfully in database.`
+      );
+    } catch (err: any) {
+      console.error('[Connector Save Error]:', err);
+      Alert.alert('Save Failed', err?.message || 'Failed to update channel credentials. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const renderConnectorCard = (item: ChannelConnectorItem) => {
@@ -709,12 +983,28 @@ export default function ConnectorsScreen() {
     );
   };
 
+  const headerTitle = 
+    activeFilter === 'CHANNELS' 
+      ? 'Channels' 
+      : activeFilter === 'CONNECTORS' 
+      ? 'Connectors' 
+      : activeFilter === 'FEATURES' 
+      ? 'Features' 
+      : 'Connectors & Channels';
+
   return (
     <Screen safeAreaEdges={['top', 'left', 'right']}>
-      <Header title="Connectors & Channels" showMenu={true} />
+      <Header 
+        title={headerTitle} 
+        showBack={true} 
+        onBackPress={() => {
+          useConnectorsTabStore.getState().setTargetTab('ALL');
+          router.replace('/(app)/home' as any);
+        }}
+      />
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 72 + insets.bottom + 16 }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={profileLoading || statsLoading} onRefresh={onRefresh} />
@@ -725,109 +1015,154 @@ export default function ConnectorsScreen() {
           <View style={styles.summaryRow}>
             <View style={styles.summaryTextGroup}>
               <Text variant="h2" weight="bold" color={colors.textPrimary}>
-                {connectedCount} / {connectorsList.length} Active
+                {activeFilter === 'CHANNELS'
+                  ? `${connectedChannelsCount} / ${channelsCount} Connected`
+                  : activeFilter === 'CONNECTORS'
+                  ? `${connectedConnectorsCount} / ${connectorsCount} Active`
+                  : activeFilter === 'FEATURES'
+                  ? `${connectedFeaturesCount} / ${featuresCount} Enabled`
+                  : `${connectedCount} / ${totalAvailableCount} Active`}
               </Text>
               <Text variant="caption" color={colors.textMuted} style={styles.summarySubtitle}>
-                Channels, cloud connectors & platform features
+                {activeFilter === 'CHANNELS'
+                  ? channelsSummaryText
+                  : activeFilter === 'CONNECTORS'
+                  ? connectorsSummaryText
+                  : activeFilter === 'FEATURES'
+                  ? featuresSummaryText
+                  : 'Channels, cloud connectors & platform features'}
               </Text>
             </View>
-            <View style={[styles.badgePill, { backgroundColor: colors.success + '15' }]}>
-              <CheckCircle2 size={16} color={colors.success} />
-              <Text variant="caption" weight="bold" color={colors.success}>
-                System Ready
+            <View 
+              style={[
+                styles.badgePill, 
+                { 
+                  backgroundColor: activeFilter === 'FEATURES' 
+                    ? `${colors.secondary || '#8B5CF6'}15` 
+                    : activeFilter === 'CONNECTORS'
+                    ? `${colors.primary}15`
+                    : `${colors.success || '#10B981'}15` 
+                }
+              ]}
+            >
+              {activeFilter === 'FEATURES' ? (
+                <Sparkles size={16} color={colors.secondary || '#8B5CF6'} />
+              ) : (
+                <CheckCircle2 size={16} color={activeFilter === 'CONNECTORS' ? colors.primary : (colors.success || '#10B981')} />
+              )}
+              <Text 
+                variant="caption" 
+                weight="bold" 
+                color={
+                  activeFilter === 'FEATURES' 
+                    ? (colors.secondary || '#8B5CF6') 
+                    : activeFilter === 'CONNECTORS'
+                    ? colors.primary
+                    : (colors.success || '#10B981')
+                }
+              >
+                {activeFilter === 'CHANNELS' 
+                  ? 'Channels Ready' 
+                  : activeFilter === 'CONNECTORS' 
+                  ? 'Cloud Synced' 
+                  : activeFilter === 'FEATURES' 
+                  ? 'Platform Active' 
+                  : 'System Ready'}
               </Text>
             </View>
           </View>
         </Card>
 
-        {/* Top Category Filter Pills */}
-        <View style={styles.filterSection}>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false} 
-            contentContainerStyle={styles.filterScroll}
-          >
-            {filterTabs.map((tab) => {
-              const isActive = activeFilter === tab.id;
-              return (
-                <TouchableOpacity
-                  key={tab.id}
-                  activeOpacity={0.8}
-                  style={[
-                    styles.filterPill,
-                    {
-                      backgroundColor: isActive ? colors.primary : colors.surface,
-                      borderColor: isActive ? colors.primary : colors.border,
-                    }
-                  ]}
-                  onPress={() => setActiveFilter(tab.id as FilterTab)}
-                >
-                  {React.cloneElement(tab.icon as React.ReactElement, {
-                    color: isActive ? colors.textInverse : colors.textSecondary
-                  })}
-                  <Text 
-                    variant="caption" 
-                    weight="bold" 
-                    color={isActive ? colors.textInverse : colors.textPrimary}
+        {/* Top Category Filter Pills — ONLY shown in general hub mode, HIDDEN in dedicated view */}
+        {!isDedicatedMode && (
+          <View style={styles.filterSection}>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
+              contentContainerStyle={styles.filterScroll}
+            >
+              {filterTabs.map((tab) => {
+                const isActive = activeFilter === tab.id;
+                return (
+                  <TouchableOpacity
+                    key={tab.id}
+                    activeOpacity={0.8}
+                    style={[
+                      styles.filterPill,
+                      {
+                        backgroundColor: isActive ? colors.primary : colors.surface,
+                        borderColor: isActive ? colors.primary : colors.border,
+                      }
+                    ]}
+                    onPress={() => setActiveFilter(tab.id as FilterTab)}
                   >
-                    {tab.label} ({tab.count})
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
+                    {React.cloneElement(tab.icon as React.ReactElement, {
+                      color: isActive ? colors.textInverse : colors.textSecondary
+                    })}
+                    <Text 
+                      variant="caption" 
+                      weight="bold" 
+                      color={isActive ? colors.textInverse : colors.textPrimary}
+                    >
+                      {tab.label} ({tab.count})
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
 
-        {/* Categorized List View */}
-        {activeFilter === 'ALL' ? (
+        {/* Dedicated or Categorized List View */}
+        {activeFilter === 'CHANNELS' ? (
+          <>
+            <Text variant="label" style={styles.sectionLabel}>
+              COMMUNICATION CHANNELS ({channelsCount})
+            </Text>
+            {channelsList.map(renderConnectorCard)}
+          </>
+        ) : activeFilter === 'CONNECTORS' ? (
+          <>
+            <Text variant="label" style={styles.sectionLabel}>
+              CONNECTORS & INTEGRATIONS ({connectorsCount})
+            </Text>
+            {connectorsOnlyList.map(renderConnectorCard)}
+          </>
+        ) : activeFilter === 'FEATURES' ? (
+          <>
+            <Text variant="label" style={styles.sectionLabel}>
+              PLATFORM FEATURES & MODULES ({featuresCount})
+            </Text>
+            {featuresOnlyList.map(renderConnectorCard)}
+          </>
+        ) : activeFilter === 'ACTIVE' ? (
+          <>
+            <Text variant="label" style={styles.sectionLabel}>
+              ACTIVE ITEMS ({connectedCount})
+            </Text>
+            {connectorsList.filter(i => i.isConnected).map(renderConnectorCard)}
+          </>
+        ) : (
           <>
             {/* Section 1: Channels */}
             <Text variant="label" style={styles.sectionLabel}>
               CHANNELS ({channelsCount})
             </Text>
-            {connectorsList.filter(i => i.type === 'channel').map(renderConnectorCard)}
+            {channelsList.map(renderConnectorCard)}
 
             {/* Section 2: Connectors */}
             <Text variant="label" style={styles.sectionLabel}>
               CONNECTORS & INTEGRATIONS ({connectorsCount})
             </Text>
-            {connectorsList.filter(i => i.type === 'connector').map(renderConnectorCard)}
+            {connectorsOnlyList.map(renderConnectorCard)}
 
             {/* Section 3: Features */}
             <Text variant="label" style={styles.sectionLabel}>
               PLATFORM FEATURES ({featuresCount})
             </Text>
-            {connectorsList.filter(i => i.type === 'feature').map(renderConnectorCard)}
-          </>
-        ) : (
-          <>
-            <Text variant="label" style={styles.sectionLabel}>
-              {activeFilter} ITEMS ({filteredItems.length})
-            </Text>
-            {filteredItems.length > 0 ? (
-              filteredItems.map(renderConnectorCard)
-            ) : (
-              <Card variant="outlined" style={styles.emptyCard}>
-                <Text variant="caption" color={colors.textMuted}>
-                  No items found in this category filter.
-                </Text>
-              </Card>
-            )}
+            {featuresOnlyList.map(renderConnectorCard)}
           </>
         )}
-
-        {/* Security Note */}
-        <Card variant="outlined" style={styles.noteCard}>
-          <View style={styles.noteHeader}>
-            <ShieldCheck size={18} color={colors.primary} />
-            <Text variant="label" weight="bold" color={colors.primary}>
-              Enterprise Security & Encryption
-            </Text>
-          </View>
-          <Text variant="caption" color={colors.textMuted}>
-            All channel OAuth tokens & API credentials are encrypted with AES-256 and stored securely in dedicated tenant vaults.
-          </Text>
-        </Card>
       </ScrollView>
 
       {/* Configuration Sheet Modal */}
@@ -849,10 +1184,10 @@ export default function ConnectorsScreen() {
                 ) : null}
                 <View style={styles.modalHeaderTitleGroup}>
                   <Text variant="h2" weight="bold" color={colors.textPrimary}>
-                    Configure {selectedItem?.name || 'Channel'}
+                    {selectedItem?.name || 'Channel'}
                   </Text>
                   <Text variant="caption" color={colors.textMuted}>
-                    Connect and manage your {selectedItem?.name} API settings.
+                    {isMetaChannel ? 'Official Meta Business Integration' : `Manage ${selectedItem?.name} settings`}
                   </Text>
                 </View>
               </View>
@@ -864,212 +1199,378 @@ export default function ConnectorsScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScroll}>
-              {/* Connection Status Box */}
-              <View 
-                style={[
-                  styles.statusBox, 
-                  { 
-                    backgroundColor: selectedItem?.isConnected 
-                      ? (selectedItem.color ? selectedItem.color + '15' : colors.success + '15') 
-                      : colors.warning + '15',
-                    borderColor: selectedItem?.isConnected ? (selectedItem.color ? selectedItem.color + '30' : colors.success + '30') : colors.warning + '30',
-                    borderWidth: 1,
-                  }
-                ]}
-              >
-                <View 
+            {/* Segmented Mode Tab Switcher for Meta Channels */}
+            {isMetaChannel && (
+              <View style={[styles.metaTabWrapper, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <TouchableOpacity
                   style={[
-                    styles.statusDot, 
-                    { backgroundColor: selectedItem?.isConnected ? (selectedItem.color || colors.success) : colors.warning }
-                  ]} 
-                />
-                <View style={{ flex: 1 }}>
-                  <Text 
-                    variant="caption" 
-                    weight="bold" 
-                    style={{ color: selectedItem?.isConnected ? (selectedItem.color || colors.success) : colors.warning }}
+                    styles.metaTabButton,
+                    metaTab === 'AUTO' && [styles.metaTabButtonActive, { backgroundColor: colors.surface }]
+                  ]}
+                  activeOpacity={0.8}
+                  onPress={() => setMetaTab('AUTO')}
+                >
+                  <Zap size={14} color={metaTab === 'AUTO' ? (selectedItem?.color || colors.primary) : colors.textMuted} />
+                  <Text
+                    variant="caption"
+                    weight="bold"
+                    color={metaTab === 'AUTO' ? colors.textPrimary : colors.textMuted}
                   >
-                    CONNECTION STATUS
+                    1-Click Auto
                   </Text>
-                  <Text variant="body" weight="bold" color={colors.textPrimary}>
-                    {selectedItem?.isConnected ? 'Connected & Live Sync' : 'Ready for Setup'}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.metaTabButton,
+                    metaTab === 'MANUAL' && [styles.metaTabButtonActive, { backgroundColor: colors.surface }]
+                  ]}
+                  activeOpacity={0.8}
+                  onPress={() => setMetaTab('MANUAL')}
+                >
+                  <Text
+                    variant="caption"
+                    weight="bold"
+                    color={metaTab === 'MANUAL' ? colors.textPrimary : colors.textMuted}
+                  >
+                    Manual Setup
                   </Text>
-                </View>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {isMetaChannel && metaTab === 'AUTO' ? (
+              /* ── 1-CLICK AUTO HERO VIEW ── */
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScroll}>
+                {/* Status Capsule */}
                 <View 
                   style={[
-                    styles.modalBadgePill, 
-                    { backgroundColor: selectedItem?.isConnected ? (selectedItem.color ? selectedItem.color + '20' : colors.success + '20') : colors.warning + '20' }
+                    styles.sleekStatusCapsule, 
+                    { 
+                      backgroundColor: selectedItem?.isConnected ? '#10B98112' : '#F59E0B12',
+                      borderColor: selectedItem?.isConnected ? '#10B98135' : '#F59E0B35',
+                    }
                   ]}
                 >
-                  <Text 
-                    variant="caption" 
-                    weight="bold" 
-                    style={{ color: selectedItem?.isConnected ? (selectedItem.color || colors.success) : colors.warning, fontSize: 11 }}
-                  >
-                    {selectedItem?.isConnected ? 'v20.0 API' : 'READY'}
+                  <View style={[styles.statusDot, { backgroundColor: selectedItem?.isConnected ? '#10B981' : '#F59E0B' }]} />
+                  <Text variant="caption" weight="bold" style={{ color: selectedItem?.isConnected ? '#059669' : '#D97706', fontSize: 12 }}>
+                    {selectedItem?.isConnected ? 'Active & Live Sync' : 'Ready for Connection'}
+                  </Text>
+                  <View style={{ flex: 1 }} />
+                  <Text variant="caption" color={colors.textMuted} style={{ fontSize: 11 }}>
+                    {selectedItem?.id === 'whatsapp' ? 'Cloud API v20.0' : 'Graph API v20.0'}
                   </Text>
                 </View>
-              </View>
 
-              {/* Form Section */}
-              <Text variant="label" color={colors.textMuted} style={styles.formSectionLabel}>
-                BUSINESS INFORMATION & API TOKENS
-              </Text>
-
-              {selectedItem?.id === 'whatsapp' ? (
-                <>
-                  <View style={styles.inputGroup}>
-                    <Text variant="caption" weight="bold" color={colors.textPrimary} style={styles.inputLabel}>
-                      Display Name *
+                {/* Hero Card */}
+                <View 
+                  style={[
+                    styles.heroCard, 
+                    { 
+                      borderColor: `${selectedItem?.color || colors.primary}30`,
+                      backgroundColor: `${selectedItem?.color || colors.primary}06`,
+                    }
+                  ]}
+                >
+                  <View style={styles.heroBadgeRow}>
+                    <View style={[styles.recommendedPill, { backgroundColor: `${selectedItem?.color || colors.primary}18` }]}>
+                      <Sparkles size={11} color={selectedItem?.color || colors.primary} />
+                      <Text style={[styles.recommendedPillText, { color: selectedItem?.color || colors.primary }]}>
+                        RECOMMENDED
+                      </Text>
+                    </View>
+                    <Text variant="caption" color={colors.textMuted} style={{ fontSize: 11, fontWeight: '600' }}>
+                      ⚡ FAST SETUP
                     </Text>
-                    <TextInput
-                      style={[styles.textInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
-                      value={formFields.displayName}
-                      onChangeText={(val) => setFormFields(prev => ({ ...prev, displayName: val }))}
-                      placeholder="Enter Business Display Name"
-                      placeholderTextColor={colors.textMuted}
-                    />
                   </View>
 
-                  <View style={styles.inputRow}>
-                    <View style={[styles.inputGroup, { flex: 1 }]}>
-                      <Text variant="caption" weight="bold" color={colors.textPrimary} style={styles.inputLabel}>
-                        WABA ID *
-                      </Text>
-                      <TextInput
-                        style={[styles.textInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
-                        value={formFields.wabaId}
-                        onChangeText={(val) => setFormFields(prev => ({ ...prev, wabaId: val }))}
-                        placeholder="Account ID"
-                        placeholderTextColor={colors.textMuted}
-                      />
+                  <View style={styles.heroCardTopRow}>
+                    <View style={[styles.heroIconCircle, { backgroundColor: `${selectedItem?.color || colors.primary}18` }]}>
+                      {selectedItem?.id === 'whatsapp' ? (
+                        <WhatsAppLogo size={34} />
+                      ) : selectedItem?.id === 'instagram' ? (
+                        <InstagramLogo size={34} />
+                      ) : (
+                        <FacebookLogo size={34} />
+                      )}
                     </View>
-
-                    <View style={[styles.inputGroup, { flex: 1 }]}>
-                      <Text variant="caption" weight="bold" color={colors.textPrimary} style={styles.inputLabel}>
-                        Phone ID *
+                    <View style={styles.heroTitleGroup}>
+                      <Text variant="body" weight="bold" color={colors.textPrimary} style={{ fontSize: 16 }}>
+                        {selectedItem?.id === 'whatsapp'
+                          ? 'WhatsApp Cloud API'
+                          : selectedItem?.id === 'instagram'
+                          ? 'Instagram Direct DM'
+                          : 'Facebook Messenger'}
                       </Text>
-                      <TextInput
-                        style={[styles.textInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
-                        value={formFields.phoneId}
-                        onChangeText={(val) => setFormFields(prev => ({ ...prev, phoneId: val }))}
-                        placeholder="Phone Number ID"
-                        placeholderTextColor={colors.textMuted}
-                      />
+                      <Text variant="caption" color={colors.textMuted}>
+                        Official Meta Platform Integration
+                      </Text>
                     </View>
                   </View>
 
-                  <View style={styles.inputGroup}>
-                    <Text variant="caption" weight="bold" color={colors.textPrimary} style={styles.inputLabel}>
-                      WhatsApp Business Phone Number *
-                    </Text>
-                    <View style={styles.phoneInputRow}>
-                      <View style={[styles.countryCodeBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                        <Text variant="caption" weight="bold" color={colors.textPrimary}>
-                          IN +91
+                  <View style={styles.benefitContainer}>
+                    <View style={styles.benefitRow}>
+                      <CheckCircle2 size={15} color={selectedItem?.color || colors.primary} />
+                      <Text variant="caption" color={colors.textPrimary} style={styles.benefitText}>
+                        1-Click login with your Facebook / Meta Business
+                      </Text>
+                    </View>
+                    <View style={styles.benefitRow}>
+                      <CheckCircle2 size={15} color={selectedItem?.color || colors.primary} />
+                      <Text variant="caption" color={colors.textPrimary} style={styles.benefitText}>
+                        Automatic webhook verification & token renewal
+                      </Text>
+                    </View>
+                    <View style={styles.benefitRow}>
+                      <CheckCircle2 size={15} color={selectedItem?.color || colors.primary} />
+                      <Text variant="caption" color={colors.textPrimary} style={styles.benefitText}>
+                        AI auto-replies, broadcasts & live CRM sync
+                      </Text>
+                    </View>
+                  </View>
+
+                  {selectedItem?.isConnected && (
+                    <View style={[styles.linkedDetailsBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                      <Text variant="caption" weight="bold" color={colors.textMuted} style={{ fontSize: 10, textTransform: 'uppercase' }}>
+                        Connected Account
+                      </Text>
+                      <Text variant="body" weight="bold" color={colors.textPrimary} style={{ marginTop: 2 }}>
+                        {selectedItem.details}
+                      </Text>
+                    </View>
+                  )}
+
+                  <TouchableOpacity
+                    style={[
+                      styles.heroCtaBtn,
+                      { backgroundColor: selectedItem?.color || colors.primary },
+                      isMetaConnecting && { opacity: 0.75 }
+                    ]}
+                    activeOpacity={0.88}
+                    disabled={isMetaConnecting}
+                    onPress={() => handleMetaOnboarding(selectedItem.id as 'whatsapp' | 'facebook' | 'instagram')}
+                  >
+                    {isMetaConnecting ? (
+                      <View style={styles.btnRow}>
+                        <ActivityIndicator size="small" color="#FFF" />
+                        <Text variant="body" weight="bold" color="#FFF" style={{ marginLeft: 8 }}>
+                          Connecting with Meta...
                         </Text>
                       </View>
-                      <TextInput
-                        style={[styles.textInput, { flex: 1, backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
-                        value={formFields.phoneNumber}
-                        onChangeText={(val) => setFormFields(prev => ({ ...prev, phoneNumber: val }))}
-                        placeholder="Phone Number"
-                        placeholderTextColor={colors.textMuted}
-                        keyboardType="phone-pad"
-                      />
-                    </View>
-                  </View>
-
-                  <View style={styles.inputGroup}>
-                    <Text variant="caption" weight="bold" color={colors.textPrimary} style={styles.inputLabel}>
-                      System User Access Token *
-                    </Text>
-                    <View style={styles.passwordInputWrapper}>
-                      <TextInput
-                        style={[styles.textInput, styles.passwordInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
-                        value={formFields.accessToken}
-                        onChangeText={(val) => setFormFields(prev => ({ ...prev, accessToken: val }))}
-                        secureTextEntry={!showToken}
-                        placeholder="Meta Access Token"
-                        placeholderTextColor={colors.textMuted}
-                      />
-                      <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowToken(!showToken)}>
-                        {showToken ? <EyeOff size={18} color={colors.textMuted} /> : <Eye size={18} color={colors.textMuted} />}
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </>
-              ) : (
-                Object.keys(formFields).map((key) => (
-                  <View key={key} style={styles.inputGroup}>
-                    <Text variant="caption" weight="bold" color={colors.textPrimary} style={styles.inputLabel}>
-                      {key.replace(/([A-Z])/g, ' $1').toUpperCase()}
-                    </Text>
-                    <TextInput
-                      style={[styles.textInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
-                      value={formFields[key]}
-                      onChangeText={(val) => setFormFields(prev => ({ ...prev, [key]: val }))}
-                      placeholder={`Enter ${key}`}
-                      placeholderTextColor={colors.textMuted}
-                    />
-                  </View>
-                ))
-              )}
-
-              {/* Metadata Diagnostics Box */}
-              <Card variant="outlined" style={styles.metaCard}>
-                <Text variant="caption" weight="bold" color={colors.textPrimary} style={{ marginBottom: 6 }}>
-                  METADATA INFO & DIAGNOSTICS
-                </Text>
-                <View style={styles.metaGrid}>
-                  <View style={styles.metaItem}>
-                    <Text variant="caption" color={colors.textMuted}>Last Connected</Text>
-                    <Text variant="caption" weight="bold" color={colors.textPrimary}>Aug 20, 2026, 10:46 AM</Text>
-                  </View>
-                  <View style={styles.metaItem}>
-                    <Text variant="caption" color={colors.textMuted}>API Version</Text>
-                    <Text variant="caption" weight="bold" style={{ color: selectedItem?.color || colors.success }}>v20.0 Cloud API</Text>
-                  </View>
+                    ) : (
+                      <View style={styles.btnRow}>
+                        <Zap size={18} color="#FFF" />
+                        <Text variant="body" weight="bold" color="#FFF" style={{ marginLeft: 6 }}>
+                          {selectedItem?.isConnected
+                            ? `Re-connect / Switch Account`
+                            : `Connect with Meta (1-Click)`}
+                        </Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
                 </View>
-              </Card>
-            </ScrollView>
+
+                <TouchableOpacity 
+                  style={styles.switchModeFooter}
+                  activeOpacity={0.7}
+                  onPress={() => setMetaTab('MANUAL')}
+                >
+                  <Text variant="caption" color={colors.textMuted}>
+                    Prefer manual setup? <Text variant="caption" weight="bold" color={colors.primary}>Enter tokens & IDs →</Text>
+                  </Text>
+                </TouchableOpacity>
+              </ScrollView>
+            ) : (
+              /* ── MANUAL SETUP VIEW (For Manual tab or non-Meta channels) ── */
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScroll}>
+                {/* Status Capsule */}
+                <View 
+                  style={[
+                    styles.sleekStatusCapsule, 
+                    { 
+                      backgroundColor: selectedItem?.isConnected ? '#10B98112' : '#F59E0B12',
+                      borderColor: selectedItem?.isConnected ? '#10B98135' : '#F59E0B35',
+                    }
+                  ]}
+                >
+                  <View style={[styles.statusDot, { backgroundColor: selectedItem?.isConnected ? '#10B981' : '#F59E0B' }]} />
+                  <Text variant="caption" weight="bold" style={{ color: selectedItem?.isConnected ? '#059669' : '#D97706', fontSize: 12 }}>
+                    {selectedItem?.isConnected ? 'Active & Live Sync' : 'Ready for Setup'}
+                  </Text>
+                  <View style={{ flex: 1 }} />
+                  <Text variant="caption" color={colors.textMuted} style={{ fontSize: 11 }}>
+                    {selectedItem?.id === 'whatsapp' ? 'Cloud API v20.0' : selectedItem?.type === 'channel' ? 'Meta Graph v20.0' : 'Enterprise REST'}
+                  </Text>
+                </View>
+
+                <Text variant="label" color={colors.textMuted} style={styles.formSectionLabel}>
+                  BUSINESS INFORMATION & API TOKENS
+                </Text>
+
+                {selectedItem?.id === 'whatsapp' ? (
+                  <>
+                    <View style={styles.inputGroup}>
+                      <Text variant="caption" weight="bold" color={colors.textPrimary} style={styles.inputLabel}>
+                        Display Name *
+                      </Text>
+                      <TextInput
+                        style={[styles.textInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
+                        value={formFields.displayName}
+                        onChangeText={(val) => setFormFields(prev => ({ ...prev, displayName: val }))}
+                        placeholder="Enter Business Display Name"
+                        placeholderTextColor={colors.textMuted}
+                      />
+                    </View>
+
+                    <View style={styles.inputRow}>
+                      <View style={[styles.inputGroup, { flex: 1 }]}>
+                        <Text variant="caption" weight="bold" color={colors.textPrimary} style={styles.inputLabel}>
+                          WABA ID *
+                        </Text>
+                        <TextInput
+                          style={[styles.textInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
+                          value={formFields.wabaId}
+                          onChangeText={(val) => setFormFields(prev => ({ ...prev, wabaId: val }))}
+                          placeholder="Account ID"
+                          placeholderTextColor={colors.textMuted}
+                        />
+                      </View>
+
+                      <View style={[styles.inputGroup, { flex: 1 }]}>
+                        <Text variant="caption" weight="bold" color={colors.textPrimary} style={styles.inputLabel}>
+                          Phone ID *
+                        </Text>
+                        <TextInput
+                          style={[styles.textInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
+                          value={formFields.phoneId}
+                          onChangeText={(val) => setFormFields(prev => ({ ...prev, phoneId: val }))}
+                          placeholder="Phone Number ID"
+                          placeholderTextColor={colors.textMuted}
+                        />
+                      </View>
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                      <Text variant="caption" weight="bold" color={colors.textPrimary} style={styles.inputLabel}>
+                        WhatsApp Business Phone Number *
+                      </Text>
+                      <View style={styles.phoneInputRow}>
+                        <View style={[styles.countryCodeBox, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                          <Text variant="caption" weight="bold" color={colors.textPrimary}>
+                            IN +91
+                          </Text>
+                        </View>
+                        <TextInput
+                          style={[styles.textInput, { flex: 1, backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
+                          value={formFields.phoneNumber}
+                          onChangeText={(val) => setFormFields(prev => ({ ...prev, phoneNumber: val }))}
+                          placeholder="Phone Number"
+                          placeholderTextColor={colors.textMuted}
+                          keyboardType="phone-pad"
+                        />
+                      </View>
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                      <Text variant="caption" weight="bold" color={colors.textPrimary} style={styles.inputLabel}>
+                        System User Access Token *
+                      </Text>
+                      <View style={styles.passwordInputWrapper}>
+                        <TextInput
+                          style={[styles.textInput, styles.passwordInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
+                          value={formFields.accessToken}
+                          onChangeText={(val) => setFormFields(prev => ({ ...prev, accessToken: val }))}
+                          secureTextEntry={!showToken}
+                          placeholder="Meta Access Token"
+                          placeholderTextColor={colors.textMuted}
+                        />
+                        <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowToken(!showToken)}>
+                          {showToken ? <EyeOff size={18} color={colors.textMuted} /> : <Eye size={18} color={colors.textMuted} />}
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </>
+                ) : (
+                  Object.keys(formFields).map((key) => (
+                    <View key={key} style={styles.inputGroup}>
+                      <Text variant="caption" weight="bold" color={colors.textPrimary} style={styles.inputLabel}>
+                        {key.replace(/([A-Z])/g, ' $1').toUpperCase()}
+                      </Text>
+                      <TextInput
+                        style={[styles.textInput, { backgroundColor: colors.background, color: colors.textPrimary, borderColor: colors.border }]}
+                        value={formFields[key]}
+                        onChangeText={(val) => setFormFields(prev => ({ ...prev, [key]: val }))}
+                        placeholder={`Enter ${key}`}
+                        placeholderTextColor={colors.textMuted}
+                      />
+                    </View>
+                  ))
+                )}
+
+                {/* Metadata Diagnostics Box */}
+                <Card variant="outlined" style={styles.metaCard}>
+                  <Text variant="caption" weight="bold" color={colors.textPrimary} style={{ marginBottom: 6 }}>
+                    METADATA INFO & DIAGNOSTICS
+                  </Text>
+                  <View style={styles.metaGrid}>
+                    <View style={styles.metaItem}>
+                      <Text variant="caption" color={colors.textMuted}>Last Synced</Text>
+                      <Text variant="caption" weight="bold" color={colors.textPrimary}>
+                        {selectedItem?.isConnected ? 'Live Active Sync' : 'Not Connected'}
+                      </Text>
+                    </View>
+                    <View style={styles.metaItem}>
+                      <Text variant="caption" color={colors.textMuted}>API Engine</Text>
+                      <Text variant="caption" weight="bold" style={{ color: selectedItem?.color || colors.success }}>
+                        {selectedItem?.id === 'whatsapp' ? 'v20.0 Cloud API' : selectedItem?.type === 'channel' ? 'Meta Graph v20.0' : 'Enterprise REST'}
+                      </Text>
+                    </View>
+                  </View>
+                </Card>
+              </ScrollView>
+            )}
 
             {/* Modal Actions Footer */}
-            <View style={[styles.modalFooter, { borderTopColor: colors.border }]}>
-              <TouchableOpacity 
-                style={[styles.cancelBtn, { borderColor: colors.border }]} 
-                onPress={() => setIsModalOpen(false)}
-              >
-                <Text variant="body" weight="medium" color={colors.textPrimary}>
-                  Cancel
-                </Text>
-              </TouchableOpacity>
+            {isMetaChannel && metaTab === 'AUTO' ? (
+              <View style={[styles.modalFooterSingle, { borderTopColor: colors.border }]}>
+                <TouchableOpacity 
+                  style={[styles.closeModalBtn, { backgroundColor: colors.background, borderColor: colors.border }]} 
+                  onPress={() => setIsModalOpen(false)}
+                >
+                  <Text variant="body" weight="bold" color={colors.textPrimary}>
+                    Close
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={[styles.modalFooter, { borderTopColor: colors.border }]}>
+                <TouchableOpacity 
+                  style={[styles.cancelBtn, { borderColor: colors.border }]} 
+                  onPress={() => setIsModalOpen(false)}
+                >
+                  <Text variant="body" weight="medium" color={colors.textPrimary}>
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity 
-                style={[styles.saveBtn, { backgroundColor: selectedItem?.color || colors.success }]}
-                disabled={isSaving}
-                onPress={() => {
-                  setIsSaving(true);
-                  setTimeout(() => {
-                    setIsSaving(false);
-                    setIsModalOpen(false);
-                    Alert.alert('Configuration Updated', `${selectedItem?.name || 'Channel'} configuration saved!`);
-                  }, 500);
-                }}
-              >
-                {isSaving ? (
-                  <ActivityIndicator color="#FFF" size="small" />
-                ) : (
-                  <>
-                    <Check size={18} color="#FFF" />
-                    <Text variant="body" weight="bold" color="#FFF">
-                      Update Configuration
-                    </Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
+                <TouchableOpacity 
+                  style={[styles.saveBtn, { backgroundColor: selectedItem?.color || colors.success }]}
+                  disabled={isSaving}
+                  onPress={handleSaveConfiguration}
+                >
+                  {isSaving ? (
+                    <ActivityIndicator color="#FFF" size="small" />
+                  ) : (
+                    <>
+                      <Check size={18} color="#FFF" />
+                      <Text variant="body" weight="bold" color="#FFF">
+                        Update Configuration
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
       </Modal>
@@ -1336,5 +1837,133 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+  },
+  metaTabWrapper: {
+    flexDirection: 'row',
+    padding: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 14,
+    gap: 4,
+  },
+  metaTabButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 9,
+    gap: 6,
+  },
+  metaTabButtonActive: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  heroBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  recommendedPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  recommendedPillText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  sleekStatusCapsule: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 14,
+  },
+  heroCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 18,
+    marginBottom: 12,
+  },
+  heroCardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  heroIconCircle: {
+    width: 50,
+    height: 50,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroTitleGroup: {
+    flex: 1,
+  },
+  benefitContainer: {
+    gap: 10,
+    marginBottom: 18,
+    paddingHorizontal: 2,
+  },
+  benefitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  benefitText: {
+    fontSize: 13,
+    lineHeight: 18,
+    flex: 1,
+  },
+  linkedDetailsBox: {
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  heroCtaBtn: {
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  btnRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  switchModeFooter: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  modalFooterSingle: {
+    paddingTop: 14,
+    borderTopWidth: 1,
+  },
+  closeModalBtn: {
+    height: 46,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

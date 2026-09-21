@@ -250,7 +250,7 @@ export const ExportLeadsModal: React.FC<ExportLeadsModalProps> = ({ visible, onC
           <ScrollView
             style={styles.scrollContainer}
             contentContainerStyle={styles.container}
-            showsVerticalScrollIndicator={true}
+            showsVerticalScrollIndicator={false}
             nestedScrollEnabled={true}
             keyboardShouldPersistTaps="handled"
             bounces={true}
@@ -415,7 +415,7 @@ export const ExportLeadsModal: React.FC<ExportLeadsModalProps> = ({ visible, onC
             <Badge label={exportFormat.toUpperCase()} variant="success" />
           </View>
 
-          <ScrollView style={styles.fullReportScroll} nestedScrollEnabled>
+          <ScrollView style={styles.fullReportScroll} nestedScrollEnabled showsVerticalScrollIndicator={false}>
             <View style={[styles.tableHeader, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Text style={[styles.colName, styles.tableHeaderText, { color: colors.textSecondary }]}>Name</Text>
               <Text style={[styles.colPhone, styles.tableHeaderText, { color: colors.textSecondary }]}>Phone</Text>

@@ -41,10 +41,28 @@ export const authApi = {
   },
 
   /**
+   * Consumes Django Apple Sign-In endpoint `/api/auth/apple/`
+   */
+  async loginWithApple(identityToken: string, extra?: { name?: string; invite_token?: string }): Promise<LoginResponse> {
+    return apiClient.post<LoginResponse>('/api/auth/apple/', {
+      identity_token: identityToken,
+      ...extra,
+    });
+  },
+
+  /**
    * Consumes existing Django endpoint `/api/profile`
    */
-  async getProfile(): Promise<UserProfile> {
-    return apiClient.get<UserProfile>('/api/profile');
+  async getProfile(overrideToken?: string): Promise<UserProfile> {
+    const config = overrideToken ? { headers: { Authorization: `Bearer ${overrideToken}` } } : undefined;
+    return apiClient.get<UserProfile>('/api/profile', config);
+  },
+
+  /**
+   * Update User / Client profile on `/api/profile`
+   */
+  async updateProfile(data: Record<string, any>): Promise<UserProfile> {
+    return apiClient.patch<UserProfile>('/api/profile', data);
   },
 
   /**

@@ -2,13 +2,13 @@ import { TextStyle } from 'react-native';
 
 export const typography = {
   fontSize: {
-    xs: 11,
-    sm: 13,
-    base: 15,
-    lg: 17,
-    xl: 20,
-    '2xl': 24,
-    '3xl': 30,
+    xs: 10,
+    sm: 11.5,
+    base: 13.5,
+    lg: 15.5,
+    xl: 18,
+    '2xl': 22,
+    '3xl': 26,
   },
 
   fontWeight: {

@@ -7,6 +7,7 @@ interface BrandState {
   brand: WhiteLabelConfig;
   isLoading: boolean;
   fetchBrandConfig: () => Promise<void>;
+  reset: () => void;
 }
 
 export const useBrandStore = create<BrandState>((set) => ({
@@ -42,5 +43,18 @@ export const useBrandStore = create<BrandState>((set) => ({
       // Fallback to defaults silently if endpoint not configured or offline
       set({ isLoading: false });
     }
+  },
+
+  reset: () => {
+    set({
+      brand: {
+        brand_name: APP_CONFIG.defaultBrand.brandName,
+        tagline: APP_CONFIG.defaultBrand.tagline,
+        logo_url: APP_CONFIG.defaultBrand.logoUrl,
+        primary_color: APP_CONFIG.defaultBrand.primaryColor,
+        secondary_color: APP_CONFIG.defaultBrand.secondaryColor,
+      },
+      isLoading: false,
+    });
   },
 }));
