@@ -3,6 +3,7 @@ import { BackHandler, Platform, ToastAndroid } from 'react-native';
 import { useRouter, useSegments, usePathname } from 'expo-router';
 import { useConnectorsTabStore } from '../stores/connectorsTabStore';
 import { useDrawerStore } from '../stores/drawerStore';
+import { smartNavigateBack } from '../services/appNavigation';
 
 export function useAndroidBackHandler(): void {
   const router = useRouter();
@@ -61,14 +62,7 @@ export function useAndroidBackHandler(): void {
       // Always reset connectors category filter
       useConnectorsTabStore.getState().setTargetTab('ALL');
 
-      // 1. Pop back in stack if history exists (returns to exact previous page)
-      if (router.canGoBack()) {
-        router.back();
-        return true;
-      }
-
-      // 2. Fallback to Home if at the root of the history stack
-      router.replace('/(app)/home' as any);
+      smartNavigateBack(router, pathnameRef.current || '');
       return true;
     };
 

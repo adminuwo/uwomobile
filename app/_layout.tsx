@@ -75,15 +75,24 @@ import { useContentStore } from '../src/stores/contentStore';
 import { MaintenanceOverlay } from '../src/components/MaintenanceOverlay';
 import { trackAppInstallation } from '../src/services/appInstallTracker';
 import { useAndroidBackHandler } from '../src/hooks/useAndroidBackHandler';
+import { recordRoute } from '../src/services/appNavigation';
+import { usePathname } from 'expo-router';
 import { AppState } from 'react-native';
 
 function RootLayoutNav() {
   useAndroidBackHandler();
+  const pathname = usePathname();
   const { initialize, status } = useSessionStore();
   const { fetchBrandConfig } = useBrandStore();
   const { syncWithServer: syncTheme } = useTheme();
   const { syncWithServer: syncI18n } = useTranslation();
   const { initialize: initContent, checkVersionAndSync } = useContentStore();
+
+  useEffect(() => {
+    if (pathname) {
+      recordRoute(pathname);
+    }
+  }, [pathname]);
 
   useEffect(() => {
     // Ensure native splash screen is hidden immediately so white JS screen displays

@@ -28,7 +28,7 @@ export default function AppLayout() {
   return (
     <View style={{ flex: 1 }}>
       <Tabs
-        backBehavior="none"
+        backBehavior="history"
         screenOptions={{
           headerShown: false,
           tabBarActiveTintColor: colors.tabBarActive,

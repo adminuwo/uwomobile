@@ -397,7 +397,7 @@ export default function ConversationDetailScreen() {
   });
 
   return (
-    <Screen safeAreaEdges={['top', 'bottom']}>
+    <Screen safeAreaEdges={['top', 'bottom']} onSwipeBack={handleBack}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>

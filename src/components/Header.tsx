@@ -9,6 +9,8 @@ import { useTenantBranding } from '../hooks/useTenantBranding';
 import { ClientLogoBadge } from './ClientLogoBadge';
 import { Skeleton } from './Skeleton';
 
+import { smartNavigateBack, isRootTab } from '../services/appNavigation';
+
 interface HeaderProps {
   title?: string;
   showBack?: boolean;
@@ -38,26 +40,13 @@ export const Header: React.FC<HeaderProps> = ({
   const actionToRender = rightElement || rightAction;
 
   // Root tabs that should default to showing Menu drawer instead of Back button
-  const isRootTab = 
-    pathname === '/home' || pathname === '/(app)/home' || 
-    pathname === '/' || pathname === '/(app)' || 
-    pathname === '/inbox' || pathname === '/(app)/inbox' || 
-    pathname === '/crm' || pathname === '/(app)/crm' || 
-    pathname === '/more' || pathname === '/(app)/more';
+  const isRoot = isRootTab(pathname);
 
   // If showBack is explicitly passed, use it. Otherwise, if it's not a root tab, default to showing Back!
-  const shouldShowBack = showBack !== undefined ? showBack : !isRootTab;
+  const shouldShowBack = showBack !== undefined ? showBack : !isRoot;
 
   const handleBackPress = () => {
-    if (onBackPress) {
-      onBackPress();
-      return;
-    }
-    if (router.canGoBack()) {
-      router.back();
-      return;
-    }
-    router.replace('/(app)/home' as any);
+    smartNavigateBack(router, pathname, onBackPress);
   };
 
   // Title to display: Prefer specific screen title if passed, else tenant client company name
