@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "UwoConnect",
+    "name": "UWO Connect",
     "slug": "uwo-connect",
     "version": "1.0.0",
     "orientation": "default",
@@ -20,8 +20,8 @@
       "bundleIdentifier": "com.uwo.uwoconnect",
       "buildNumber": "2",
       "infoPlist": {
-        "NSCameraUsageDescription": "UwoConnect requires camera access to attach media to messages and CRM contacts.",
-        "NSPhotoLibraryUsageDescription": "UwoConnect requires photo library access to upload media.",
+        "NSCameraUsageDescription": "UWO Connect requires camera access to attach media to messages and CRM contacts.",
+        "NSPhotoLibraryUsageDescription": "UWO Connect requires photo library access to upload media.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -66,7 +66,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow UwoConnect to access your camera to scan QR codes for web login."
+          "cameraPermission": "Allow UWO Connect to access your camera to scan QR codes for web login."
         }
       ]
     ],

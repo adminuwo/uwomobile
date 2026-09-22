@@ -619,7 +619,7 @@ export default function TeamScreen() {
       : `https://uwoconnect.aisa24.com/join?code=${qrInviteCode}`;
     try {
       await Share.share({
-        message: `Join our UwoConnect Workspace instantly: ${fullUrl}`,
+        message: `Join our UWO Connect Workspace instantly: ${fullUrl}`,
         url: fullUrl,
       });
     } catch (e) {
@@ -1256,7 +1256,7 @@ export default function TeamScreen() {
 
               <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
                 <Text variant="caption" color="#64748B" style={{ textAlign: 'center', marginBottom: 14, fontSize: 12, lineHeight: 18 }}>
-                  Scan this QR Code from the UwoConnect Mobile App to join this workspace instantly as an Agent/Supervisor.
+                  Scan this QR Code from the UWO Connect Mobile App to join this workspace instantly as an Agent/Supervisor.
                 </Text>
 
                 {/* Live Real-Time Auth Status Badge */}

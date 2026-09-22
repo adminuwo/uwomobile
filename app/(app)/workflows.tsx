@@ -1998,7 +1998,7 @@ export default function WorkflowsScreen() {
                 {/* Bottom Right Watermark */}
                 <View style={styles.bottomRightWatermark}>
                   <Text variant="caption" weight="bold" color="#94A3B8" style={{ fontSize: 9 }}>
-                    React Flow • UwoConnect Canvas
+                    React Flow • UWO Connect Canvas
                   </Text>
                 </View>
               </View>

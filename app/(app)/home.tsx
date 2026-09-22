@@ -244,8 +244,21 @@ export default function HomeScreen() {
           />
         </View>
 
-        {/* ── SECTION A: OVERVIEW SNAPSHOT (8 SUMMARY CARDS) ── */}
+        {/* ── SECTION: PERFORMANCE & GROWTH ── */}
         <Text variant="label" style={styles.sectionLabel}>
+          {t('home.performanceGrowth')}
+        </Text>
+
+        <GrowthChart
+          automationRuns={clientStats?.automationRuns ?? 0}
+          activeAutomations={resourceCounts.projects}
+          unreadMessages={monitoringStats?.unread_conversations ?? 0}
+          avgResponse={monitoringStats?.avg_response_time || clientStats?.avgResponse || '14s'}
+          colors={colors}
+        />
+
+        {/* ── SECTION: OVERVIEW SNAPSHOT (8 SUMMARY CARDS) ── */}
+        <Text variant="label" style={[styles.sectionLabel, { marginTop: 16 }]}>
           {t('home.overviewSnapshot')}
         </Text>
 
@@ -429,19 +442,6 @@ export default function HomeScreen() {
             </Card>
           </TouchableOpacity>
         </View>
-
-        {/* ── SECTION B: PERFORMANCE & GROWTH ── */}
-        <Text variant="label" style={styles.sectionLabel}>
-          {t('home.performanceGrowth')}
-        </Text>
-
-        <GrowthChart
-          automationRuns={clientStats?.automationRuns ?? 0}
-          activeAutomations={resourceCounts.projects}
-          unreadMessages={monitoringStats?.unread_conversations ?? 0}
-          avgResponse={monitoringStats?.avg_response_time || clientStats?.avgResponse || '14s'}
-          colors={colors}
-        />
 
         {/* ── SECTION C: NEWS / UPDATES ── */}
         {isFeatureEnabled('news_feed') && (

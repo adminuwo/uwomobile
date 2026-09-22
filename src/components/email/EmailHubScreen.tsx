@@ -116,7 +116,7 @@ const GMAIL_FALLBACK_EMAILS: EmailMessage[] = [
     sender_email: 'workspace-noreply@google.com',
     to: 'admin@uwoconnect.com',
     subject: 'Security Audit: New OAuth Webhook Connected',
-    preview: 'A new application was granted permissions to access UwoConnect Workspace APIs...',
+    preview: 'A new application was granted permissions to access UWO Connect Workspace APIs...',
     body: 'Hello Administrator,\n\nA new OAuth application was successfully linked to your Google Workspace account for real-time inbox synchronization.\n\nIP: 192.168.1.1\nDevice: Mobile Agent App\nStatus: Secure & Encrypted',
     time: '09:15 AM',
     date: 'Today',
@@ -151,9 +151,9 @@ const GMAIL_FALLBACK_EMAILS: EmailMessage[] = [
     sender_name: 'You',
     sender_email: 'support@uwoconnect.com',
     to: 'client.leads@retailhub.com',
-    subject: 'Welcome to UWOConnect Omnichannel CRM',
-    preview: 'Thank you for choosing UWOConnect! Your workspace has been activated with WhatsApp, Instagram & Gmail...',
-    body: 'Hi there,\n\nThank you for choosing UWOConnect! Your workspace is ready.\n\nYou can access your unified inbox and CRM leads directly from your mobile app.\n\nCheers,\nUWOConnect Team',
+    subject: 'Welcome to UWO Connect Omnichannel CRM',
+    preview: 'Thank you for choosing UWO Connect! Your workspace has been activated with WhatsApp, Instagram & Gmail...',
+    body: 'Hi there,\n\nThank you for choosing UWO Connect! Your workspace is ready.\n\nYou can access your unified inbox and CRM leads directly from your mobile app.\n\nCheers,\nUWO Connect Team',
     time: 'Sep 4',
     date: 'Sep 4',
     is_read: true,
@@ -171,7 +171,7 @@ const GMAIL_FALLBACK_EMAILS: EmailMessage[] = [
     to: 'ceo@technovate.in',
     subject: 'Credentials & Onboarding Documentation',
     preview: 'Please find attached your primary API keys and documentation for Webhook configuration...',
-    body: 'Hello Rajesh,\n\nPlease find attached your primary API keys and documentation for Webhook configuration.\n\nLet us know if you need assistance during sandbox testing.\n\nWarm regards,\nUWOConnect Ops',
+    body: 'Hello Rajesh,\n\nPlease find attached your primary API keys and documentation for Webhook configuration.\n\nLet us know if you need assistance during sandbox testing.\n\nWarm regards,\nUWO Connect Ops',
     time: 'Sep 3',
     date: 'Sep 3',
     is_read: true,
@@ -208,7 +208,7 @@ const GMAIL_FALLBACK_EMAILS: EmailMessage[] = [
     to: 'vip.clients@capitalbank.com',
     subject: 'Follow-up: Weekly CRM Performance Analytics',
     preview: 'Scheduled dispatch for Friday morning: Weekly summary report on customer engagement and pipeline velocity...',
-    body: 'Dear Partner,\n\nHere is your scheduled weekly pipeline review. We saw a 38% increase in resolved conversations this week.\n\nWarm regards,\nUWOConnect Analytics Team',
+    body: 'Dear Partner,\n\nHere is your scheduled weekly pipeline review. We saw a 38% increase in resolved conversations this week.\n\nWarm regards,\nUWO Connect Analytics Team',
     time: 'Fri 09:00 AM',
     date: 'Scheduled',
     is_read: true,
@@ -304,14 +304,14 @@ const OUTLOOK_FALLBACK_EMAILS: EmailMessage[] = [
     sender_email: 'team@uwoconnect.com',
     to: 'rahul@uwoconnect.com',
     subject: 'Scheduled Broadcast & Product Brochure Demo',
-    preview: 'Dear Rahul, Here is your requested product brochure for UWOConnect SaaS Platform...',
-    body: 'Dear Rahul,\n\nHere is your requested product brochure for UWOConnect SaaS Platform. We have outlined all omnichannel capabilities including WhatsApp Bot flows and CRM Pipelines.\n\nLooking forward to our call tomorrow on Teams.\n\nBest regards,\nOperations Team',
+    preview: 'Dear Rahul, Here is your requested product brochure for UWO Connect SaaS Platform...',
+    body: 'Dear Rahul,\n\nHere is your requested product brochure for UWO Connect SaaS Platform. We have outlined all omnichannel capabilities including WhatsApp Bot flows and CRM Pipelines.\n\nLooking forward to our call tomorrow on Teams.\n\nBest regards,\nOperations Team',
     time: '12:51 PM',
     date: 'Today',
     is_read: false,
     is_starred: false,
     has_attachment: true,
-    attachment_name: 'UWOConnect_Brochure_2026.pdf',
+    attachment_name: 'UWO_Connect_Brochure_2026.pdf',
     has_meeting: true,
     meeting_info: {
       title: 'UWO Demo & Technical Q&A',
@@ -348,7 +348,7 @@ const OUTLOOK_FALLBACK_EMAILS: EmailMessage[] = [
     to: 'priya.s@apexcorp.com',
     subject: 'Re: Proposal Review & Quotation Confirmation #Q-8821',
     preview: 'Hi Priya, Thank you for confirming! We have generated Invoice #INV-2026-088 for Apex Corp...',
-    body: 'Hi Priya,\n\nThank you for confirming! We have generated Invoice #INV-2026-088 for Apex Corp with the agreed enterprise discounts.\n\nOur accounts department will track receipt of wire transfer.\n\nBest regards,\nUWOConnect Commercial Team',
+    body: 'Hi Priya,\n\nThank you for confirming! We have generated Invoice #INV-2026-088 for Apex Corp with the agreed enterprise discounts.\n\nOur accounts department will track receipt of wire transfer.\n\nBest regards,\nUWO Connect Commercial Team',
     time: 'Yesterday',
     date: 'Yesterday',
     is_read: true,
@@ -367,7 +367,7 @@ const OUTLOOK_FALLBACK_EMAILS: EmailMessage[] = [
     to: 'operations@reliancegroup.in',
     subject: 'Updated Master Service Agreement & SLA 2026',
     preview: 'Attached is the executed SLA document covering 99.9% uptime and 15-minute response time...',
-    body: 'Dear Team,\n\nAttached is the executed SLA document covering 99.9% uptime and 15-minute response time for your WhatsApp Business API infrastructure.\n\nThank you for partnering with us.\n\nRegards,\nUWOConnect Legal & Ops',
+    body: 'Dear Team,\n\nAttached is the executed SLA document covering 99.9% uptime and 15-minute response time for your WhatsApp Business API infrastructure.\n\nThank you for partnering with us.\n\nRegards,\nUWO Connect Legal & Ops',
     time: 'Sep 3',
     date: 'Sep 3',
     is_read: true,
@@ -536,7 +536,7 @@ export const EmailHubScreen: React.FC<EmailHubScreenProps> = ({ provider }) => {
   const [autoReplyEnabled, setAutoReplyEnabled] = useState(true);
   const [autoReplySubject, setAutoReplySubject] = useState('Thank you for contacting us, {{first_name}}!');
   const [autoReplyBody, setAutoReplyBody] = useState(
-    `Hi {{first_name}},\n\nWe have received your email via ${providerTitle} and our team will get back to you within 15 minutes.\n\nBest regards,\nUWOConnect Support Team`
+    `Hi {{first_name}},\n\nWe have received your email via ${providerTitle} and our team will get back to you within 15 minutes.\n\nBest regards,\nUWO Connect Support Team`
   );
   const [savingAutoReply, setSavingAutoReply] = useState(false);
 

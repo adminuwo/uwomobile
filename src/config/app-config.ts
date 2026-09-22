@@ -1,7 +1,7 @@
 export const APP_CONFIG = {
-  appName: 'UwoConnect',
+  appName: 'UWO Connect',
   tagline: 'Unified Communication & Business Automation',
-  defaultTenantName: 'UwoConnect',
+  defaultTenantName: 'UWO Connect',
   supportEmail: 'support@uwoconnect.com',
   apiTimeout: 45000, // 45 seconds
   tokenStorageKey: 'uwo_mobile_access_token',
@@ -9,7 +9,7 @@ export const APP_CONFIG = {
   userStorageKey: 'uwo_mobile_user_data',
   brandStorageKey: 'uwo_mobile_brand_config',
   defaultBrand: {
-    brandName: 'UwoConnect',
+    brandName: 'UWO Connect',
     tagline: 'Unified Business Automation',
     logoUrl: null,
     primaryColor: '#10b981',

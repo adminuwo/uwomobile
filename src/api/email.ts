@@ -217,7 +217,7 @@ export const emailApi = {
       const rawText = res?.result || res?.content || '';
       return cleanAiEmailContent(rawText);
     } catch {
-      return `Dear Client,\n\n${prompt.trim()}\n\nBest regards,\nUWOConnect Team`;
+      return `Dear Client,\n\n${prompt.trim()}\n\nBest regards,\nUWO Connect Team`;
     }
   },
 };

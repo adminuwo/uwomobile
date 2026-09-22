@@ -97,6 +97,26 @@ export const resolveChannel = (
   return ch || 'WHATSAPP';
 };
 
+export const formatDisplayName = (name?: string, phone?: string, platformId?: string): string => {
+  let val = (name || '').trim();
+  const genericList = ['UNKNOWN', 'UNKNOWN USER', 'USER', 'CUSTOMER', 'NONE', 'NULL'];
+  if (!val || genericList.includes(val.toUpperCase())) {
+    val = (phone || platformId || '').trim();
+  }
+
+  // Format 10 to 12 digit phone numbers cleanly
+  const digits = val.replace(/\D/g, '');
+  if (digits.length === 12 && digits.startsWith('91')) {
+    return `+91 ${digits.slice(2, 7)} ${digits.slice(7)}`;
+  } else if (digits.length === 10) {
+    return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
+  } else if (digits.length >= 8 && digits.length <= 15 && (val.startsWith('+') || /^\d+$/.test(val))) {
+    return val.startsWith('+') ? val : `+${val}`;
+  }
+
+  return val || 'Customer';
+};
+
 export const inboxApi = {
   getConversations: async (params: FetchConversationsParams = {}): Promise<{ conversations: Conversation[]; hasMore: boolean }> => {
     const { channel = 'ALL', search = '', limit = 20, offset = 0 } = params;
@@ -119,7 +139,7 @@ export const inboxApi = {
         const rawContacts = Array.isArray(contactRes) ? contactRes : (contactRes?.results || []);
         rawConvos = rawContacts.map((ct: any) => ({
           id: ct.id,
-          contact_name: ct.name || ct.phone_number || ct.platform_id || 'Customer',
+          contact_name: formatDisplayName(ct.name, ct.phone_number, ct.platform_id),
           contact_platform_id: ct.platform_id || ct.phone_number || ct.id,
           contact_phone: ct.phone_number,
           channel: resolveChannel(ct.preferred_channel, ct.name, ct.platform_id),
@@ -132,7 +152,7 @@ export const inboxApi = {
 
       const formatted: Conversation[] = rawConvos.map((c: any) => {
         const rawAddr = c.contact_platform_id || c.contact_phone || c.id;
-        const nameStr = c.contact_name || c.contact_platform_id || c.contact_phone || 'Customer';
+        const nameStr = formatDisplayName(c.contact_name, c.contact_phone, c.contact_platform_id);
         const dynamicChannel = resolveChannel(c.channel || c.preferred_channel, nameStr, rawAddr);
 
         return {

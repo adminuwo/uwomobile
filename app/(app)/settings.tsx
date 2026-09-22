@@ -13,7 +13,7 @@ import { useSessionStore } from '../../src/stores/sessionStore';
 import { useBrandStore } from '../../src/stores/brandStore';
 import { apiClient } from '../../src/api/client';
 import { useRouter } from 'expo-router';
-import { Building2, User, Phone, MapPin, Shield, Save, CheckCircle2, Activity, RefreshCw, Server, Database, Laptop, ChevronRight, QrCode, ShieldCheck, Trash2, Camera, Upload, ImageIcon } from 'lucide-react-native';
+import { Building2, User, Phone, MapPin, Shield, Save, CheckCircle2, Activity, RefreshCw, Server, Database, Laptop, ChevronRight, QrCode, ShieldCheck, Trash2, Camera, Upload, Image as ImageIcon } from 'lucide-react-native';
 
 export default function SettingsScreen() {
   const router = useRouter();

@@ -153,7 +153,7 @@ export default function RegisterScreen() {
               )}
             </View>
             <Text variant="h1" weight="bold" align="center" style={styles.brandTitle}>
-              {brand.brand_name || 'UwoConnect'}
+              {brand.brand_name || 'UWO Connect'}
             </Text>
             <Text variant="caption" color={colors.textSecondary} align="center" style={styles.brandSubtitle}>
               {brand.tagline || 'Unified Communication & Business Automation'}
@@ -507,7 +507,7 @@ export default function RegisterScreen() {
           {/* Footer note */}
           <View style={styles.footer}>
             <Text variant="caption" color={colors.textMuted} align="center">
-              Secured by UwoConnect • v1.0.0
+              Secured by UWO Connect • v1.0.0
             </Text>
           </View>
         </ScrollView>

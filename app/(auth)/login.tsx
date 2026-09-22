@@ -141,7 +141,7 @@ export default function LoginScreen() {
               )}
             </View>
             <Text variant="h1" weight="bold" align="center" style={styles.brandTitle}>
-              {brand.brand_name || 'UwoConnect'}
+              {brand.brand_name || 'UWO Connect'}
             </Text>
             <Text variant="caption" color={colors.textSecondary} align="center" style={styles.brandSubtitle}>
               {brand.tagline || 'Unified Communication & Business Automation'}

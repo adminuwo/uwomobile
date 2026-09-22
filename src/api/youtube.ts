@@ -85,9 +85,9 @@ export interface YouTubeSettings {
 // Rich Fallback Data for when YouTube channel is not connected or offline
 export const FALLBACK_YT_STATS: YouTubeChannelStats = {
   channel_id: 'UC_uwo_official_2026',
-  channel_name: 'UWOConnect Official',
+  channel_name: 'UWO Connect Official',
   channel_thumbnail: null,
-  channel_description: 'Official channel for UWOConnect SaaS — WhatsApp Bots, Instagram Automation & Omnichannel CRM Tutorials.',
+  channel_description: 'Official channel for UWO Connect SaaS — WhatsApp Bots, Instagram Automation & Omnichannel CRM Tutorials.',
   subscribers: 14850,
   total_views: 489200,
   video_count: 24,
@@ -97,7 +97,7 @@ export const FALLBACK_YT_STATS: YouTubeChannelStats = {
 export const FALLBACK_YT_VIDEOS: YouTubeVideo[] = [
   {
     id: 'vid-1',
-    title: 'How to Automate 50,000 WhatsApp Messages with UWOConnect',
+    title: 'How to Automate 50,000 WhatsApp Messages with UWO Connect',
     description: 'Complete step-by-step guide to setting up WhatsApp Cloud API webhooks and automated broadcast campaigns.',
     thumbnail: 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=600&q=80',
     url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
@@ -119,8 +119,8 @@ export const FALLBACK_YT_VIDEOS: YouTubeVideo[] = [
   },
   {
     id: 'vid-3',
-    title: 'UWOConnect Omnichannel Mobile App Walkthrough & Setup',
-    description: 'A full tour of the UWOConnect React Native mobile app: Team Inbox, CRM Leads, Quotations, and Email Center.',
+    title: 'UWO Connect Omnichannel Mobile App Walkthrough & Setup',
+    description: 'A full tour of the UWO Connect React Native mobile app: Team Inbox, CRM Leads, Quotations, and Email Center.',
     thumbnail: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&q=80',
     url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
     views: 18900,
@@ -153,7 +153,7 @@ export const FALLBACK_YT_COMMENTS: YouTubeComment[] = [
     replies: [
       {
         id: 'reply-1',
-        author_name: 'UWOConnect Official',
+        author_name: 'UWO Connect Official',
         text: 'Yes Rahul! You need a verified Facebook Business Manager to get official green tick and unmetered tier messaging.',
         published_at: 'Yesterday at 5:00 PM',
       },

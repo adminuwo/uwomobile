@@ -89,7 +89,7 @@ export default function QrAuthScreen() {
                 Authenticating Device Handoff...
               </Text>
               <Text variant="caption" color={colors.textMuted} style={{ textAlign: 'center', marginTop: 6 }}>
-                Verifying secure one-time session with UwoConnect Server. Please wait.
+                Verifying secure one-time session with UWO Connect Server. Please wait.
               </Text>
             </View>
           )}

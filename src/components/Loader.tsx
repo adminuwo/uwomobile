@@ -9,7 +9,7 @@ interface FullScreenLoaderProps {
 }
 
 export const FullScreenLoader: React.FC<FullScreenLoaderProps> = ({
-  message = 'Loading UwoConnect...',
+  message = 'Loading UWO Connect...',
   style,
 }) => {
   const { colors } = useTheme();

@@ -27,6 +27,8 @@ LogBox.ignoreLogs([
   /inboxApi/i,
   /ReactImageView/i,
   /doesn't exist/i,
+  /\[Layout children\]/i,
+  /No route named/i,
 ]);
 
 
@@ -52,7 +54,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
       return (
         <View style={styles.errorContainer}>
           <RNText style={[styles.errorTitle, { fontSize: 24, fontWeight: 'bold', color: '#ef4444' }]}>
-            UwoConnect Launch Error
+            UWO Connect Launch Error
           </RNText>
           <RNText style={[styles.errorMessage, { fontSize: 13, color: '#a1a1aa' }]}>
             {this.state.error?.message || 'An unexpected startup error occurred.'}

@@ -377,7 +377,7 @@ export default function LinkedDevicesScreen() {
                 No Linked Devices
               </Text>
               <Text variant="caption" color={colors.textSecondary} style={styles.emptySubtitle}>
-                You have not linked Uwo Connect to any web browsers yet. Open uwoconnect.com on your computer to get started.
+                You have not linked UWO Connect to any web browsers yet. Open uwoconnect.com on your computer to get started.
               </Text>
             </Card>
           ) : (

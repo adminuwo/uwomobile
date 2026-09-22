@@ -69,7 +69,7 @@ export const AddMoneyModal: React.FC<AddMoneyModalProps> = ({
             onPress: () => {
               Alert.alert(
                 'Credits Added! 🚀',
-                `[Sandbox Mode] ₹${numAmount.toLocaleString('en-IN')} test credits added to your UwoConnect wallet.`
+                `[Sandbox Mode] ₹${numAmount.toLocaleString('en-IN')} test credits added to your UWO Connect wallet.`
               );
               onSuccess();
               onClose();
@@ -137,7 +137,7 @@ export const AddMoneyModal: React.FC<AddMoneyModalProps> = ({
         if (isSuccess) {
           Alert.alert(
             'Recharge Successful! 🚀',
-            `₹${numAmount.toLocaleString('en-IN')} has been added to your UwoConnect wallet.`
+            `₹${numAmount.toLocaleString('en-IN')} has been added to your UWO Connect wallet.`
           );
           onSuccess();
           onClose();
