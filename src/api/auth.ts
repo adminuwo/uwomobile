@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { apiClient } from './client';
 import { LoginCredentials, LoginResponse, UserProfile, RegisterPayload } from '../types/auth';
 
@@ -15,27 +17,56 @@ export interface QrStatusResponse {
   expires_in_seconds: number;
 }
 
+function getMobileDeviceTelemetry() {
+  const platform = Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'web';
+  const appVersion = Constants.expoConfig?.version || '1.0.0';
+  const osVersion = String(Platform.Version || '');
+  const deviceModel = Constants.deviceName || (Platform.OS === 'ios' ? 'Apple Device' : 'Android Device');
+
+  return {
+    platform,
+    device_type: 'mobile',
+    device_model: deviceModel,
+    os_name: Platform.OS === 'ios' ? 'iOS' : 'Android',
+    os_version: osVersion,
+    app_version: appVersion,
+  };
+}
+
 export const authApi = {
   /**
    * Consumes existing Django endpoint `/api/auth/register`
    */
   async register(data: RegisterPayload): Promise<LoginResponse> {
-    return apiClient.post<LoginResponse>('/api/auth/register', data);
+    const telemetry = getMobileDeviceTelemetry();
+    const payload = {
+      ...telemetry,
+      registration_method: 'email',
+      ...data,
+    };
+    return apiClient.post<LoginResponse>('/api/auth/register', payload);
   },
 
   /**
    * Consumes existing Django endpoint `/api/auth/login`
    */
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
-    return apiClient.post<LoginResponse>('/api/auth/login', credentials);
+    const telemetry = getMobileDeviceTelemetry();
+    const payload = {
+      ...telemetry,
+      ...credentials,
+    };
+    return apiClient.post<LoginResponse>('/api/auth/login', payload);
   },
 
   /**
    * Consumes Django Google OAuth endpoint `/api/auth/google/`
    */
   async loginWithGoogle(idToken: string, extra?: { name?: string; invite_token?: string }): Promise<LoginResponse> {
+    const telemetry = getMobileDeviceTelemetry();
     return apiClient.post<LoginResponse>('/api/auth/google/', {
       id_token: idToken,
+      ...telemetry,
       ...extra,
     });
   },
@@ -44,8 +75,11 @@ export const authApi = {
    * Consumes Django Apple Sign-In endpoint `/api/auth/apple/`
    */
   async loginWithApple(identityToken: string, extra?: { name?: string; invite_token?: string }): Promise<LoginResponse> {
+    const telemetry = getMobileDeviceTelemetry();
     return apiClient.post<LoginResponse>('/api/auth/apple/', {
       identity_token: identityToken,
+      ...telemetry,
+      platform: 'ios',
       ...extra,
     });
   },

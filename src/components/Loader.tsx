@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ActivityIndicator, StyleSheet, ViewStyle } from 'react-native';
+import { View, Image, ActivityIndicator, StyleSheet, ViewStyle } from 'react-native';
 import { useTheme } from '../theme';
 import { Text } from './Text';
 
@@ -16,12 +16,18 @@ export const FullScreenLoader: React.FC<FullScreenLoaderProps> = ({
 
   return (
     <View style={[styles.fullScreen, { backgroundColor: colors.background }, style]}>
-      <ActivityIndicator size="large" color={colors.primary} />
-      {message && (
-        <Text variant="caption" color={colors.textSecondary} style={styles.message}>
-          {message}
-        </Text>
-      )}
+      <Image
+        source={require('../../assets/download (3).gif')}
+        style={styles.logo}
+      />
+      <View style={styles.messageContainer}>
+        <ActivityIndicator size="small" color={colors.primary} />
+        {message && (
+          <Text variant="caption" color={colors.textSecondary} style={styles.message}>
+            {message}
+          </Text>
+        )}
+      </View>
     </View>
   );
 };
@@ -62,6 +68,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
   },
+  logo: {
+    width: 100,
+    height: 100,
+    resizeMode: 'contain',
+    marginBottom: 20,
+  },
   message: {
     marginTop: 14,
   },
@@ -73,5 +85,9 @@ const styles = StyleSheet.create({
   },
   inlineMessage: {
     marginLeft: 8,
+  },
+  messageContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });

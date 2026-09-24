@@ -37,10 +37,7 @@ export default function ForgotPasswordScreen() {
     try {
       const res = await authApi.sendForgotPasswordOtp(email.trim().toLowerCase());
       setSuccessMessage(res.message || 'OTP code sent to your registered email.');
-      if (res.otp_debug) {
-        setDebugOtp(res.otp_debug);
-        setOtp(res.otp_debug);
-      }
+      // Dev mode auto-fill removed
       setStep(2);
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'Failed to send OTP code. Please try again.';
@@ -223,13 +220,7 @@ export default function ForgotPasswordScreen() {
                   We sent a 6-digit OTP code to <Text weight="bold" color={colors.textPrimary}>{email}</Text>
                 </Text>
 
-                {debugOtp ? (
-                  <View style={[styles.devBadge, { backgroundColor: '#fef3c7', borderColor: '#fde68a' }]}>
-                    <Text variant="caption" weight="bold" color="#92400e">
-                      ⚡ Dev Mode OTP: {debugOtp} (Auto-filled)
-                    </Text>
-                  </View>
-                ) : null}
+
 
                 <Input
                   label="6-Digit OTP"

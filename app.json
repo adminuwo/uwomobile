@@ -63,6 +63,7 @@
       "expo-router",
       "expo-secure-store",
       "expo-apple-authentication",
+      "react-native-iap",
       [
         "expo-camera",
         {

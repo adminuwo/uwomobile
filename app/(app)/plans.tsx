@@ -19,6 +19,9 @@ import { Card } from '../../src/components/Card';
 import { useTheme } from '../../src/theme';
 import { apiClient } from '../../src/api/client';
 import { env } from '../../src/config/env';
+import { iapService } from '../../src/services/iapService';
+import { APPLE_LEGAL_LINKS, getAppleProductIdForPlan } from '../../src/config/iapConfig';
+import type { Subscription as AppleSubscription } from 'react-native-iap';
 import {
   Sparkles,
   Zap,
@@ -410,6 +413,8 @@ export default function PlansScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [upgradingSlug, setUpgradingSlug] = useState<string | null>(null);
+  const [appleProducts, setAppleProducts] = useState<Map<string, AppleSubscription>>(new Map());
+  const [isRestoring, setIsRestoring] = useState(false);
 
   // Active channel view tab per plan (e.g. { starter: 'whatsapp', growth: 'whatsapp', advanced: 'whatsapp' })
   const [activeChannelTabs, setActiveChannelTabs] = useState<Record<string, string>>({
@@ -475,9 +480,48 @@ export default function PlansScreen() {
     fetchPlans();
   }, [fetchPlans]);
 
+  // Initialize Apple StoreKit on iOS and fetch product pricing
+  useEffect(() => {
+    if (Platform.OS === 'ios') {
+      iapService.init().then((ready) => {
+        if (ready) {
+          iapService.getSubscriptions().then((subs) => {
+            if (subs && subs.size > 0) {
+              setAppleProducts(new Map(subs));
+            }
+          });
+        }
+      });
+      return () => {
+        iapService.end();
+      };
+    }
+  }, []);
+
   const handleRefresh = () => {
     setRefreshing(true);
     fetchPlans();
+  };
+
+  const handleRestorePurchases = async () => {
+    setIsRestoring(true);
+    try {
+      const result = await iapService.restorePurchases();
+      if (result.success) {
+        Alert.alert(
+          'Purchases Restored! 🎉',
+          result.message || `Your ${result.plan || ''} subscription has been restored successfully.`,
+          [{ text: 'Great!', onPress: () => fetchPlans() }]
+        );
+      } else {
+        Alert.alert('Restore Purchases', result.error || 'No active Apple subscriptions were found to restore.');
+      }
+    } catch (e: any) {
+      Alert.alert('Restore Error', e?.message || 'Failed to restore Apple purchases.');
+    } finally {
+      setIsRestoring(false);
+      fetchPlans();
+    }
   };
 
   const isCurrentPlan = (planSlug: string): boolean => {
@@ -486,47 +530,31 @@ export default function PlansScreen() {
     return cur.includes(slug) || slug.includes(cur);
   };
 
-  // Trigger Razorpay In-App Browser Checkout
+  // Trigger Razorpay (Android/Web) or Apple StoreKit (iOS) In-App Checkout
   const handleUpgrade = async (plan: PlanTier) => {
     setUpgradingSlug(plan.slug);
 
-    // iOS Apple Review Sandbox Mode:
-    // Strictly complies with Apple Guideline 3.1.1 (preventing rejection for external web payments).
+    // iOS Apple In-App Purchase (StoreKit Auto-Renewable Subscription)
+    // Strictly complies with Apple Review Guideline 3.1.1
     if (Platform.OS === 'ios') {
-      Alert.alert(
-        'Sandbox Test Mode (Apple Review)',
-        `Simulate switching workspace to the ${plan.name} (${billingPeriod}) plan for review testing?`,
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-            onPress: () => setUpgradingSlug(null),
-          },
-          {
-            text: 'Activate Test Plan',
-            onPress: async () => {
-              try {
-                await apiClient.post('/api/payments/create-order/', {
-                  plan: plan.name,
-                  billing_cycle: billingPeriod,
-                  sandbox: true,
-                }).catch(() => null);
-
-                Alert.alert(
-                  'Subscription Activated! 🎉',
-                  `[Sandbox Mode] Your workspace has been successfully upgraded to the ${plan.name} plan (${billingPeriod}).`,
-                  [{ text: 'Great!', onPress: () => fetchPlans() }]
-                );
-              } catch (e: any) {
-                Alert.alert('Plan Activated', `Switched to ${plan.name} plan successfully!`);
-              } finally {
-                setUpgradingSlug(null);
-                fetchPlans();
-              }
-            },
-          },
-        ]
-      );
+      try {
+        const cycle = billingPeriod.toLowerCase() as 'monthly' | 'yearly';
+        const result = await iapService.purchasePlanSubscription(plan.slug, cycle);
+        if (result.success) {
+          Alert.alert(
+            'Subscription Activated! 🎉',
+            result.message || `Your workspace has been successfully upgraded to the ${plan.name} plan (${billingPeriod}).`,
+            [{ text: 'Great!', onPress: () => fetchPlans() }]
+          );
+        } else if (result.error !== 'USER_CANCELLED') {
+          Alert.alert('Subscription Failed', result.error || 'Could not complete Apple In-App Purchase.');
+        }
+      } catch (e: any) {
+        Alert.alert('Subscription Error', e?.message || 'Failed to initiate Apple subscription.');
+      } finally {
+        setUpgradingSlug(null);
+        fetchPlans();
+      }
       return;
     }
 
@@ -734,6 +762,22 @@ export default function PlansScreen() {
             <TouchableOpacity onPress={handleRefresh} style={styles.refreshBtn}>
               <RefreshCw size={16} color={colors.textMuted} />
             </TouchableOpacity>
+            {Platform.OS === 'ios' && (
+              <TouchableOpacity
+                onPress={handleRestorePurchases}
+                disabled={isRestoring}
+                style={[styles.restoreBtn, { borderColor: '#10b98150' }]}
+                activeOpacity={0.7}
+              >
+                {isRestoring ? (
+                  <ActivityIndicator size="small" color="#059669" />
+                ) : (
+                  <Text variant="caption" weight="bold" color="#059669">
+                    Restore
+                  </Text>
+                )}
+              </TouchableOpacity>
+            )}
           </View>
         </Card>
 
@@ -748,6 +792,15 @@ export default function PlansScreen() {
           const isExpanded = expandedDetails[plan.slug] ?? true;
           const curTab = activeChannelTabs[plan.slug] || 'whatsapp';
           const channelData = plan.channel_details[curTab] || plan.channel_details['whatsapp'];
+
+          // Apple StoreKit Dynamic Localized Price
+          const appleSku = getAppleProductIdForPlan(plan.slug, billingPeriod.toLowerCase() as 'monthly' | 'yearly');
+          const appleProduct = appleProducts.get(appleSku);
+          const appleLocalizedPrice = (appleProduct as any)?.localizedPrice;
+          const hasApplePrice = Platform.OS === 'ios' && !!appleLocalizedPrice;
+          const displayPriceText = hasApplePrice
+            ? appleLocalizedPrice
+            : `₹${displayPrice.toLocaleString('en-IN')}`;
 
           return (
             <Card
@@ -793,14 +846,16 @@ export default function PlansScreen() {
               <View style={styles.priceContainer}>
                 <View style={styles.priceRow}>
                   <Text variant="h1" weight="bold" color={colors.textPrimary} style={styles.priceAmount}>
-                    ₹{displayPrice.toLocaleString('en-IN')}
+                    {displayPriceText}
                   </Text>
                   <Text variant="body" weight="bold" color={colors.textMuted}>
                     {periodLabel}
                   </Text>
-                  <Text variant="caption" color={colors.textMuted} style={styles.taxInfo}>
-                    (+taxes)
-                  </Text>
+                  {!hasApplePrice && (
+                    <Text variant="caption" color={colors.textMuted} style={styles.taxInfo}>
+                      (+taxes)
+                    </Text>
+                  )}
                 </View>
 
                 {billingPeriod === 'YEARLY' && (
@@ -1020,14 +1075,46 @@ export default function PlansScreen() {
         })}
 
         {/* ═══════════════════════════════════════════════════════════════════ */}
-        {/* 5. RAZORPAY 256-BIT SECURITY FOOTER                                 */}
+        {/* 5. FOOTER & LEGAL (STOREKIT / RAZORPAY)                             */}
         {/* ═══════════════════════════════════════════════════════════════════ */}
-        <View style={[styles.securityFooter, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Lock size={16} color="#059669" />
-          <Text variant="caption" color={colors.textMuted} style={styles.securityFooterText}>
-            Protected by 256-bit Razorpay Secure Encrypted In-App Checkout. Instant plan activation.
-          </Text>
-        </View>
+        {Platform.OS === 'ios' ? (
+          <View style={[styles.securityFooter, styles.iosLegalFooter, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <ShieldCheck size={18} color="#059669" style={{ alignSelf: 'center', marginBottom: 4 }} />
+            <Text variant="caption" weight="bold" color={colors.textPrimary} style={{ textAlign: 'center', marginBottom: 4 }}>
+              Apple In-App Purchase Protection
+            </Text>
+            <Text variant="caption" color={colors.textMuted} style={styles.securityFooterText}>
+              Payment will be charged to your Apple ID account at confirmation of purchase. Subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current billing period. You can manage and cancel your subscriptions in your Apple ID Account Settings anytime after purchase.
+            </Text>
+
+            <View style={styles.legalLinksRow}>
+              <TouchableOpacity onPress={() => WebBrowser.openBrowserAsync(APPLE_LEGAL_LINKS.TERMS_OF_USE_URL)}>
+                <Text variant="caption" weight="bold" color="#059669" style={styles.legalLink}>
+                  Terms of Use (EULA)
+                </Text>
+              </TouchableOpacity>
+              <Text variant="caption" color={colors.textMuted}>•</Text>
+              <TouchableOpacity onPress={() => WebBrowser.openBrowserAsync(APPLE_LEGAL_LINKS.PRIVACY_POLICY_URL)}>
+                <Text variant="caption" weight="bold" color="#059669" style={styles.legalLink}>
+                  Privacy Policy
+                </Text>
+              </TouchableOpacity>
+              <Text variant="caption" color={colors.textMuted}>•</Text>
+              <TouchableOpacity onPress={handleRestorePurchases} disabled={isRestoring}>
+                <Text variant="caption" weight="bold" color="#059669" style={styles.legalLink}>
+                  {isRestoring ? 'Restoring...' : 'Restore'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <View style={[styles.securityFooter, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Lock size={16} color="#059669" />
+            <Text variant="caption" color={colors.textMuted} style={styles.securityFooterText}>
+              Protected by 256-bit Razorpay Secure Encrypted In-App Checkout. Instant plan activation.
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </Screen>
   );
@@ -1410,5 +1497,35 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 11,
     lineHeight: 16,
+  },
+  restoreBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginLeft: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#05966910',
+  },
+  iosLegalFooter: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 6,
+    padding: 16,
+  },
+  legalLinksRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#00000010',
+  },
+  legalLink: {
+    fontSize: 11,
+    textDecorationLine: 'underline',
   },
 });

@@ -28,7 +28,7 @@ export default function IndexScreen() {
     <View style={styles.container}>
       <View style={styles.centerSection}>
         <Image
-          source={require('../assets/icon.png')}
+          source={require('../assets/logo.gif')}
           style={styles.logo}
         />
         <ActivityIndicator size="small" color="#10b981" style={styles.spinner} />

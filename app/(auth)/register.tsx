@@ -33,6 +33,7 @@ import {
   ExternalLink,
   ShieldCheck,
   Check,
+  MapPin,
 } from 'lucide-react-native';
 
 export default function RegisterScreen() {
@@ -50,6 +51,7 @@ export default function RegisterScreen() {
   const [portfolioName, setPortfolioName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [location, setLocation] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [acceptedLegal, setAcceptedLegal] = useState(false);
@@ -102,6 +104,7 @@ export default function RegisterScreen() {
     const nameParts = fullName.trim().split(' ');
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
+    const locParts = location.split(',').map((p) => p.trim()).filter(Boolean);
 
     const success = await register({
       email: email.trim().toLowerCase(),
@@ -112,6 +115,9 @@ export default function RegisterScreen() {
       meta_portfolio_name: portfolioName.trim(),
       portfolio_name: portfolioName.trim(),
       phone_number: phone.trim(),
+      location: location.trim(),
+      city: locParts[0] || '',
+      country: locParts.length > 1 ? locParts[locParts.length - 1] : '',
       meta_portfolio_eligible: true,
       terms_accepted: true,
       privacy_accepted: true,
@@ -404,6 +410,19 @@ export default function RegisterScreen() {
                 leftIcon={<Phone size={18} color={colors.textMuted} />}
               />
 
+              {/* Location / City */}
+              <Input
+                label="Location / City"
+                placeholder="e.g. Mumbai, India"
+                value={location}
+                onChangeText={(t) => {
+                  setLocation(t);
+                  if (validationError) setValidationError('');
+                }}
+                autoCapitalize="words"
+                leftIcon={<MapPin size={18} color={colors.textMuted} />}
+              />
+
               {/* Password */}
               <Input
                 label="Password (min. 8 characters)"
@@ -431,8 +450,15 @@ export default function RegisterScreen() {
               />
 
               {/* Mandatory Terms & Privacy Consent Checkbox */}
-              <View style={styles.consentRow}>
-                <TouchableOpacity
+              <TouchableOpacity
+                style={styles.consentRow}
+                onPress={() => {
+                  setAcceptedLegal(!acceptedLegal);
+                  if (validationError) setValidationError('');
+                }}
+                activeOpacity={0.7}
+              >
+                <View
                   style={[
                     styles.checkboxBox,
                     {
@@ -440,40 +466,34 @@ export default function RegisterScreen() {
                       backgroundColor: acceptedLegal ? colors.primary : colors.surface,
                     },
                   ]}
-                  onPress={() => {
-                    setAcceptedLegal(!acceptedLegal);
-                    if (validationError) setValidationError('');
-                  }}
-                  activeOpacity={0.7}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  {acceptedLegal && <Check size={14} color="#FFFFFF" strokeWidth={3} />}
-                </TouchableOpacity>
-
-                <View style={styles.consentTextContainer}>
-                  <Text variant="caption" color={colors.textSecondary} style={{ lineHeight: 18 }}>
-                    I have read and agree to the{' '}
-                    <Text
-                      variant="caption"
-                      weight="bold"
-                      color={colors.primary}
-                      onPress={() => router.push('/(auth)/terms')}
-                    >
-                      Terms & Conditions
-                    </Text>
-                    {' '}and{' '}
-                    <Text
-                      variant="caption"
-                      weight="bold"
-                      color={colors.primary}
-                      onPress={() => router.push('/(auth)/privacy')}
-                    >
-                      Privacy Policy
-                    </Text>
-                    .
-                  </Text>
+                  {acceptedLegal && <Check size={12} color="#FFFFFF" strokeWidth={3} />}
                 </View>
-              </View>
+
+                <Text style={[styles.consentText, { color: colors.textSecondary }]}>
+                  I have read and agree to the{' '}
+                  <Text
+                    style={[styles.consentLink, { color: colors.primary }]}
+                    onPress={(e) => {
+                      e.stopPropagation?.();
+                      router.push('/(auth)/terms');
+                    }}
+                  >
+                    Terms & Conditions
+                  </Text>
+                  {' '}and{' '}
+                  <Text
+                    style={[styles.consentLink, { color: colors.primary }]}
+                    onPress={(e) => {
+                      e.stopPropagation?.();
+                      router.push('/(auth)/privacy');
+                    }}
+                  >
+                    Privacy Policy
+                  </Text>
+                  .
+                </Text>
+              </TouchableOpacity>
 
               {/* Submit Button */}
               <Button
@@ -645,21 +665,29 @@ const styles = StyleSheet.create({
   },
   consentRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginVertical: 12,
-    gap: 10,
+    alignItems: 'center',
+    marginVertical: 14,
   },
   checkboxBox: {
-    width: 20,
-    height: 20,
-    borderRadius: 5,
+    width: 17,
+    height: 17,
+    borderRadius: 4,
     borderWidth: 1.5,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 2,
+    marginRight: 9,
   },
-  consentTextContainer: {
+  consentText: {
     flex: 1,
+    fontSize: 12,
+    lineHeight: 18,
+    textAlignVertical: 'center',
+    includeFontPadding: false,
+  },
+  consentLink: {
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: '700',
   },
   submitBtn: {
     marginTop: 8,

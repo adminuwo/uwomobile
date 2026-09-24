@@ -101,6 +101,16 @@ export interface RegisterPayload {
   privacy_accepted?: boolean;
   terms_version?: string;
   privacy_version?: string;
+  location?: string;
+  city?: string;
+  country?: string;
+  platform?: 'ios' | 'android' | 'web';
+  device_type?: string;
+  device_model?: string;
+  os_name?: string;
+  os_version?: string;
+  app_version?: string;
+  registration_method?: string;
 }
 
 export interface LoginResponse {
