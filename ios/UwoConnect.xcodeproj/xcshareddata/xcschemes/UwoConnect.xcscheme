@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-               BuildableName = "UwoConnect.app"
-               BlueprintName = "UwoConnect"
-               ReferencedContainer = "container:UwoConnect.xcodeproj">
+               BuildableName = "UWOConnect.app"
+               BlueprintName = "UWOConnect"
+               ReferencedContainer = "container:UWOConnect.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +33,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "00E356ED1AD99517003FC87E"
-               BuildableName = "UwoConnectTests.xctest"
-               BlueprintName = "UwoConnectTests"
-               ReferencedContainer = "container:UwoConnect.xcodeproj">
+               BuildableName = "UWOConnectTests.xctest"
+               BlueprintName = "UWOConnectTests"
+               ReferencedContainer = "container:UWOConnect.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -55,9 +55,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "UwoConnect.app"
-            BlueprintName = "UwoConnect"
-            ReferencedContainer = "container:UwoConnect.xcodeproj">
+            BuildableName = "UWOConnect.app"
+            BlueprintName = "UWOConnect"
+            ReferencedContainer = "container:UWOConnect.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -72,9 +72,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "UwoConnect.app"
-            BlueprintName = "UwoConnect"
-            ReferencedContainer = "container:UwoConnect.xcodeproj">
+            BuildableName = "UWOConnect.app"
+            BlueprintName = "UWOConnect"
+            ReferencedContainer = "container:UWOConnect.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

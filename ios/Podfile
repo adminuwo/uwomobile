@@ -28,13 +28,13 @@ self.define_singleton_method(use_autolinking_method_symbol) do |*args|
   end
 end
 
-platform :ios, podfile_properties['ios.deploymentTarget'] || '15.1'
+platform :ios, podfile_properties['ios.deploymentTarget'] || '13.4'
 install! 'cocoapods',
   :deterministic_uuids => false
 
 prepare_react_native_project!
 
-target 'UwoConnect' do
+target 'UWOConnect' do
   use_expo_modules!
   config = use_native_modules!
 
@@ -48,18 +48,6 @@ target 'UwoConnect' do
     :app_path => "#{Pod::Config.instance.installation_root}/..",
     :privacy_file_aggregation_enabled => podfile_properties['apple.privacyManifestAggregationEnabled'] != 'false',
   )
-
-  pre_install do |installer|
-    dev_menu_file = File.join(__dir__, '../node_modules/expo-dev-menu/ios/DevMenuViewController.swift')
-    if File.exist?(dev_menu_file)
-      content = File.read(dev_menu_file)
-      if content.include?("let isSimulator = TARGET_IPHONE_SIMULATOR > 0")
-        content.gsub!("let isSimulator = TARGET_IPHONE_SIMULATOR > 0", "#if targetEnvironment(simulator)\n    let isSimulator = true\n    #else\n    let isSimulator = false\n    #endif")
-        File.write(dev_menu_file, content)
-        Pod::UI.puts "[patch] Patched DevMenuViewController.swift for Xcode 16+".green
-      end
-    end
-  end
 
   post_install do |installer|
     react_native_post_install(
