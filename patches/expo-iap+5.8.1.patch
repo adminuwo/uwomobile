@@ -1,0 +1,24 @@
+diff --git a/node_modules/expo-iap/android/src/main/java/expo/modules/iap/ExpoIapModule.kt b/node_modules/expo-iap/android/src/main/java/expo/modules/iap/ExpoIapModule.kt
+index bda2e51..7307896 100644
+--- a/node_modules/expo-iap/android/src/main/java/expo/modules/iap/ExpoIapModule.kt
++++ b/node_modules/expo-iap/android/src/main/java/expo/modules/iap/ExpoIapModule.kt
+@@ -130,8 +130,8 @@ class ExpoIapModule : Module() {
+         ModuleDefinition {
+             Name("ExpoIap")
+ 
+-            Constant("ERROR_CODES") {
+-                OpenIapError.getAllErrorCodes()
++            Constants {
++                mapOf("ERROR_CODES" to OpenIapError.getAllErrorCodes())
+             }
+ 
+             Events(
+@@ -807,7 +807,7 @@ class ExpoIapModule : Module() {
+                 connectionReady.set(false)
+                 pendingEvents.clear()
+                 PromiseUtils.rejectAllPendingPromises()
+-                job.cancel()
++                // job.cancel()
+             }
+         }
+ 

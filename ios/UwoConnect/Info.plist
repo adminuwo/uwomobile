@@ -39,36 +39,11 @@
           <string>exp+uwo-connect</string>
         </array>
       </dict>
-      <dict>
-        <key>CFBundleURLSchemes</key>
-        <array>
-          <string>fb991147863536661</string>
-        </array>
-      </dict>
     </array>
     <key>CFBundleVersion</key>
     <string>2</string>
-    <key>FacebookAdvertiserIDCollectionEnabled</key>
-    <false/>
-    <key>FacebookAppID</key>
-    <string>991147863536661</string>
-    <key>FacebookAutoInitEnabled</key>
-    <false/>
-    <key>FacebookAutoLogAppEventsEnabled</key>
-    <false/>
-    <key>FacebookClientToken</key>
-    <string>991147863536661</string>
-    <key>FacebookDisplayName</key>
-    <string>UWO Connect</string>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
-    <key>LSApplicationQueriesSchemes</key>
-    <array>
-      <string>fbapi</string>
-      <string>fb-messenger-api</string>
-      <string>fbauth2</string>
-      <string>fbshareextension</string>
-    </array>
     <key>LSRequiresIPhoneOS</key>
     <true/>
     <key>NSAppTransportSecurity</key>
@@ -89,17 +64,6 @@
     <key>NSUserActivityTypes</key>
     <array>
       <string>$(PRODUCT_BUNDLE_IDENTIFIER).expo.index_route</string>
-    </array>
-    <key>SKAdNetworkItems</key>
-    <array>
-      <dict>
-        <key>SKAdNetworkIdentifier</key>
-        <string>v9wttpbfk9.skadnetwork</string>
-      </dict>
-      <dict>
-        <key>SKAdNetworkIdentifier</key>
-        <string>n38lu8286q.skadnetwork</string>
-      </dict>
     </array>
     <key>UILaunchStoryboardName</key>
     <string>SplashScreen</string>
