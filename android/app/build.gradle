@@ -114,8 +114,9 @@ android {
         applicationId 'com.uwo.uwoconnect'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 17
+        versionCode 38
         versionName "1.0.0"
+        missingDimensionStrategy 'store', 'play'
     }
     signingConfigs {
         debug {

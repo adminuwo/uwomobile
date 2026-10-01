@@ -13,8 +13,11 @@ import { useGoogleAuth } from '../../src/hooks/useGoogleAuth';
 import { useTheme } from '../../src/theme';
 import { ShieldCheck, Mail, Lock, AlertCircle, ArrowRight } from 'lucide-react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
-import Svg, { Path } from 'react-native-svg';
+import { AppleIcon } from '../../src/components/AppleIcon';
 
+
+import * as WebBrowser from 'expo-web-browser';
+import { APPLE_LEGAL_LINKS } from '../../src/config/iapConfig';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -254,31 +257,34 @@ export default function LoginScreen() {
                 </Text>
               </TouchableOpacity>
 
-              {/* Apple */}
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={handleApplePress}
-                disabled={isActionLoading}
-                style={[
-                  styles.socialButton,
-                  {
-                    backgroundColor: colors.surface,
-                    borderColor: colors.border,
-                    opacity: isActionLoading ? 0.6 : 1,
-                  },
-                ]}
-              >
-                {isAppleLoading ? (
-                  <ActivityIndicator size="small" color={colors.textPrimary} />
-                ) : (
-                  <Svg viewBox="0 0 814 1000" width={18} height={18} fill={colors.textPrimary}>
-                    <Path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76.5 0-103.7 40.8-165.9 40.8s-105-47.4-155.5-127.4C46 790.8 0 663 0 541.8c0-207.8 135.4-318 269-318 69.4 0 126.9 45.3 170.8 45.3 42 0 109.2-47.4 185.6-47.4 29.8 0 108.2 2.6 168.5 80.1zm-84.7-217.5c39.5-46.8 67.8-112.5 67.8-178.2 0-9-1-18.1-2.6-25.8-64.3 2.6-140.7 43.4-186.5 93.6-36.5 40.8-70.3 106.5-70.3 173.1 0 10.3 1.9 20.6 2.6 23.9 3.9.6 10.3 1.3 16.6 1.3 57.8 0 129.8-38.8 172.4-87.9z" />
-                  </Svg>
-                )}
-                <Text variant="body" weight="bold" color={colors.textPrimary} style={{ marginLeft: 8 }}>
-                  Apple
-                </Text>
-              </TouchableOpacity>
+              {/* Apple — Official Apple HIG "White with outline" Button */}
+              {Platform.OS === 'ios' && (
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={handleApplePress}
+                  disabled={isActionLoading}
+                  style={[
+                    styles.socialButton,
+                    {
+                      backgroundColor: '#FFFFFF',
+                      borderColor: '#000000',
+                      borderWidth: 1,
+                      opacity: isActionLoading ? 0.6 : 1,
+                    },
+                  ]}
+                >
+                  {isAppleLoading ? (
+                    <ActivityIndicator size="small" color="#000000" />
+                  ) : (
+                    <>
+                      <AppleIcon size={18} color="#000000" />
+                      <Text variant="body" weight="bold" style={{ marginLeft: 8, color: '#000000' }}>
+                        Sign in with Apple
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
             </View>
 
 
@@ -308,7 +314,16 @@ export default function LoginScreen() {
                   color={colors.primary}
                   onPress={() => router.push('/(auth)/terms')}
                 >
-                  Terms & Conditions
+                  App Terms
+                </Text>
+                ,{' '}
+                <Text
+                  variant="caption"
+                  weight="bold"
+                  color={colors.primary}
+                  onPress={() => WebBrowser.openBrowserAsync(APPLE_LEGAL_LINKS.APPLE_STANDARD_EULA_URL)}
+                >
+                  Apple EULA (Terms of Use)
                 </Text>
                 {' '}and{' '}
                 <Text

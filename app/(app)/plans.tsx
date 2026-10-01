@@ -21,7 +21,7 @@ import { apiClient } from '../../src/api/client';
 import { env } from '../../src/config/env';
 import { iapService } from '../../src/services/iapService';
 import { APPLE_LEGAL_LINKS, getAppleProductIdForPlan } from '../../src/config/iapConfig';
-import type { Subscription as AppleSubscription } from 'react-native-iap';
+import type { Subscription as AppleSubscription } from 'expo-iap';
 import {
   Sparkles,
   Zap,
@@ -1090,7 +1090,13 @@ export default function PlansScreen() {
             <View style={styles.legalLinksRow}>
               <TouchableOpacity onPress={() => WebBrowser.openBrowserAsync(APPLE_LEGAL_LINKS.TERMS_OF_USE_URL)}>
                 <Text variant="caption" weight="bold" color="#059669" style={styles.legalLink}>
-                  Terms of Use (EULA)
+                  App Terms
+                </Text>
+              </TouchableOpacity>
+              <Text variant="caption" color={colors.textMuted}>•</Text>
+              <TouchableOpacity onPress={() => WebBrowser.openBrowserAsync(APPLE_LEGAL_LINKS.APPLE_STANDARD_EULA_URL)}>
+                <Text variant="caption" weight="bold" color="#059669" style={styles.legalLink}>
+                  Apple EULA (Terms of Use)
                 </Text>
               </TouchableOpacity>
               <Text variant="caption" color={colors.textMuted}>•</Text>

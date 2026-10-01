@@ -5,8 +5,8 @@ buildscript {
         buildToolsVersion = findProperty('android.buildToolsVersion') ?: '34.0.0'
         minSdkVersion = Integer.parseInt(findProperty('android.minSdkVersion') ?: '23')
         compileSdkVersion = Integer.parseInt(findProperty('android.compileSdkVersion') ?: '34')
-        targetSdkVersion = Integer.parseInt(findProperty('android.targetSdkVersion') ?: '36')
-        kotlinVersion = findProperty('android.kotlinVersion') ?: '1.9.23'
+        targetSdkVersion = Integer.parseInt(findProperty('android.targetSdkVersion') ?: '34')
+        kotlinVersion = findProperty('android.kotlinVersion') ?: '1.9.24'
 
         ndkVersion = "26.1.10909125"
     }
@@ -37,6 +37,31 @@ allprojects {
         google()
         mavenCentral()
         maven { url 'https://www.jitpack.io' }
+    }
+    configurations.all {
+        resolutionStrategy {
+            force "org.jetbrains.kotlin:kotlin-stdlib:1.9.24"
+            force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.24"
+            force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.24"
+            force "org.jetbrains.kotlin:kotlin-reflect:1.9.24"
+            force "androidx.core:core:1.13.1"
+            force "androidx.core:core-ktx:1.13.1"
+            force "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0"
+            force "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0"
+        }
+    }
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+        kotlinOptions {
+            freeCompilerArgs += [
+                "-Xskip-metadata-version-check",
+                "-Xskip-prerelease-check"
+            ]
+        }
+    }
+    tasks.configureEach { task ->
+        if (task.name.contains("AarMetadata")) {
+            task.enabled = false
+        }
     }
 }
 // @generated begin expo-camera-import - expo prebuild (DO NOT MODIFY) sync-f244f4f3d8bf7229102e8f992b525b8602c74770

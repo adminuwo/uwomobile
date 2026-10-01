@@ -36,6 +36,9 @@ import {
   MapPin,
 } from 'lucide-react-native';
 
+import * as WebBrowser from 'expo-web-browser';
+import { APPLE_LEGAL_LINKS } from '../../src/config/iapConfig';
+
 export default function RegisterScreen() {
   const router = useRouter();
   const { colors, spacing, radius } = useTheme();
@@ -479,7 +482,17 @@ export default function RegisterScreen() {
                       router.push('/(auth)/terms');
                     }}
                   >
-                    Terms & Conditions
+                    App Terms
+                  </Text>
+                  ,{' '}
+                  <Text
+                    style={[styles.consentLink, { color: colors.primary }]}
+                    onPress={(e) => {
+                      e.stopPropagation?.();
+                      WebBrowser.openBrowserAsync(APPLE_LEGAL_LINKS.APPLE_STANDARD_EULA_URL);
+                    }}
+                  >
+                    Apple EULA (Terms of Use)
                   </Text>
                   {' '}and{' '}
                   <Text

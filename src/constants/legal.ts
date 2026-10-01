@@ -207,6 +207,17 @@ export const TERMS_AND_CONDITIONS: LegalDocument = {
       ],
     },
     {
+      id: 'terms-ugc-policy',
+      number: 11.5,
+      title: 'User Generated Content (UGC) Policy',
+      content: [
+        'UWO Connect maintains a strict zero-tolerance policy against objectionable content and abusive behavior. "Objectionable content" includes, but is not limited to, hate speech, pornography, bullying, harassment, and illegal activities.',
+        'Users can filter or block objectionable content and report any abusive users directly within the app using the "Report/Block User" functionality provided in the chat interface.',
+        'Upon receiving a report of abusive behavior or objectionable content, the UWO Connect moderation team will review the report and act upon it within 24 hours. Actions may include content removal and permanent account suspension of the abusive user.',
+        'There is no tolerance for objectionable content or abusive users. Any user found violating this policy will be immediately and permanently banned from the platform.',
+      ],
+    },
+    {
       id: 'terms-intellectual-property',
       number: 12,
       title: 'UWO Connect Intellectual Property',

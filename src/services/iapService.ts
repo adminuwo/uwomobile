@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import * as RNIap from 'react-native-iap';
+import * as RNIap from 'expo-iap';
 import { apiClient } from '../api/client';
 import {
   ALL_APPLE_SUBSCRIPTION_SKUS,
@@ -77,13 +77,19 @@ class AppleIAPService {
       const initialized = await this.init();
       if (!initialized) return this.productCache;
 
-      const subscriptions = await RNIap.getSubscriptions({
-        skus: ALL_APPLE_SUBSCRIPTION_SKUS,
-      });
+      const subscriptions: any = (RNIap as any).fetchProducts
+        ? await (RNIap as any).fetchProducts({ skus: ALL_APPLE_SUBSCRIPTION_SKUS, type: 'subs' })
+        : (RNIap as any).getSubscriptions
+        ? await (RNIap as any).getSubscriptions({ skus: ALL_APPLE_SUBSCRIPTION_SKUS })
+        : [];
 
       this.productCache.clear();
-      for (const sub of subscriptions) {
-        this.productCache.set(sub.productId, sub);
+      if (Array.isArray(subscriptions)) {
+        for (const sub of subscriptions) {
+          if (sub?.productId) {
+            this.productCache.set(sub.productId, sub);
+          }
+        }
       }
       return this.productCache;
     } catch (err: any) {
@@ -122,9 +128,9 @@ class AppleIAPService {
       }
 
       // 1. Trigger Apple Native StoreKit Purchase Sheet
-      const purchaseResult = await RNIap.requestSubscription({
-        sku,
-      });
+      const purchaseResult: any = (RNIap as any).requestPurchase
+        ? await (RNIap as any).requestPurchase({ sku, type: 'subs' })
+        : await (RNIap as any).requestSubscription({ sku });
 
       if (!purchaseResult) {
         return { success: false, error: 'Purchase was not completed.' };
@@ -136,8 +142,8 @@ class AppleIAPService {
       }
 
       // 2. Extract transaction details
-      const receiptData = purchase.transactionReceipt;
-      const transactionId = purchase.transactionId;
+      const receiptData = (purchase as any).transactionReceipt || (purchase as any).purchaseToken;
+      const transactionId = (purchase as any).transactionId;
       const originalTransactionId = (purchase as any).originalTransactionIdentifierIOS || transactionId;
 
       // 3. Send to UwoConnect backend for secure verification & plan activation
@@ -201,16 +207,16 @@ class AppleIAPService {
       const purchases = await RNIap.getAvailablePurchases();
 
       const transactionsPayload = purchases.map((p) => ({
-        product_id: p.productId,
-        transaction_id: p.transactionId,
-        original_transaction_id: (p as any).originalTransactionIdentifierIOS || p.transactionId,
-        receipt: p.transactionReceipt,
+        product_id: (p as any).productId,
+        transaction_id: (p as any).transactionId,
+        original_transaction_id: (p as any).originalTransactionIdentifierIOS || (p as any).transactionId,
+        receipt: (p as any).transactionReceipt || (p as any).purchaseToken,
       }));
 
       // Let backend verify and restore entitlement
       const restoreRes = await apiClient.post<any>('/api/payments/apple/restore/', {
         transactions: transactionsPayload,
-        receipt_data: purchases[0]?.transactionReceipt,
+        receipt_data: (purchases[0] as any)?.transactionReceipt || (purchases[0] as any)?.purchaseToken,
       });
 
       // Finish any pending purchases

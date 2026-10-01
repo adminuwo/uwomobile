@@ -17,7 +17,7 @@ export const APPLE_IAP_SUBSCRIPTION_SKUS: Record<string, string> = {
   STARTER_YEARLY: 'com.uwo.uwoconnect.starter.annual',
   STARTER_YEARLY_ALT: 'com.uwo.uwoconnect.starter.yearly',
   GROWTH_MONTHLY: 'com.uwo.uwoconnect.growth.monthly',
-  GROWTH_YEARLY: 'om.uwo.uwoconnect.growth.annual',
+  GROWTH_YEARLY: 'com.uwo.uwoconnect.growth.annual',
   GROWTH_YEARLY_ALT: 'com.uwo.uwoconnect.growth.annual',
   ENTERPRISE_MONTHLY: 'com.uwo.uwoconnect.advance.monthly',
   ENTERPRISE_MONTHLY_ALT: 'com.uwo.uwoconnect.enterprise.monthly',
@@ -53,6 +53,7 @@ export function getAppleProductIdForPlan(planSlug: string, billingPeriod: 'month
  * Legal Links required by Apple App Store Review Guidelines (Guideline 3.1.2)
  */
 export const APPLE_LEGAL_LINKS = {
-  TERMS_OF_USE_URL: 'https://uwoconnect.aisa24.com/legal/terms',
-  PRIVACY_POLICY_URL: 'https://uwoconnect.aisa24.com/legal/privacy',
+  APPLE_STANDARD_EULA_URL: 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/',
+  TERMS_OF_USE_URL: 'https://uwoconnect.in/terms',
+  PRIVACY_POLICY_URL: 'https://uwoconnect.in/privacy',
 };
