@@ -114,8 +114,8 @@ android {
         applicationId 'com.uwo.uwoconnect'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 38
-        versionName "1.0.0"
+        versionCode 39
+        versionName "1.0.1"
         missingDimensionStrategy 'store', 'play'
     }
     signingConfigs {
@@ -125,15 +125,23 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            if (file('release.keystore').exists()) {
+                storeFile file('release.keystore')
+                storePassword 'e410ec7a362873e460d96ff2d2cfa6c7'
+                keyAlias '194cca92ae377428433b84d9a80fc3b2'
+                keyPassword 'fb6f0cd4bcc19b9366d4887f0e56cc0c'
+            } else {
+                signingConfig signingConfigs.debug
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            signingConfig (file('release.keystore').exists() ? signingConfigs.release : signingConfigs.debug)
             shrinkResources (findProperty('android.enableShrinkResourcesInReleaseBuilds')?.toBoolean() ?: false)
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"

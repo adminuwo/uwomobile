@@ -98,6 +98,14 @@ export default function ForgotPasswordScreen() {
     }
   };
 
+  const handleBackToLogin = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(auth)/login');
+    }
+  };
+
   return (
     <Screen safeAreaEdges={['top', 'bottom', 'left', 'right']}>
       <KeyboardAvoidingView
@@ -117,7 +125,7 @@ export default function ForgotPasswordScreen() {
                   setStep((prev) => (prev - 1) as any);
                   setErrorMessage('');
                 } else {
-                  router.replace('/(auth)/login');
+                  handleBackToLogin();
                 }
               }}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -129,7 +137,7 @@ export default function ForgotPasswordScreen() {
 
           {/* Form Card */}
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.xl }]}>
-            
+
             {/* Step Indicators */}
             {step < 4 ? (
               <View style={styles.stepsIndicator}>
@@ -325,7 +333,7 @@ export default function ForgotPasswordScreen() {
 
                 <Button
                   title="Return to Sign In"
-                  onPress={() => router.replace('/(auth)/login')}
+                  onPress={handleBackToLogin}
                   variant="primary"
                   fullWidth
                   rightIcon={<ArrowRight size={18} color={colors.textInverse} />}
@@ -341,7 +349,7 @@ export default function ForgotPasswordScreen() {
                   Remember your password?{' '}
                 </Text>
                 <TouchableOpacity
-                  onPress={() => router.replace('/(auth)/login')}
+                  onPress={handleBackToLogin}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   activeOpacity={0.7}
                 >

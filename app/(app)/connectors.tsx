@@ -16,18 +16,18 @@ import { channelAuthApi } from '../../src/api/channelAuth';
 import { statsApi } from '../../src/api/stats';
 import { useSessionStore } from '../../src/stores/sessionStore';
 import { useChannelAccess } from '../../src/hooks/useChannelAccess';
-import { 
-  Share2, 
-  MessageSquare, 
-  Mail, 
-  Calendar, 
-  Video, 
-  Cloud, 
-  Database, 
-  ShieldCheck, 
-  CheckCircle2, 
-  Zap, 
-  Sparkles, 
+import {
+  Share2,
+  MessageSquare,
+  Mail,
+  Calendar,
+  Video,
+  Cloud,
+  Database,
+  ShieldCheck,
+  CheckCircle2,
+  Zap,
+  Sparkles,
   FileText,
   Globe,
   Layers,
@@ -408,8 +408,8 @@ export default function ConnectorsScreen() {
       details: isChannelComingSoon('whatsapp')
         ? 'Coming Soon'
         : (client?.phone_number || client?.whatsapp_phone_number_id || client?.whatsapp_config?.display_phone_number)
-        ? `Phone: ${client?.phone_number || client?.whatsapp_phone_number_id || client?.whatsapp_config?.display_phone_number}`
-        : (client?.whatsapp_access_token ? 'Credentials Configured' : 'Connect WhatsApp Cloud API'),
+          ? `Phone: ${client?.phone_number || client?.whatsapp_phone_number_id || client?.whatsapp_config?.display_phone_number}`
+          : (client?.whatsapp_access_token ? 'Credentials Configured' : 'Connect WhatsApp Cloud API'),
     },
     {
       id: 'instagram',
@@ -427,8 +427,8 @@ export default function ConnectorsScreen() {
       details: isChannelComingSoon('instagram')
         ? 'Coming Soon'
         : client?.instagram_config?.username
-        ? `@${client.instagram_config.username}`
-        : (client?.instagram_enabled ? 'Active Meta Graph Sync' : 'Connect Instagram Account'),
+          ? `@${client.instagram_config.username}`
+          : (client?.instagram_enabled ? 'Active Meta Graph Sync' : 'Connect Instagram Account'),
     },
     {
       id: 'facebook',
@@ -446,8 +446,8 @@ export default function ConnectorsScreen() {
       details: isChannelComingSoon('facebook')
         ? 'Coming Soon'
         : client?.facebook_config?.page_name
-        ? client.facebook_config.page_name
-        : (client?.facebook_enabled ? 'Facebook Page Connected' : 'Connect Facebook Page'),
+          ? client.facebook_config.page_name
+          : (client?.facebook_enabled ? 'Facebook Page Connected' : 'Connect Facebook Page'),
     },
     {
       id: 'youtube',
@@ -465,8 +465,8 @@ export default function ConnectorsScreen() {
       details: isChannelComingSoon('youtube')
         ? 'Coming Soon'
         : client?.youtube_config?.channel_title
-        ? client.youtube_config.channel_title
-        : (client?.youtube_enabled ? 'Channel Analytics Active' : 'Connect YouTube Channel'),
+          ? client.youtube_config.channel_title
+          : (client?.youtube_enabled ? 'Channel Analytics Active' : 'Connect YouTube Channel'),
     },
 
     // ══════════════════ 2. CONNECTORS (Email & Cloud Integration Logos) ══════════════════
@@ -486,8 +486,8 @@ export default function ConnectorsScreen() {
       details: isChannelComingSoon('gmail')
         ? 'Coming Soon'
         : client?.gmail_config?.email
-        ? client.gmail_config.email
-        : (client?.gmail_enabled ? 'OAuth Account Connected' : 'Google Workspace OAuth'),
+          ? client.gmail_config.email
+          : (client?.gmail_enabled ? 'OAuth Account Connected' : 'Google Workspace OAuth'),
     },
     {
       id: 'outlook',
@@ -505,8 +505,8 @@ export default function ConnectorsScreen() {
       details: isChannelComingSoon('outlook')
         ? 'Coming Soon'
         : client?.outlook_config?.email
-        ? client.outlook_config.email
-        : (client?.outlook_enabled ? 'Microsoft Graph Connected' : 'Connect 365 Account'),
+          ? client.outlook_config.email
+          : (client?.outlook_enabled ? 'Microsoft Graph Connected' : 'Connect 365 Account'),
     },
     {
       id: 'google_calendar',
@@ -931,7 +931,7 @@ export default function ConnectorsScreen() {
         <Card style={styles.connectorCard}>
           <View style={styles.connectorHeader}>
             <View style={[
-              styles.iconContainer, 
+              styles.iconContainer,
               item.isSvg ? { backgroundColor: 'transparent' } : { backgroundColor: item.color + '15' }
             ]}>
               {item.icon}
@@ -948,9 +948,9 @@ export default function ConnectorsScreen() {
               </Text>
             </View>
 
-            <Badge 
-              label={isComingSoon ? 'COMING SOON' : item.isConnected ? 'ACTIVE' : 'READY'} 
-              variant={isComingSoon ? 'warning' : item.isConnected ? 'success' : 'info'} 
+            <Badge
+              label={isComingSoon ? 'COMING SOON' : item.isConnected ? 'ACTIVE' : 'READY'}
+              variant={isComingSoon ? 'warning' : item.isConnected ? 'success' : 'info'}
             />
           </View>
 
@@ -959,9 +959,9 @@ export default function ConnectorsScreen() {
           </Text>
 
           <View style={[styles.connectorFooter, { borderTopColor: colors.border }]}>
-            <Text 
-              variant="caption" 
-              weight="medium" 
+            <Text
+              variant="caption"
+              weight="medium"
               color={isComingSoon ? '#F59E0B' : item.isConnected ? colors.primary : colors.textMuted}
             >
               {isComingSoon ? 'Deactivated by Admin' : item.details}
@@ -983,20 +983,20 @@ export default function ConnectorsScreen() {
     );
   };
 
-  const headerTitle = 
-    activeFilter === 'CHANNELS' 
-      ? 'Channels' 
-      : activeFilter === 'CONNECTORS' 
-      ? 'Connectors' 
-      : activeFilter === 'FEATURES' 
-      ? 'Features' 
-      : 'Connectors & Channels';
+  const headerTitle =
+    activeFilter === 'CHANNELS'
+      ? 'Channels'
+      : activeFilter === 'CONNECTORS'
+        ? 'Connectors'
+        : activeFilter === 'FEATURES'
+          ? 'Features'
+          : 'Connectors & Channels';
 
   return (
     <Screen safeAreaEdges={['top', 'left', 'right']}>
-      <Header 
-        title={headerTitle} 
-        showBack={true} 
+      <Header
+        title={headerTitle}
+        showBack={true}
         onBackPress={() => {
           useConnectorsTabStore.getState().setTargetTab('ALL');
           router.replace('/(app)/home' as any);
@@ -1018,30 +1018,30 @@ export default function ConnectorsScreen() {
                 {activeFilter === 'CHANNELS'
                   ? `${connectedChannelsCount} / ${channelsCount} Connected`
                   : activeFilter === 'CONNECTORS'
-                  ? `${connectedConnectorsCount} / ${connectorsCount} Active`
-                  : activeFilter === 'FEATURES'
-                  ? `${connectedFeaturesCount} / ${featuresCount} Enabled`
-                  : `${connectedCount} / ${totalAvailableCount} Active`}
+                    ? `${connectedConnectorsCount} / ${connectorsCount} Active`
+                    : activeFilter === 'FEATURES'
+                      ? `${connectedFeaturesCount} / ${featuresCount} Enabled`
+                      : `${connectedCount} / ${totalAvailableCount} Active`}
               </Text>
               <Text variant="caption" color={colors.textMuted} style={styles.summarySubtitle}>
                 {activeFilter === 'CHANNELS'
                   ? channelsSummaryText
                   : activeFilter === 'CONNECTORS'
-                  ? connectorsSummaryText
-                  : activeFilter === 'FEATURES'
-                  ? featuresSummaryText
-                  : 'Channels, cloud connectors & platform features'}
+                    ? connectorsSummaryText
+                    : activeFilter === 'FEATURES'
+                      ? featuresSummaryText
+                      : 'Channels, cloud connectors & platform features'}
               </Text>
             </View>
-            <View 
+            <View
               style={[
-                styles.badgePill, 
-                { 
-                  backgroundColor: activeFilter === 'FEATURES' 
-                    ? `${colors.secondary || '#8B5CF6'}15` 
+                styles.badgePill,
+                {
+                  backgroundColor: activeFilter === 'FEATURES'
+                    ? `${colors.secondary || '#8B5CF6'}15`
                     : activeFilter === 'CONNECTORS'
-                    ? `${colors.primary}15`
-                    : `${colors.success || '#10B981'}15` 
+                      ? `${colors.primary}15`
+                      : `${colors.success || '#10B981'}15`
                 }
               ]}
             >
@@ -1050,24 +1050,24 @@ export default function ConnectorsScreen() {
               ) : (
                 <CheckCircle2 size={16} color={activeFilter === 'CONNECTORS' ? colors.primary : (colors.success || '#10B981')} />
               )}
-              <Text 
-                variant="caption" 
-                weight="bold" 
+              <Text
+                variant="caption"
+                weight="bold"
                 color={
-                  activeFilter === 'FEATURES' 
-                    ? (colors.secondary || '#8B5CF6') 
+                  activeFilter === 'FEATURES'
+                    ? (colors.secondary || '#8B5CF6')
                     : activeFilter === 'CONNECTORS'
-                    ? colors.primary
-                    : (colors.success || '#10B981')
+                      ? colors.primary
+                      : (colors.success || '#10B981')
                 }
               >
-                {activeFilter === 'CHANNELS' 
-                  ? 'Channels Ready' 
-                  : activeFilter === 'CONNECTORS' 
-                  ? 'Cloud Synced' 
-                  : activeFilter === 'FEATURES' 
-                  ? 'Platform Active' 
-                  : 'System Ready'}
+                {activeFilter === 'CHANNELS'
+                  ? 'Channels Ready'
+                  : activeFilter === 'CONNECTORS'
+                    ? 'Cloud Synced'
+                    : activeFilter === 'FEATURES'
+                      ? 'Platform Active'
+                      : 'System Ready'}
               </Text>
             </View>
           </View>
@@ -1076,9 +1076,9 @@ export default function ConnectorsScreen() {
         {/* Top Category Filter Pills — ONLY shown in general hub mode, HIDDEN in dedicated view */}
         {!isDedicatedMode && (
           <View style={styles.filterSection}>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false} 
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.filterScroll}
             >
               {filterTabs.map((tab) => {
@@ -1099,9 +1099,9 @@ export default function ConnectorsScreen() {
                     {React.cloneElement(tab.icon as React.ReactElement, {
                       color: isActive ? colors.textInverse : colors.textSecondary
                     })}
-                    <Text 
-                      variant="caption" 
-                      weight="bold" 
+                    <Text
+                      variant="caption"
+                      weight="bold"
                       color={isActive ? colors.textInverse : colors.textPrimary}
                     >
                       {tab.label} ({tab.count})
@@ -1191,7 +1191,7 @@ export default function ConnectorsScreen() {
                   </Text>
                 </View>
               </View>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.closeBtn, { backgroundColor: colors.background }]}
                 onPress={() => setIsModalOpen(false)}
               >
@@ -1243,10 +1243,10 @@ export default function ConnectorsScreen() {
               /* ── 1-CLICK AUTO HERO VIEW ── */
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScroll}>
                 {/* Status Capsule */}
-                <View 
+                <View
                   style={[
-                    styles.sleekStatusCapsule, 
-                    { 
+                    styles.sleekStatusCapsule,
+                    {
                       backgroundColor: selectedItem?.isConnected ? '#10B98112' : '#F59E0B12',
                       borderColor: selectedItem?.isConnected ? '#10B98135' : '#F59E0B35',
                     }
@@ -1263,10 +1263,10 @@ export default function ConnectorsScreen() {
                 </View>
 
                 {/* Hero Card */}
-                <View 
+                <View
                   style={[
-                    styles.heroCard, 
-                    { 
+                    styles.heroCard,
+                    {
                       borderColor: `${selectedItem?.color || colors.primary}30`,
                       backgroundColor: `${selectedItem?.color || colors.primary}06`,
                     }
@@ -1299,8 +1299,8 @@ export default function ConnectorsScreen() {
                         {selectedItem?.id === 'whatsapp'
                           ? 'WhatsApp Cloud API'
                           : selectedItem?.id === 'instagram'
-                          ? 'Instagram Direct DM'
-                          : 'Facebook Messenger'}
+                            ? 'Instagram Direct DM'
+                            : 'Facebook Messenger'}
                       </Text>
                       <Text variant="caption" color={colors.textMuted}>
                         Official Meta Platform Integration
@@ -1370,7 +1370,7 @@ export default function ConnectorsScreen() {
                   </TouchableOpacity>
                 </View>
 
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.switchModeFooter}
                   activeOpacity={0.7}
                   onPress={() => setMetaTab('MANUAL')}
@@ -1384,10 +1384,10 @@ export default function ConnectorsScreen() {
               /* ── MANUAL SETUP VIEW (For Manual tab or non-Meta channels) ── */
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScroll}>
                 {/* Status Capsule */}
-                <View 
+                <View
                   style={[
-                    styles.sleekStatusCapsule, 
-                    { 
+                    styles.sleekStatusCapsule,
+                    {
                       backgroundColor: selectedItem?.isConnected ? '#10B98112' : '#F59E0B12',
                       borderColor: selectedItem?.isConnected ? '#10B98135' : '#F59E0B35',
                     }
@@ -1533,8 +1533,8 @@ export default function ConnectorsScreen() {
             {/* Modal Actions Footer */}
             {isMetaChannel && metaTab === 'AUTO' ? (
               <View style={[styles.modalFooterSingle, { borderTopColor: colors.border }]}>
-                <TouchableOpacity 
-                  style={[styles.closeModalBtn, { backgroundColor: colors.background, borderColor: colors.border }]} 
+                <TouchableOpacity
+                  style={[styles.closeModalBtn, { backgroundColor: colors.background, borderColor: colors.border }]}
                   onPress={() => setIsModalOpen(false)}
                 >
                   <Text variant="body" weight="bold" color={colors.textPrimary}>
@@ -1544,8 +1544,8 @@ export default function ConnectorsScreen() {
               </View>
             ) : (
               <View style={[styles.modalFooter, { borderTopColor: colors.border }]}>
-                <TouchableOpacity 
-                  style={[styles.cancelBtn, { borderColor: colors.border }]} 
+                <TouchableOpacity
+                  style={[styles.cancelBtn, { borderColor: colors.border }]}
                   onPress={() => setIsModalOpen(false)}
                 >
                   <Text variant="body" weight="medium" color={colors.textPrimary}>
@@ -1553,7 +1553,7 @@ export default function ConnectorsScreen() {
                   </Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.saveBtn, { backgroundColor: selectedItem?.color || colors.success }]}
                   disabled={isSaving}
                   onPress={handleSaveConfiguration}

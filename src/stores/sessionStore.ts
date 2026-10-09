@@ -64,14 +64,19 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         // Fallback: If offline or token error, attempt loading cached user
         const cachedUserStr = await secureStorage.getItem(APP_CONFIG.userStorageKey);
         if (cachedUserStr) {
-          const cachedUser = JSON.parse(cachedUserStr);
-          set({
-            status: 'authenticated',
-            token: savedToken,
-            user: cachedUser,
-            isLoading: false,
-          });
-          trackAppInstallation(true).catch(() => {});
+          try {
+            const cachedUser = JSON.parse(cachedUserStr);
+            set({
+              status: 'authenticated',
+              token: savedToken,
+              user: cachedUser,
+              isLoading: false,
+            });
+            trackAppInstallation(true).catch(() => {});
+          } catch {
+            await secureStorage.removeAccessToken();
+            set({ status: 'unauthenticated', token: null, user: null, isLoading: false });
+          }
         } else {
           // Token invalid or profile unreachable without cache
           await secureStorage.removeAccessToken();

@@ -22,7 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChannelAccess } from '../../src/hooks/useChannelAccess';
 import { secureStorage } from '../../src/services/secureStore';
 import { APP_CONFIG } from '../../src/config/app-config';
-import { 
+import {
   Share2,
   Link2,
   Sparkles,
@@ -60,7 +60,7 @@ export default function HomeScreen() {
         const profile = await authApi.getProfile();
         if (profile) {
           setUser(profile);
-          secureStorage.setItem(APP_CONFIG.userStorageKey, JSON.stringify(profile)).catch(() => {});
+          secureStorage.setItem(APP_CONFIG.userStorageKey, JSON.stringify(profile)).catch(() => { });
         }
         return profile;
       } catch {
@@ -104,7 +104,7 @@ export default function HomeScreen() {
   }, [consentStatus]);
 
   const onRefresh = () => {
-    checkVersionAndSync().catch(() => {});
+    checkVersionAndSync().catch(() => { });
     refetchClientStats();
     refetchMonitoringStats();
     refetchNews();
@@ -125,14 +125,14 @@ export default function HomeScreen() {
 
   const clientPlan = currentUser?.client?.plan || currentUser?.plan || 'PRO';
 
-  const clientLogoUri = 
-    currentUser?.client?.company_logo_url || 
-    currentUser?.client?.logo_url || 
-    currentUser?.client?.logo || 
+  const clientLogoUri =
+    currentUser?.client?.company_logo_url ||
+    currentUser?.client?.logo_url ||
+    currentUser?.client?.logo ||
     currentUser?.client?.company_logo ||
-    currentUser?.company_logo_url || 
-    currentUser?.company_logo || 
-    currentUser?.avatar || 
+    currentUser?.company_logo_url ||
+    currentUser?.company_logo ||
+    currentUser?.avatar ||
     brand.logo_url;
 
   const resourceCounts = clientStats?.resourceCounts || {
@@ -162,7 +162,7 @@ export default function HomeScreen() {
   const availableChannelItems = channelItems.filter((c) => c.available);
   const connectedChannels = channelItems.filter((c) => c.connected);
   const connectedChannelsCount = connectedChannels.length;
-  const channelSummaryText = connectedChannels.length > 0 
+  const channelSummaryText = connectedChannels.length > 0
     ? connectedChannels.map((c) => c.name).join(', ')
     : availableChannelItems.map((c) => c.name).join(', ') || 'WhatsApp, Instagram & Facebook';
 
@@ -264,8 +264,8 @@ export default function HomeScreen() {
 
         {/* Row 1: Channels & Connectors */}
         <View style={styles.grid}>
-          <TouchableOpacity 
-            activeOpacity={0.7} 
+          <TouchableOpacity
+            activeOpacity={0.7}
             style={styles.gridCardTouch}
             onPress={() => {
               useConnectorsTabStore.getState().setTargetTab('CHANNELS');
@@ -287,8 +287,8 @@ export default function HomeScreen() {
             </Card>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            activeOpacity={0.7} 
+          <TouchableOpacity
+            activeOpacity={0.7}
             style={styles.gridCardTouch}
             onPress={() => {
               useConnectorsTabStore.getState().setTargetTab('CONNECTORS');
@@ -313,8 +313,8 @@ export default function HomeScreen() {
 
         {/* Row 2: Features & Active Flows */}
         <View style={styles.grid}>
-          <TouchableOpacity 
-            activeOpacity={0.7} 
+          <TouchableOpacity
+            activeOpacity={0.7}
             style={styles.gridCardTouch}
             onPress={() => {
               useConnectorsTabStore.getState().setTargetTab('FEATURES');
@@ -336,8 +336,8 @@ export default function HomeScreen() {
             </Card>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            activeOpacity={0.7} 
+          <TouchableOpacity
+            activeOpacity={0.7}
             style={styles.gridCardTouch}
             onPress={() => router.push('/(app)/workflows' as any)}
           >
@@ -359,8 +359,8 @@ export default function HomeScreen() {
 
         {/* Row 3: Members & KB Documents */}
         <View style={styles.grid}>
-          <TouchableOpacity 
-            activeOpacity={0.7} 
+          <TouchableOpacity
+            activeOpacity={0.7}
             style={styles.gridCardTouch}
             onPress={() => router.push('/(app)/team' as any)}
           >
@@ -379,8 +379,8 @@ export default function HomeScreen() {
             </Card>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            activeOpacity={0.7} 
+          <TouchableOpacity
+            activeOpacity={0.7}
             style={styles.gridCardTouch}
             onPress={() => router.push('/(app)/knowledge' as any)}
           >
@@ -402,8 +402,8 @@ export default function HomeScreen() {
 
         {/* Row 4: CRM Leads & Products */}
         <View style={styles.grid}>
-          <TouchableOpacity 
-            activeOpacity={0.7} 
+          <TouchableOpacity
+            activeOpacity={0.7}
             style={styles.gridCardTouch}
             onPress={() => router.push('/(app)/crm' as any)}
           >
@@ -422,8 +422,8 @@ export default function HomeScreen() {
             </Card>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            activeOpacity={0.7} 
+          <TouchableOpacity
+            activeOpacity={0.7}
             style={styles.gridCardTouch}
             onPress={() => router.push('/(app)/sales/products' as any)}
           >
@@ -473,7 +473,7 @@ export default function HomeScreen() {
                     </Text>
                   ) : null}
                   {article.link ? (
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.newsLinkBtn}
                       onPress={() => Linking.openURL(article.link)}
                     >

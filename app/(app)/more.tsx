@@ -8,7 +8,7 @@ import { Text } from '../../src/components/Text';
 import { Card } from '../../src/components/Card';
 import { useTheme } from '../../src/theme';
 import { useTranslation } from '../../src/i18n';
-import { 
+import {
   Bell,
   ChevronRight,
   Palette,
@@ -23,7 +23,8 @@ import {
   CreditCard,
   Building2,
   HelpCircle,
-  Laptop
+  Laptop,
+  Info
 } from 'lucide-react-native';
 import { useSessionStore } from '../../src/stores/sessionStore';
 import { useContentStore } from '../../src/stores/contentStore';
@@ -78,8 +79,8 @@ export default function MoreScreen() {
   const contentVersion = useContentStore((state) => state.version);
 
   const isAgencyUser = Boolean(
-    user?.role === 'SUPERADMIN' || 
-    (user?.client as any)?.is_agency || 
+    user?.role === 'SUPERADMIN' ||
+    (user?.client as any)?.is_agency ||
     user?.role === 'AGENCY'
   );
 
@@ -111,7 +112,7 @@ export default function MoreScreen() {
     <Screen safeAreaEdges={['top', 'left', 'right']}>
       <Header title={t('navigation.more')} showMenu={true} />
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 72 + insets.bottom + 16 }]} showsVerticalScrollIndicator={false}>
-        
+
         {/* ── 1. MANAGEMENT SECTION ── */}
         <Text variant="label" color={colors.textMuted} style={styles.sectionLabel}>
           {t('drawer.management')}
@@ -162,6 +163,13 @@ export default function MoreScreen() {
             subtitle="Terms & Conditions, Privacy Policy & Permissions"
             onPress={() => router.push('/(app)/legal' as any)}
           />
+          <View style={[styles.divider, { backgroundColor: colors.divider }]} />
+          <MenuItem
+            icon={<Info size={20} color={colors.primary} />}
+            title="About UWO"
+            subtitle="Who we are, founders, capability ecosystem & core"
+            onPress={() => router.push('/(app)/about-uwo' as any)}
+          />
         </Card>
 
         {/* ── 3. SETTINGS & WORKSPACE PREFERENCES ── */}
@@ -197,14 +205,14 @@ export default function MoreScreen() {
             icon={<Palette size={20} color={colors.primary} />}
             title={t('account.appearance')}
             subtitle={getThemeSubtitle()}
-            onPress={() => router.push('/appearance' as any)}
+            onPress={() => router.push('/(app)/appearance' as any)}
           />
           <View style={[styles.divider, { backgroundColor: colors.divider }]} />
           <MenuItem
             icon={<Globe size={20} color={colors.primary} />}
             title={t('account.language')}
             subtitle={`${currentLanguageInfo.name} (${currentLanguageInfo.nativeName})`}
-            onPress={() => router.push('/language' as any)}
+            onPress={() => router.push('/(app)/language' as any)}
           />
         </Card>
 

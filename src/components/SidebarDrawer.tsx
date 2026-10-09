@@ -43,6 +43,7 @@ import {
   Bot,
   PhoneCall,
   Settings,
+  Info,
 } from 'lucide-react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -110,6 +111,7 @@ export const SidebarDrawer: React.FC = () => {
     { id: 'automations', label: t('drawer.keywordAutoReplies'), icon: Bot, route: '/(app)/automations' },
     { id: 'knowledge', label: t('drawer.aiKnowledgeBase'), icon: Brain, route: '/(app)/knowledge' },
     { id: 'connectors', label: t('drawer.integrationsApps'), icon: Link2, route: '/(app)/connectors' },
+    { id: 'about-uwo', label: 'About UWO', icon: Info, route: '/(app)/about-uwo' },
   ];
 
   // ──────────────────────────────────────────────

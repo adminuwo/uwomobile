@@ -26,7 +26,7 @@ export default function AppLayout() {
   }
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Tabs
         backBehavior="history"
         screenOptions={{
@@ -113,6 +113,7 @@ export default function AppLayout() {
         <Tabs.Screen name="legal/privacy" options={{ href: null }} />
         <Tabs.Screen name="legal/permissions" options={{ href: null }} />
         <Tabs.Screen name="legal/delete-account" options={{ href: null }} />
+        <Tabs.Screen name="about-uwo" options={{ href: null }} />
         <Tabs.Screen name="payment-result" options={{ href: null }} />
       </Tabs>
       <SidebarDrawer />

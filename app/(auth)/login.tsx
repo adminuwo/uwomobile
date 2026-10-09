@@ -11,10 +11,11 @@ import { useSessionStore } from '../../src/stores/sessionStore';
 import { useBrandStore } from '../../src/stores/brandStore';
 import { useGoogleAuth } from '../../src/hooks/useGoogleAuth';
 import { useTheme } from '../../src/theme';
-import { ShieldCheck, Mail, Lock, AlertCircle, ArrowRight } from 'lucide-react-native';
+import { ShieldCheck, Mail, Lock, AlertCircle, ArrowRight, Check } from 'lucide-react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { AppleIcon } from '../../src/components/AppleIcon';
-
+import { legalApi } from '../../src/api/legal';
+import { LEGAL_CONSTANTS } from '../../src/constants/legal';
 
 import * as WebBrowser from 'expo-web-browser';
 import { APPLE_LEGAL_LINKS } from '../../src/config/iapConfig';
@@ -28,6 +29,7 @@ export default function LoginScreen() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
   const [validationError, setValidationError] = useState('');
   const [isAppleLoading, setIsAppleLoading] = useState(false);
 
@@ -35,6 +37,11 @@ export default function LoginScreen() {
     clearError();
     clearGoogleError();
     setValidationError('');
+
+    if (!acceptedLegal) {
+      setValidationError('Please accept the Privacy Policy and Terms of Service to continue.');
+      return;
+    }
 
     if (!email || !email.includes('@')) {
       setValidationError('Please enter a valid email address.');
@@ -48,6 +55,16 @@ export default function LoginScreen() {
 
     const success = await login({ email, password });
     if (success) {
+      try {
+        await legalApi.submitConsent({
+          terms_accepted: true,
+          terms_version: LEGAL_CONSTANTS.TERMS_VERSION,
+          privacy_accepted: true,
+          privacy_version: LEGAL_CONSTANTS.PRIVACY_VERSION,
+        });
+      } catch (e) {
+        console.warn('[Consent] Legal record submit notice:', e);
+      }
       router.replace('/(app)/home');
     }
   };
@@ -55,6 +72,12 @@ export default function LoginScreen() {
   const handleGooglePress = async () => {
     clearError();
     setValidationError('');
+
+    if (!acceptedLegal) {
+      setValidationError('Please accept the Privacy Policy and Terms of Service to continue.');
+      return;
+    }
+
     await promptGoogleLogin();
   };
 
@@ -62,6 +85,12 @@ export default function LoginScreen() {
     clearError();
     clearGoogleError();
     setValidationError('');
+
+    if (!acceptedLegal) {
+      setValidationError('Please accept the Privacy Policy and Terms of Service to continue.');
+      return;
+    }
+
     setIsAppleLoading(true);
 
     try {
@@ -96,6 +125,16 @@ export default function LoginScreen() {
       });
 
       if (success) {
+        try {
+          await legalApi.submitConsent({
+            terms_accepted: true,
+            terms_version: LEGAL_CONSTANTS.TERMS_VERSION,
+            privacy_accepted: true,
+            privacy_version: LEGAL_CONSTANTS.PRIVACY_VERSION,
+          });
+        } catch (e) {
+          console.warn('[Consent] Legal record submit notice:', e);
+        }
         router.replace('/(app)/home');
       }
     } catch (e: any) {
@@ -209,6 +248,70 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </View>
 
+            {/* Mandatory Terms & Privacy Consent Checkbox */}
+            <TouchableOpacity
+              style={styles.consentRow}
+              onPress={() => {
+                setAcceptedLegal(!acceptedLegal);
+                if (validationError) setValidationError('');
+              }}
+              activeOpacity={0.7}
+            >
+              <View
+                style={[
+                  styles.checkboxBox,
+                  {
+                    borderColor: acceptedLegal
+                      ? colors.primary
+                      : validationError && !acceptedLegal
+                        ? colors.error
+                        : colors.border,
+                    backgroundColor: acceptedLegal ? colors.primary : colors.surface,
+                  },
+                ]}
+              >
+                {acceptedLegal && <Check size={12} color="#FFFFFF" strokeWidth={3} />}
+              </View>
+
+              <Text style={[styles.consentText, { color: colors.textSecondary }]}>
+                I have read and agree to the{' '}
+                <Text
+                  style={[styles.consentLink, { color: colors.primary }]}
+                  onPress={(e: any) => {
+                    e?.stopPropagation?.();
+                    router.push('/(auth)/terms');
+                  }}
+                >
+                  Terms
+                </Text>
+                {Platform.OS === 'ios' ? (
+                  <>
+                    {', '}
+                    <Text
+                      style={[styles.consentLink, { color: colors.primary }]}
+                      onPress={(e: any) => {
+                        e?.stopPropagation?.();
+                        WebBrowser.openBrowserAsync(APPLE_LEGAL_LINKS.APPLE_STANDARD_EULA_URL);
+                      }}
+                    >
+                      Apple EULA
+                    </Text>
+                  </>
+                ) : null}
+                {' & '}
+                <Text
+                  style={[styles.consentLink, { color: colors.primary }]}
+                  onPress={(e: any) => {
+                    e?.stopPropagation?.();
+                    router.push('/(auth)/privacy');
+                  }}
+                >
+                  Privacy Policy
+                </Text>
+                .
+              </Text>
+            </TouchableOpacity>
+
             <Button
               title="Sign In"
               onPress={handleLogin}
@@ -303,40 +406,6 @@ export default function LoginScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
-
-            {/* Legal Notice */}
-            <View style={[styles.legalNoticeContainer, { backgroundColor: `${colors.border}25` }]}>
-              <Text variant="caption" color={colors.textMuted} align="center" style={styles.legalNoticeText}>
-                By signing in, you agree to our{' '}
-                <Text
-                  variant="caption"
-                  weight="bold"
-                  color={colors.primary}
-                  onPress={() => router.push('/(auth)/terms')}
-                >
-                  App Terms
-                </Text>
-                ,{' '}
-                <Text
-                  variant="caption"
-                  weight="bold"
-                  color={colors.primary}
-                  onPress={() => WebBrowser.openBrowserAsync(APPLE_LEGAL_LINKS.APPLE_STANDARD_EULA_URL)}
-                >
-                  Apple EULA (Terms of Use)
-                </Text>
-                {' '}and{' '}
-                <Text
-                  variant="caption"
-                  weight="bold"
-                  color={colors.primary}
-                  onPress={() => router.push('/(auth)/privacy')}
-                >
-                  Privacy Policy
-                </Text>
-                .
-              </Text>
-            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -430,7 +499,32 @@ const styles = StyleSheet.create({
   forgotPasswordRow: {
     alignItems: 'flex-end',
     marginTop: -4,
+    marginBottom: 14,
+  },
+  consentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 16,
+    marginTop: 0,
+  },
+  checkboxBox: {
+    width: 18,
+    height: 18,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 9,
+  },
+  consentText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  consentLink: {
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: '700',
   },
   submitBtn: {
     marginTop: 2,

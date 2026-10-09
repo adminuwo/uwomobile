@@ -3,6 +3,7 @@ import { View, ScrollView, TouchableOpacity, StyleSheet, Text as RNText } from '
 import { useTheme } from '../../theme';
 
 import { getChannelColor } from './ChannelBadge';
+import { useChannelAccess } from '../../hooks/useChannelAccess';
 
 export type ChannelFilter = 'ALL' | 'WHATSAPP' | 'INSTAGRAM' | 'FACEBOOK';
 
@@ -20,6 +21,25 @@ const CHANNELS: { id: ChannelFilter; label: string }[] = [
 
 export const ChannelFilterBar: React.FC<ChannelFilterBarProps> = ({ selectedChannel, onSelectChannel }) => {
   const { colors } = useTheme();
+  const { isChannelActive } = useChannelAccess();
+
+  const visibleChannels = React.useMemo(() => {
+    return CHANNELS.filter((ch) => {
+      if (ch.id === 'ALL') return true;
+      if (ch.id === 'FACEBOOK') return isChannelActive('facebook');
+      if (ch.id === 'INSTAGRAM') return isChannelActive('instagram');
+      if (ch.id === 'WHATSAPP') return isChannelActive('whatsapp');
+      return true;
+    });
+  }, [isChannelActive]);
+
+  React.useEffect(() => {
+    if (selectedChannel === 'FACEBOOK' && !isChannelActive('facebook')) {
+      onSelectChannel('ALL');
+    } else if (selectedChannel === 'INSTAGRAM' && !isChannelActive('instagram')) {
+      onSelectChannel('ALL');
+    }
+  }, [selectedChannel, isChannelActive, onSelectChannel]);
 
   return (
     <View style={styles.wrapper}>
@@ -29,7 +49,7 @@ export const ChannelFilterBar: React.FC<ChannelFilterBarProps> = ({ selectedChan
         style={styles.scrollView}
         contentContainerStyle={styles.container}
       >
-        {CHANNELS.map((ch) => {
+        {visibleChannels.map((ch) => {
           const isSelected = selectedChannel === ch.id;
           const chipColor = ch.id === 'ALL' ? colors.primary : getChannelColor(ch.id);
           return (

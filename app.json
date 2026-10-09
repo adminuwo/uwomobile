@@ -32,8 +32,9 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.uwo.uwoconnect",
-      "versionCode": 38,
+      "versionCode": 39,
       "usesCleartextTraffic": true,
+      "largeHeap": true,
       "intentFilters": [
         {
           "action": "VIEW",
@@ -76,6 +77,9 @@
         {
           "ios": {
             "deploymentTarget": "15.0"
+          },
+          "android": {
+            "minSdkVersion": 24
           }
         }
       ]

@@ -41,7 +41,7 @@ jobs:
       - name: Run Expo Prebuild
         env:
           EXPO_PUBLIC_APP_ENV: "production"
-          EXPO_PUBLIC_API_BASE_URL: "https://uwoconnectforrb-743928421487.asia-south1.run.app"
+          EXPO_PUBLIC_API_BASE_URL: "https://aisaconnectback-anaqbuapb6c6apgy.centralindia-01.azurewebsites.net"
         run: npx expo prebuild --platform android --no-install
 
       - name: Make Gradle wrapper executable
@@ -50,7 +50,7 @@ jobs:
       - name: Build Android Standalone Release APK
         env:
           EXPO_PUBLIC_APP_ENV: "production"
-          EXPO_PUBLIC_API_BASE_URL: "https://uwoconnectforrb-743928421487.asia-south1.run.app"
+          EXPO_PUBLIC_API_BASE_URL: "https://aisaconnectback-anaqbuapb6c6apgy.centralindia-01.azurewebsites.net"
           NODE_OPTIONS: "--max-old-space-size=4096"
           GRADLE_OPTS: "-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dorg.gradle.jvmargs='-Xmx4096m -XX:MaxMetaspaceSize=1024m'"
         run: |

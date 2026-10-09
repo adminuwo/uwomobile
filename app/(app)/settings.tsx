@@ -8,16 +8,18 @@ import { Text } from '../../src/components/Text';
 import { Card } from '../../src/components/Card';
 import { Button } from '../../src/components/Button';
 import { Avatar } from '../../src/components/Avatar';
+import { Input } from '../../src/components/Input';
+import { Modal } from '../../src/components/Modal';
 import { useTheme } from '../../src/theme';
 import { useSessionStore } from '../../src/stores/sessionStore';
 import { useBrandStore } from '../../src/stores/brandStore';
 import { apiClient } from '../../src/api/client';
 import { useRouter } from 'expo-router';
-import { Building2, User, Phone, MapPin, Shield, Save, CheckCircle2, Activity, RefreshCw, Server, Database, Laptop, ChevronRight, QrCode, ShieldCheck, Trash2, Camera, Upload, Image as ImageIcon } from 'lucide-react-native';
+import { Building2, User, Phone, MapPin, Shield, Save, CheckCircle2, Activity, RefreshCw, Server, Database, Laptop, ChevronRight, QrCode, ShieldCheck, Trash2, Camera, Upload, Image as ImageIcon, Palette, KeyRound, Lock, AlertCircle } from 'lucide-react-native';
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, mode } = useTheme();
   const { user } = useSessionStore();
 
   const [loading, setLoading] = useState(true);
@@ -29,6 +31,15 @@ export default function SettingsScreen() {
   const [taxGst, setTaxGst] = useState('');
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  // Change Password state
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
 
   const [healthData, setHealthData] = useState<{
     status: string;
@@ -271,6 +282,45 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleSavePassword = async () => {
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    if (!newPassword || newPassword.trim().length < 6) {
+      setPasswordError('New password must be at least 6 characters long.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New password and confirm password do not match.');
+      return;
+    }
+
+    setPasswordSaving(true);
+    try {
+      await apiClient.post('/api/auth/change-password', {
+        current_password: currentPassword.trim() || undefined,
+        new_password: newPassword.trim(),
+        password: newPassword.trim(),
+      });
+
+      setPasswordSuccess('Password updated successfully!');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setTimeout(() => {
+        setShowPasswordModal(false);
+        setPasswordSuccess('');
+        Alert.alert('Success', 'Your password has been changed successfully.');
+      }, 1000);
+    } catch (err: any) {
+      const msg = err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to update password. Please check your inputs.';
+      setPasswordError(msg);
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
+
   return (
     <Screen safeAreaEdges={['top', 'left', 'right']}>
       <Header title="Settings & Profile" showMenu={true} />
@@ -476,6 +526,28 @@ export default function SettingsScreen() {
             </View>
           </Card>
 
+          {/* Appearance & Theme */}
+          <Text variant="label" style={styles.sectionLabel}>Display & Appearance</Text>
+          <Card style={styles.card}>
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}
+              onPress={() => router.push('/(app)/appearance' as any)}
+            >
+              <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: colors.primary + '15', justifyContent: 'center', alignItems: 'center' }}>
+                <Palette size={22} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text variant="body" weight="bold" color={colors.textPrimary}>
+                  Theme & Display
+                </Text>
+                <Text variant="caption" color={colors.textSecondary} style={{ marginTop: 2 }}>
+                  {mode === 'custom' ? 'Custom Palette' : mode === 'dark' ? 'Dark Mode' : 'Light Mode'}
+                </Text>
+              </View>
+              <ChevronRight size={18} color={colors.textMuted} />
+            </TouchableOpacity>
+          </Card>
+
           {/* Linked Devices & Web Login */}
           <Text variant="label" style={styles.sectionLabel}>Linked Devices & Web Login</Text>
           <Card style={styles.card}>
@@ -540,6 +612,28 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </Card>
 
+          {/* Security & Password */}
+          <Text variant="label" style={styles.sectionLabel}>Security & Password</Text>
+          <Card style={styles.card}>
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}
+              onPress={() => setShowPasswordModal(true)}
+            >
+              <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: '#6366F115', justifyContent: 'center', alignItems: 'center' }}>
+                <KeyRound size={22} color="#6366F1" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text variant="body" weight="bold" color={colors.textPrimary}>
+                  Change Password
+                </Text>
+                <Text variant="caption" color={colors.textSecondary} style={{ marginTop: 2 }}>
+                  Update your account password
+                </Text>
+              </View>
+              <ChevronRight size={18} color={colors.textMuted} />
+            </TouchableOpacity>
+          </Card>
+
           <Button
             title={saving ? "Saving Changes..." : "Save Settings"}
             onPress={handleSave}
@@ -548,9 +642,103 @@ export default function SettingsScreen() {
             style={styles.saveBtn}
           />
 
-
         </ScrollView>
       )}
+
+      {/* Change Password Modal */}
+      <Modal
+        visible={showPasswordModal}
+        title="Change Password"
+        onClose={() => {
+          if (!passwordSaving) {
+            setShowPasswordModal(false);
+            setPasswordError('');
+            setPasswordSuccess('');
+          }
+        }}
+      >
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <Text variant="caption" color={colors.textSecondary} style={{ marginBottom: 16 }}>
+            Create a secure password with at least 6 characters.
+          </Text>
+
+          {passwordError ? (
+            <View style={[styles.modalBanner, { backgroundColor: colors.errorBg, borderColor: colors.error }]}>
+              <AlertCircle size={16} color={colors.error} style={{ marginRight: 6 }} />
+              <Text variant="caption" color={colors.error} style={{ flex: 1 }}>
+                {passwordError}
+              </Text>
+            </View>
+          ) : null}
+
+          {passwordSuccess ? (
+            <View style={[styles.modalBanner, { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' }]}>
+              <CheckCircle2 size={16} color="#16a34a" style={{ marginRight: 6 }} />
+              <Text variant="caption" color="#15803d" style={{ flex: 1 }}>
+                {passwordSuccess}
+              </Text>
+            </View>
+          ) : null}
+
+          <Input
+            label="Current Password (Optional)"
+            placeholder="••••••••••••"
+            value={currentPassword}
+            onChangeText={(t) => {
+              setCurrentPassword(t);
+              if (passwordError) setPasswordError('');
+            }}
+            secureTextEntry
+            leftIcon={<Lock size={16} color={colors.textMuted} />}
+          />
+
+          <Input
+            label="New Password"
+            placeholder="At least 6 characters"
+            value={newPassword}
+            onChangeText={(t) => {
+              setNewPassword(t);
+              if (passwordError) setPasswordError('');
+            }}
+            secureTextEntry
+            leftIcon={<Lock size={16} color={colors.textMuted} />}
+          />
+
+          <Input
+            label="Confirm New Password"
+            placeholder="Re-enter new password"
+            value={confirmPassword}
+            onChangeText={(t) => {
+              setConfirmPassword(t);
+              if (passwordError) setPasswordError('');
+            }}
+            secureTextEntry
+            leftIcon={<Lock size={16} color={colors.textMuted} />}
+          />
+
+          <View style={{ flexDirection: 'row', gap: 12, marginTop: 10 }}>
+            <Button
+              title="Cancel"
+              variant="outline"
+              onPress={() => {
+                setShowPasswordModal(false);
+                setPasswordError('');
+                setPasswordSuccess('');
+              }}
+              disabled={passwordSaving}
+              style={{ flex: 1 }}
+            />
+            <Button
+              title={passwordSaving ? "Updating..." : "Save Password"}
+              variant="primary"
+              onPress={handleSavePassword}
+              loading={passwordSaving}
+              disabled={passwordSaving || !newPassword || !confirmPassword}
+              style={{ flex: 1 }}
+            />
+          </View>
+        </ScrollView>
+      </Modal>
     </Screen>
   );
 }
@@ -643,5 +831,13 @@ const styles = StyleSheet.create({
   actionChipText: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  modalBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 14,
   },
 });

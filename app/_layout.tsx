@@ -32,8 +32,24 @@ LogBox.ignoreLogs([
 ]);
 
 
-// Hide native splash screen quickly so JS white splash screen is shown
-SplashScreen.hideAsync().catch(() => {});
+// Prevent native splash screen from prematurely closing before native Activity is attached
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// Shield against unhandled fatal JS exceptions crashing the native process
+if (typeof (global as any).ErrorUtils !== 'undefined') {
+  try {
+    const originalHandler = (global as any).ErrorUtils.getGlobalHandler?.();
+    (global as any).ErrorUtils.setGlobalHandler((error: any, isFatal?: boolean) => {
+      console.warn('[GlobalErrorHandler caught]', error?.message || error, 'isFatal:', isFatal);
+      // Suppress fatal crash to keep app alive unless running in development
+      if (__DEV__ && originalHandler) {
+        originalHandler(error, isFatal);
+      }
+    });
+  } catch (e) {
+    console.warn('[GlobalErrorHandler] Setup note:', e);
+  }
+}
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
   constructor(props: { children: ReactNode }) {
@@ -97,12 +113,17 @@ function RootLayoutNav() {
   }, [pathname]);
 
   useEffect(() => {
-    // Ensure native splash screen is hidden immediately so white JS screen displays
-    SplashScreen.hideAsync().catch(() => {});
+    // Safely hide native splash once root component is attached and rendered
+    const splashTimer = setTimeout(() => {
+      SplashScreen.hideAsync().catch(() => {});
+    }, 150);
+
     trackAppInstallation().catch(() => {});
     fetchBrandConfig().catch(() => {});
     initialize().catch(() => {});
     initContent().catch(() => {});
+
+    return () => clearTimeout(splashTimer);
   }, [initialize, fetchBrandConfig, initContent]);
 
   useEffect(() => {
@@ -116,11 +137,14 @@ function RootLayoutNav() {
     return () => subscription.remove();
   }, [checkVersionAndSync]);
 
+  const hasSyncedRef = React.useRef(false);
+
   useEffect(() => {
     if (status !== 'initializing') {
       SplashScreen.hideAsync().catch(() => {});
     }
-    if (status === 'authenticated') {
+    if (status === 'authenticated' && !hasSyncedRef.current) {
+      hasSyncedRef.current = true;
       syncTheme().catch(() => {});
       syncI18n().catch(() => {});
     }

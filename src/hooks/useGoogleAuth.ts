@@ -6,6 +6,9 @@ import { useRouter } from 'expo-router';
 import { env } from '../config/env';
 import { useSessionStore } from '../stores/sessionStore';
 
+import { legalApi } from '../api/legal';
+import { LEGAL_CONSTANTS } from '../constants/legal';
+
 WebBrowser.maybeCompleteAuthSession();
 
 export interface UseGoogleAuthReturn {
@@ -95,6 +98,16 @@ export function useGoogleAuth(): UseGoogleAuthReturn {
         console.log('[GoogleAuth] Successfully received token, authenticating with backend...');
         const success = await loginWithGoogle(idToken);
         if (success) {
+          try {
+            await legalApi.submitConsent({
+              terms_accepted: true,
+              terms_version: LEGAL_CONSTANTS.TERMS_VERSION,
+              privacy_accepted: true,
+              privacy_version: LEGAL_CONSTANTS.PRIVACY_VERSION,
+            });
+          } catch (e) {
+            console.warn('[Consent] Google sign-in consent record notice:', e);
+          }
           router.replace('/(app)/home');
         }
       } else if (result.type === 'cancel' || result.type === 'dismiss') {

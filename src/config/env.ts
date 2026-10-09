@@ -52,6 +52,7 @@ const getEnv = (): EnvConfig => {
     const candidateUrl =
       process.env.PROD_API_BASE_URL ||
       process.env.EXPO_PUBLIC_PROD_API_URL ||
+      (!isLocalAddress(process.env.EXPO_PUBLIC_API_BASE_URL) ? process.env.EXPO_PUBLIC_API_BASE_URL : null) ||
       (!isLocalAddress(process.env.EXPO_PUBLIC_API_URL) ? process.env.EXPO_PUBLIC_API_URL : null) ||
       (!isLocalAddress(process.env.API_BASE_URL) ? process.env.API_BASE_URL : null) ||
       extra.API_BASE_URL ||

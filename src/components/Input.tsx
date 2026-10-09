@@ -92,6 +92,8 @@ export const Input: React.FC<InputProps> = ({
         {isPassword ? (
           <TouchableOpacity
             onPress={() => setShowPassword(!showPassword)}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.7}
             style={styles.iconRight}
           >
             {showPassword ? (

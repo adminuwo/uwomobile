@@ -44,9 +44,24 @@ export default function AppearanceScreen() {
   const [draftBase, setDraftBase] = useState<'light' | 'dark'>(customBase || 'light');
   const [isApplying, setIsApplying] = useState(false);
 
+  // Sync draft colors whenever active theme colors change
+  React.useEffect(() => {
+    if (primaryColor) setDraftPrimary(primaryColor);
+  }, [primaryColor]);
+
+  React.useEffect(() => {
+    if (accentColor) setDraftAccent(accentColor);
+  }, [accentColor]);
+
+  React.useEffect(() => {
+    if (customBase) setDraftBase(customBase);
+  }, [customBase]);
+
   const handleSelectMode = async (selectedMode: ThemeMode) => {
     if (selectedMode === 'custom') {
-      await setCustomTheme(draftPrimary, draftAccent, draftBase);
+      const base = mode === 'dark' ? 'dark' : (customBase || 'light');
+      setDraftBase(base);
+      await setCustomTheme(draftPrimary, draftAccent, base);
     } else {
       await setThemeMode(selectedMode);
     }
@@ -55,9 +70,8 @@ export default function AppearanceScreen() {
   const handleSelectPreset = (preset: typeof THEME_PRESETS[0]) => {
     setDraftPrimary(preset.primary);
     setDraftAccent(preset.accent);
-    if (mode === 'custom') {
-      setCustomTheme(preset.primary, preset.accent, draftBase);
-    }
+    const base = mode === 'dark' ? 'dark' : (customBase || 'light');
+    setCustomTheme(preset.primary, preset.accent, base);
   };
 
   const handleApplyCustom = async () => {

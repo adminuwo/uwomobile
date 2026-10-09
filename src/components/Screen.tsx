@@ -40,7 +40,7 @@ export const Screen: React.FC<ScreenProps> = ({
   enableSwipeBack,
   onSwipeBack,
 }) => {
-  const { colors, mode } = useTheme();
+  const { colors, mode, customBase } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const pathname = usePathname();
@@ -132,7 +132,7 @@ export const Screen: React.FC<ScreenProps> = ({
   const screenContent = (
     <View style={containerStyle}>
       <StatusBar
-        barStyle={mode === 'dark' ? 'light-content' : 'dark-content'}
+        barStyle={mode === 'dark' || (mode === 'custom' && customBase === 'dark') ? 'light-content' : 'dark-content'}
         backgroundColor={resolvedStatusBg}
       />
       {scrollable ? (

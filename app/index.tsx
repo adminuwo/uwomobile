@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Image, ActivityIndicator, StyleSheet, Text } from 'react-native';
+import { View, Animated, Easing, ActivityIndicator, StyleSheet, Text } from 'react-native';
 import { Redirect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSessionStore } from '../src/stores/sessionStore';
@@ -8,28 +8,54 @@ export default function IndexScreen() {
   const { status } = useSessionStore();
   const insets = useSafeAreaInsets();
   const [minTimeElapsed, setMinTimeElapsed] = React.useState(false);
+  const pulseAnim = React.useRef(new Animated.Value(1)).current;
 
   React.useEffect(() => {
+    // Elegant breathing animation on startup (uses 0 extra RAM, 60fps)
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.05,
+          duration: 800,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 800,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    animation.start();
+
     const timer = setTimeout(() => {
       setMinTimeElapsed(true);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, []);
+    }, 900);
+
+    return () => {
+      animation.stop();
+      clearTimeout(timer);
+    };
+  }, [pulseAnim]);
 
   if (minTimeElapsed && status === 'authenticated') {
     return <Redirect href="/(app)/home" />;
   }
 
-  if (minTimeElapsed && status === 'unauthenticated') {
+  if (minTimeElapsed && (status === 'unauthenticated' || status === 'initializing')) {
+    // If still initializing after timeout (e.g. slow backend/offline), go directly to login safely
     return <Redirect href="/(auth)/login" />;
   }
 
   return (
     <View style={styles.container}>
       <View style={styles.centerSection}>
-        <Image
-          source={require('../assets/logo.gif')}
-          style={styles.logo}
+        <Animated.Image
+          source={require('../assets/icon.png')}
+          style={[styles.logo, { transform: [{ scale: pulseAnim }] }]}
+          resizeMode="contain"
         />
         <ActivityIndicator size="small" color="#10b981" style={styles.spinner} />
       </View>

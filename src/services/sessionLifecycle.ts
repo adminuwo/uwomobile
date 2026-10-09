@@ -123,12 +123,14 @@ export async function logoutAndResetSession(): Promise<void> {
     } catch {}
 
     // 8. Navigate to login (replaces entire stack so user cannot "back" into the app)
-    try {
-      router.replace('/(auth)/login');
-      console.log('[SessionLifecycle] ✓ Navigated to login');
-    } catch (e) {
-      console.log('[SessionLifecycle] Navigation note:', e);
-    }
+    setTimeout(() => {
+      try {
+        router.replace('/(auth)/login');
+        console.log('[SessionLifecycle] ✓ Navigated to login');
+      } catch (e) {
+        console.log('[SessionLifecycle] Navigation note:', e);
+      }
+    }, 100);
 
     console.log('[SessionLifecycle] ── Session reset complete ──');
   } finally {

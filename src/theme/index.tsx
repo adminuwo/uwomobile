@@ -22,6 +22,8 @@ const STORAGE_KEYS = {
 const DEFAULT_PRIMARY = '#059669';
 const DEFAULT_ACCENT = '#0d9488';
 
+const HEX_REGEX = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+
 interface ThemeContextType {
   mode: ThemeMode;
   colors: ThemeColors;
@@ -43,15 +45,23 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [mode, setModeState] = useState<ThemeMode>('light');
-  const [primaryColor, setPrimaryColor] = useState<string>(DEFAULT_PRIMARY);
-  const [accentColor, setAccentColor] = useState<string>(DEFAULT_ACCENT);
-  const [customBase, setCustomBase] = useState<'light' | 'dark'>('light');
+  const [themeState, setThemeState] = useState<{
+    mode: ThemeMode;
+    primaryColor: string;
+    accentColor: string;
+    customBase: 'light' | 'dark';
+  }>({
+    mode: 'light',
+    primaryColor: DEFAULT_PRIMARY,
+    accentColor: DEFAULT_ACCENT,
+    customBase: 'light',
+  });
 
   const brand = useBrandStore((state) => state.brand);
 
   // 1. Instant load from local storage
   useEffect(() => {
+    let isMounted = true;
     const loadStoredTheme = async () => {
       try {
         const [storedMode, storedPrimary, storedAccent, storedBase] = await Promise.all([
@@ -61,59 +71,53 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           secureStorage.getItem(STORAGE_KEYS.CUSTOM_BASE),
         ]);
 
-        // If stale custom/slate theme is found, reset immediately to official UwoConnect green
-        if (
-          storedMode === 'custom' ||
-          storedPrimary === '#334155' ||
-          storedPrimary === '#64748b' ||
-          (storedPrimary && !storedPrimary.startsWith('#05') && !storedPrimary.startsWith('#10') && !storedPrimary.startsWith('#34'))
-        ) {
-          setModeState('light');
-          setPrimaryColor(DEFAULT_PRIMARY);
-          setAccentColor(DEFAULT_ACCENT);
-          await Promise.all([
-            secureStorage.setItem(STORAGE_KEYS.MODE, 'light'),
-            secureStorage.setItem(STORAGE_KEYS.PRIMARY, DEFAULT_PRIMARY),
-            secureStorage.setItem(STORAGE_KEYS.ACCENT, DEFAULT_ACCENT),
-          ]);
-        } else {
-          if (storedMode === 'dark' || storedMode === 'light') {
-            setModeState(storedMode);
-          }
-          if (storedPrimary) setPrimaryColor(storedPrimary);
-          if (storedAccent) setAccentColor(storedAccent);
-          if (storedBase === 'dark' || storedBase === 'light') setCustomBase(storedBase);
+        if (isMounted) {
+          setThemeState((prev) => ({
+            mode: (storedMode === 'dark' || storedMode === 'light' || storedMode === 'custom') ? storedMode : prev.mode,
+            primaryColor: (storedPrimary && HEX_REGEX.test(storedPrimary)) ? storedPrimary : prev.primaryColor,
+            accentColor: (storedAccent && HEX_REGEX.test(storedAccent)) ? storedAccent : prev.accentColor,
+            customBase: (storedBase === 'dark' || storedBase === 'light') ? storedBase : prev.customBase,
+          }));
         }
       } catch (err) {
         console.warn('[Theme] Failed to load local theme cache:', err);
       }
     };
     loadStoredTheme();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  // Compute theme colors dynamically - official UwoConnect Green is preserved
-  let baseColors: ThemeColors;
-  if (mode === 'dark') {
-    baseColors = darkThemeColors;
-  } else {
-    baseColors = lightThemeColors;
-  }
+  // Compute theme colors dynamically and memoize to avoid re-renders
+  const colors: ThemeColors = React.useMemo(() => {
+    if (themeState.mode === 'custom') {
+      return createCustomThemeColors(themeState.customBase, themeState.primaryColor, themeState.accentColor);
+    }
+    if (themeState.mode === 'dark') {
+      const darkColors = { ...darkThemeColors };
+      if (brand?.is_active && brand.primary_color && brand.primary_color !== '#334155' && brand.primary_color !== '#64748b') {
+        darkColors.primary = brand.primary_color;
+        darkColors.primaryDark = brand.primary_color;
+        darkColors.borderFocus = brand.primary_color;
+        darkColors.tabBarActive = brand.primary_color;
+        darkColors.textEmerald = brand.primary_color;
+      }
+      return darkColors;
+    }
+    // Default light mode
+    const lightColors = { ...lightThemeColors };
+    if (brand?.is_active && brand.primary_color && brand.primary_color !== '#334155' && brand.primary_color !== '#64748b') {
+      lightColors.primary = brand.primary_color;
+      lightColors.primaryDark = brand.primary_color;
+      lightColors.borderFocus = brand.primary_color;
+      lightColors.tabBarActive = brand.primary_color;
+      lightColors.textEmerald = brand.primary_color;
+    }
+    return lightColors;
+  }, [themeState.mode, themeState.customBase, themeState.primaryColor, themeState.accentColor, brand?.is_active, brand?.primary_color]);
 
-  // Strictly enforce official UwoConnect emerald green brand colors
-  const brandPrimary = (brand.primary_color && brand.primary_color !== '#334155' && brand.primary_color !== '#64748b') 
-    ? brand.primary_color 
-    : baseColors.primary;
-  const brandSecondary = (brand.secondary_color && brand.secondary_color !== '#64748b') 
-    ? brand.secondary_color 
-    : baseColors.secondary;
-
-  const colors: ThemeColors = {
-    ...baseColors,
-    primary: brandPrimary,
-    secondary: brandSecondary,
-  };
-
-  const syncToBackend = async (themeMode: ThemeMode, primary: string, accent: string) => {
+  const syncToBackend = React.useCallback(async (themeMode: ThemeMode, primary: string, accent: string) => {
     try {
       await preferencesApi.updatePreferences({
         theme_mode: themeMode,
@@ -124,28 +128,36 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       // Graceful offline tolerance: local preference remains active
       console.log('[Theme] Backend sync failed, kept local preference:', err);
     }
-  };
+  }, []);
 
-  const setThemeMode = async (newMode: ThemeMode) => {
-    setModeState(newMode);
+  const setThemeMode = React.useCallback(async (newMode: ThemeMode) => {
+    setThemeState((prev) => {
+      syncToBackend(newMode, prev.primaryColor, prev.accentColor);
+      return { ...prev, mode: newMode };
+    });
     await secureStorage.setItem(STORAGE_KEYS.MODE, newMode);
-    syncToBackend(newMode, primaryColor, accentColor);
-  };
+  }, [syncToBackend]);
 
-  const setMode = (newMode: ThemeMode) => {
+  const setMode = React.useCallback((newMode: ThemeMode) => {
     setThemeMode(newMode);
-  };
+  }, [setThemeMode]);
 
-  const toggleTheme = () => {
-    const nextMode: ThemeMode = mode === 'dark' ? 'light' : 'dark';
-    setThemeMode(nextMode);
-  };
+  const toggleTheme = React.useCallback(() => {
+    setThemeState((prev) => {
+      const nextMode: ThemeMode = prev.mode === 'dark' ? 'light' : 'dark';
+      secureStorage.setItem(STORAGE_KEYS.MODE, nextMode).catch(() => {});
+      syncToBackend(nextMode, prev.primaryColor, prev.accentColor);
+      return { ...prev, mode: nextMode };
+    });
+  }, [syncToBackend]);
 
-  const setCustomTheme = async (primary: string, accent: string, base: 'light' | 'dark' = 'light') => {
-    setModeState('custom');
-    setPrimaryColor(primary);
-    setAccentColor(accent);
-    setCustomBase(base);
+  const setCustomTheme = React.useCallback(async (primary: string, accent: string, base: 'light' | 'dark' = 'light') => {
+    setThemeState({
+      mode: 'custom',
+      primaryColor: primary,
+      accentColor: accent,
+      customBase: base,
+    });
 
     await Promise.all([
       secureStorage.setItem(STORAGE_KEYS.MODE, 'custom'),
@@ -155,13 +167,15 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     ]);
 
     syncToBackend('custom', primary, accent);
-  };
+  }, [syncToBackend]);
 
-  const resetTheme = async () => {
-    setModeState('light');
-    setPrimaryColor(DEFAULT_PRIMARY);
-    setAccentColor(DEFAULT_ACCENT);
-    setCustomBase('light');
+  const resetTheme = React.useCallback(async () => {
+    setThemeState({
+      mode: 'light',
+      primaryColor: DEFAULT_PRIMARY,
+      accentColor: DEFAULT_ACCENT,
+      customBase: 'light',
+    });
 
     await Promise.all([
       secureStorage.setItem(STORAGE_KEYS.MODE, 'light'),
@@ -171,55 +185,72 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     ]);
 
     syncToBackend('light', DEFAULT_PRIMARY, DEFAULT_ACCENT);
-  };
+  }, [syncToBackend]);
 
-  const syncWithServer = async () => {
+  const syncWithServer = React.useCallback(async () => {
     try {
       const serverPrefs = await preferencesApi.getPreferences();
       if (serverPrefs) {
-        if (serverPrefs.theme_mode) {
-          const resolvedMode = (serverPrefs.theme_mode === 'dark' || serverPrefs.theme_mode === 'light') ? serverPrefs.theme_mode : 'light';
-          setModeState(resolvedMode);
-          await secureStorage.setItem(STORAGE_KEYS.MODE, resolvedMode);
-        }
-        if (serverPrefs.primary_color) {
-          const isGreen = serverPrefs.primary_color.startsWith('#05') || serverPrefs.primary_color.startsWith('#10') || serverPrefs.primary_color.startsWith('#34');
-          const resolvedPrimary = isGreen ? serverPrefs.primary_color : DEFAULT_PRIMARY;
-          setPrimaryColor(resolvedPrimary);
-          await secureStorage.setItem(STORAGE_KEYS.PRIMARY, resolvedPrimary);
-        }
-        if (serverPrefs.accent_color) {
-          const isAccentGreen = serverPrefs.accent_color.startsWith('#0d') || serverPrefs.accent_color.startsWith('#14') || serverPrefs.accent_color.startsWith('#10');
-          const resolvedAccent = isAccentGreen ? serverPrefs.accent_color : DEFAULT_ACCENT;
-          setAccentColor(resolvedAccent);
-          await secureStorage.setItem(STORAGE_KEYS.ACCENT, resolvedAccent);
-        }
+        setThemeState((prev) => {
+          const newMode = (serverPrefs.theme_mode === 'dark' || serverPrefs.theme_mode === 'light' || serverPrefs.theme_mode === 'custom')
+            ? serverPrefs.theme_mode
+            : prev.mode;
+          const newPrimary = (serverPrefs.primary_color && HEX_REGEX.test(serverPrefs.primary_color))
+            ? serverPrefs.primary_color
+            : prev.primaryColor;
+          const newAccent = (serverPrefs.accent_color && HEX_REGEX.test(serverPrefs.accent_color))
+            ? serverPrefs.accent_color
+            : prev.accentColor;
+
+          secureStorage.setItem(STORAGE_KEYS.MODE, newMode).catch(() => {});
+          secureStorage.setItem(STORAGE_KEYS.PRIMARY, newPrimary).catch(() => {});
+          secureStorage.setItem(STORAGE_KEYS.ACCENT, newAccent).catch(() => {});
+
+          return {
+            ...prev,
+            mode: newMode,
+            primaryColor: newPrimary,
+            accentColor: newAccent,
+          };
+        });
       }
     } catch (err) {
       console.log('[Theme] Could not sync preferences from server:', err);
     }
-  };
+  }, []);
+
+  const contextValue = React.useMemo<ThemeContextType>(() => ({
+    mode: themeState.mode,
+    colors,
+    typography,
+    spacing,
+    radius,
+    shadows,
+    primaryColor: themeState.primaryColor,
+    accentColor: themeState.accentColor,
+    customBase: themeState.customBase,
+    toggleTheme,
+    setMode,
+    setThemeMode,
+    setCustomTheme,
+    resetTheme,
+    syncWithServer,
+  }), [
+    themeState.mode,
+    themeState.primaryColor,
+    themeState.accentColor,
+    themeState.customBase,
+    colors,
+    toggleTheme,
+    setMode,
+    setThemeMode,
+    setCustomTheme,
+    resetTheme,
+    syncWithServer,
+  ]);
 
   return (
-    <ThemeContext.Provider
-      value={{
-        mode,
-        colors,
-        typography,
-        spacing,
-        radius,
-        shadows,
-        primaryColor,
-        accentColor,
-        customBase,
-        toggleTheme,
-        setMode,
-        setThemeMode,
-        setCustomTheme,
-        resetTheme,
-        syncWithServer,
-      }}
-    >
+    <ThemeContext.Provider value={contextValue}>
       {children}
     </ThemeContext.Provider>
   );
