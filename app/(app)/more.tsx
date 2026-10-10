@@ -28,6 +28,7 @@ import {
 } from 'lucide-react-native';
 import { useSessionStore } from '../../src/stores/sessionStore';
 import { useContentStore } from '../../src/stores/contentStore';
+import { SocialChannelsCard } from '../../src/components/SocialChannelsCard';
 
 interface MenuItemProps {
   icon: React.ReactNode;
@@ -265,7 +266,16 @@ export default function MoreScreen() {
           </View>
         </Card>
 
-        {/* ── 5. ACCOUNT / LOGOUT ── */}
+        {/* ── 5. COMMUNITY & SOCIAL MEDIA ── */}
+        <Text variant="label" color={colors.textMuted} style={styles.sectionLabel}>
+          Community & Social Channels
+        </Text>
+        <SocialChannelsCard
+          title="Official Channels"
+          subtitle="Watch tutorials & get updates on YouTube, Instagram, and X"
+        />
+
+        {/* ── 6. ACCOUNT / LOGOUT ── */}
         <Card style={[styles.sectionCard, { marginTop: 16 }]}>
           <MenuItem
             icon={<LogOut size={20} color={colors.error} />}

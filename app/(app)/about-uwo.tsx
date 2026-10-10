@@ -52,6 +52,7 @@ import { Text } from '../../src/components/Text';
 import { Card } from '../../src/components/Card';
 import { Badge } from '../../src/components/Badge';
 import { Button } from '../../src/components/Button';
+import { SocialChannelsCard } from '../../src/components/SocialChannelsCard';
 import { useTheme } from '../../src/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -1331,6 +1332,19 @@ export default function AboutUwoScreen() {
             </Text>
             <ExternalLink size={13} color={colors.primary} />
           </TouchableOpacity>
+
+          {/* Social Media Links */}
+          <View style={{ marginTop: 14 }}>
+            <Text
+              variant="caption"
+              weight="bold"
+              color={colors.textSecondary}
+              style={{ marginBottom: 6, fontSize: 11, letterSpacing: 0.5, textTransform: 'uppercase' }}
+            >
+              Follow Us
+            </Text>
+            <SocialChannelsCard compact={true} />
+          </View>
 
           <View style={styles.footerBottomNote}>
             <Text

@@ -3,6 +3,11 @@ export const APP_CONFIG = {
   tagline: 'Unified Communication & Business Automation',
   defaultTenantName: 'UWO Connect',
   supportEmail: 'support@uwoconnect.com',
+  socialLinks: {
+    youtube: 'https://www.youtube.com/@UWOConnect',
+    instagram: 'https://www.instagram.com/uwoconnect',
+    x: 'https://x.com/uwoconnect',
+  },
   apiTimeout: 45000, // 45 seconds
   tokenStorageKey: 'uwo_mobile_access_token',
   refreshTokenStorageKey: 'uwo_mobile_refresh_token',

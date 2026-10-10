@@ -10,6 +10,7 @@ import { Button } from '../../src/components/Button';
 import { Avatar } from '../../src/components/Avatar';
 import { Input } from '../../src/components/Input';
 import { Modal } from '../../src/components/Modal';
+import { SocialChannelsCard } from '../../src/components/SocialChannelsCard';
 import { useTheme } from '../../src/theme';
 import { useSessionStore } from '../../src/stores/sessionStore';
 import { useBrandStore } from '../../src/stores/brandStore';
@@ -633,6 +634,13 @@ export default function SettingsScreen() {
               <ChevronRight size={18} color={colors.textMuted} />
             </TouchableOpacity>
           </Card>
+
+          {/* Official Social Channels */}
+          <Text variant="label" style={styles.sectionLabel}>Connect & Social Media</Text>
+          <SocialChannelsCard
+            title="Official UWO Connect Channels"
+            subtitle="Follow tutorials, announcements & updates on YouTube, Instagram, and X"
+          />
 
           <Button
             title={saving ? "Saving Changes..." : "Save Settings"}

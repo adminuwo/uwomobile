@@ -43,6 +43,9 @@ export const useContentStore = create<ContentState>((set, get) => ({
     announcement_active: 'true',
     announcement_title: 'New AI Copilot Live!',
     announcement_message: 'Connect your WhatsApp & Instagram channels to automate client responses with AI 24/7.',
+    social_youtube: 'https://www.youtube.com/@UWOConnect',
+    social_instagram: 'https://www.instagram.com/uwoconnect',
+    social_x: 'https://x.com/uwoconnect',
   },
   banners: [],
   features: {
