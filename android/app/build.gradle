@@ -104,17 +104,15 @@ def enableProguardInReleaseBuilds = (findProperty('android.enableProguardInRelea
 def jscFlavor = 'org.webkit:android-jsc:+'
 
 android {
-    ndkVersion rootProject.ext.ndkVersion
-
-    buildToolsVersion rootProject.ext.buildToolsVersion
-    compileSdk rootProject.ext.compileSdkVersion
-
+    ndkVersion = rootProject.ext.ndkVersion
+    buildToolsVersion = rootProject.ext.buildToolsVersion
+    compileSdk = rootProject.ext.compileSdkVersion
     namespace 'com.uwo.uwoconnect'
     defaultConfig {
         applicationId 'com.uwo.uwoconnect'
-        minSdkVersion rootProject.ext.minSdkVersion
-        targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 39
+        minSdk = rootProject.ext.minSdkVersion
+        targetSdk = rootProject.ext.targetSdkVersion
+        versionCode 45
         versionName "1.0.1"
         missingDimensionStrategy 'store', 'play'
     }
@@ -132,7 +130,10 @@ android {
                 keyAlias '194cca92ae377428433b84d9a80fc3b2'
                 keyPassword 'fb6f0cd4bcc19b9366d4887f0e56cc0c'
             } else {
-                signingConfig signingConfigs.debug
+                storeFile file('debug.keystore')
+                storePassword 'android'
+                keyAlias 'androiddebugkey'
+                keyPassword 'android'
             }
         }
     }
@@ -141,7 +142,7 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            signingConfig (file('release.keystore').exists() ? signingConfigs.release : signingConfigs.debug)
+            signingConfig signingConfigs.release
             shrinkResources (findProperty('android.enableShrinkResourcesInReleaseBuilds')?.toBoolean() ?: false)
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"

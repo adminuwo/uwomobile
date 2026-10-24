@@ -1,22 +1,56 @@
-name: Build Android APK (Free Standalone)
+name: Build Android (AAB / APK)
 
 on:
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment profile to build'
+        required: true
+        type: choice
+        options:
+          - production
+          - preview
+          - development
+        default: 'production'
+      build_type:
+        description: 'Build artifact format'
+        required: true
+        type: choice
+        options:
+          - aab
+          - apk
+          - both
+        default: 'aab'
+      version_code:
+        description: 'Override Android versionCode (leave empty to keep current)'
+        required: false
+        type: string
+        default: ''
+      version_name:
+        description: 'Override Android versionName (leave empty to keep current)'
+        required: false
+        type: string
+        default: ''
+
   push:
     branches:
       - main
       - master
 
+concurrency:
+  group: android-build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
-    name: Build Android Standalone APK
+    name: Build Android (${{ inputs.build_type || 'aab' }} - ${{ inputs.environment || 'production' }})
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -38,28 +72,86 @@ jobs:
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
-      - name: Run Expo Prebuild
+      - name: Set Environment & Versioning
+        id: config
+        run: |
+          ENV="${{ inputs.environment || 'production' }}"
+          echo "Selected Environment: $ENV"
+
+          if [ "$ENV" = "development" ]; then
+            APP_ENV="development"
+          elif [ "$ENV" = "preview" ]; then
+            APP_ENV="staging"
+          else
+            APP_ENV="production"
+          fi
+
+          echo "APP_ENV=$APP_ENV" >> $GITHUB_ENV
+          echo "EXPO_PUBLIC_APP_ENV=$APP_ENV" >> $GITHUB_ENV
+          echo "API_BASE_URL=https://uwoconnectforrb-743928421487.asia-south1.run.app" >> $GITHUB_ENV
+          echo "EXPO_PUBLIC_API_URL=https://uwoconnectforrb-743928421487.asia-south1.run.app" >> $GITHUB_ENV
+          echo "EXPO_PUBLIC_API_BASE_URL=https://uwoconnectforrb-743928421487.asia-south1.run.app" >> $GITHUB_ENV
+
+          # Custom Version Code override if specified
+          if [ -n "${{ inputs.version_code }}" ]; then
+            echo "Overriding versionCode with ${{ inputs.version_code }}"
+            sed -i -E "s/versionCode [0-9]+/versionCode ${{ inputs.version_code }}/" android/app/build.gradle
+          fi
+
+          # Custom Version Name override if specified
+          if [ -n "${{ inputs.version_name }}" ]; then
+            echo "Overriding versionName with ${{ inputs.version_name }}"
+            sed -i -E 's/versionName "[^"]+"/versionName "${{ inputs.version_name }}"/' android/app/build.gradle
+          fi
+
+      - name: Setup Release Keystore (if secret provided)
         env:
-          EXPO_PUBLIC_APP_ENV: "production"
-          EXPO_PUBLIC_API_BASE_URL: "https://aisaconnectback-anaqbuapb6c6apgy.centralindia-01.azurewebsites.net"
-        run: npx expo prebuild --platform android --no-install
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "Decoding release keystore from secrets..."
+            echo "$KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
+            echo "Release keystore written to android/app/release.keystore"
+          else
+            echo "No ANDROID_KEYSTORE_BASE64 secret found, checking existing repository signing setup."
+          fi
 
       - name: Make Gradle wrapper executable
         run: chmod +x android/gradlew
 
-      - name: Build Android Standalone Release APK
+      - name: Build Android AAB (Release Bundle)
+        if: ${{ inputs.build_type == 'aab' || inputs.build_type == 'both' || github.event_name == 'push' }}
         env:
-          EXPO_PUBLIC_APP_ENV: "production"
-          EXPO_PUBLIC_API_BASE_URL: "https://aisaconnectback-anaqbuapb6c6apgy.centralindia-01.azurewebsites.net"
           NODE_OPTIONS: "--max-old-space-size=4096"
-          GRADLE_OPTS: "-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dorg.gradle.jvmargs='-Xmx4096m -XX:MaxMetaspaceSize=1024m'"
+          GRADLE_OPTS: "-Xmx6144m -XX:MaxMetaspaceSize=1024m -Dorg.gradle.jvmargs='-Xmx6144m -XX:MaxMetaspaceSize=1024m'"
+        run: |
+          cd android
+          ./gradlew bundleRelease --no-daemon --stacktrace
+
+      - name: Build Android APK (Release Standalone)
+        if: ${{ inputs.build_type == 'apk' || inputs.build_type == 'both' }}
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
+          GRADLE_OPTS: "-Xmx6144m -XX:MaxMetaspaceSize=1024m -Dorg.gradle.jvmargs='-Xmx6144m -XX:MaxMetaspaceSize=1024m'"
         run: |
           cd android
           ./gradlew assembleRelease --no-daemon --stacktrace
 
-      - name: Upload Standalone APK Artifact
+      - name: Upload Production AAB Artifact
+        if: ${{ inputs.build_type == 'aab' || inputs.build_type == 'both' || github.event_name == 'push' }}
         uses: actions/upload-artifact@v4
         with:
-          name: app-release.apk
+          name: app-${{ inputs.environment || 'production' }}-release.aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 30
+
+      - name: Upload APK Artifact
+        if: ${{ inputs.build_type == 'apk' || inputs.build_type == 'both' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-${{ inputs.environment || 'production' }}-release.apk
           path: android/app/build/outputs/apk/release/app-release.apk
-          retention-days: 7
+          retention-days: 30
