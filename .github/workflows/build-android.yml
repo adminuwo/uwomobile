@@ -68,9 +68,10 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Accept Android SDK Licenses
+      - name: Accept Android SDK Licenses & Setup Platforms
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-36" "platforms;android-35" "build-tools;35.0.0" || true
 
       - name: Set Environment & Versioning
         id: config
@@ -134,6 +135,20 @@ jobs:
         run: |
           cd android
           ./gradlew bundleRelease --no-daemon --stacktrace
+
+      - name: Align Native Libraries to 16KB & Re-sign AAB
+        if: ${{ inputs.build_type == 'aab' || inputs.build_type == 'both' || github.event_name == 'push' }}
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          python3 scripts/align_16kb_and_resign.py \
+            android/app/build/outputs/bundle/release/app-release.aab \
+            android/app/release.keystore \
+            "$KEYSTORE_PASSWORD" \
+            "$KEY_ALIAS" \
+            "$KEY_PASSWORD"
 
       - name: Build Android APK (Release Standalone)
         if: ${{ inputs.build_type == 'apk' || inputs.build_type == 'both' }}

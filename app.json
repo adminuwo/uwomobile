@@ -2,7 +2,7 @@
   "expo": {
     "name": "UWO Connect",
     "slug": "uwo-connect",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "scheme": "uwoconnect",
@@ -16,13 +16,14 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.uwo.uwoconnect",
-      "buildNumber": "4",
+      "buildNumber": "7",
       "deploymentTarget": "15.0",
       "infoPlist": {
         "NSCameraUsageDescription": "UWO Connect requires camera access to attach media to messages and CRM contacts.",
         "NSPhotoLibraryUsageDescription": "UWO Connect requires photo library access to upload media.",
+        "NSMicrophoneUsageDescription": "UWO Connect requires microphone access for voice notes and audio calls.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -32,7 +33,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.uwo.uwoconnect",
-      "versionCode": 39,
+      "versionCode": 46,
       "usesCleartextTraffic": true,
       "largeHeap": true,
       "intentFilters": [
