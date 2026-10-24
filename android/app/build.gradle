@@ -126,9 +126,9 @@ android {
         release {
             if (file('release.keystore').exists()) {
                 storeFile file('release.keystore')
-                storePassword 'e410ec7a362873e460d96ff2d2cfa6c7'
-                keyAlias '194cca92ae377428433b84d9a80fc3b2'
-                keyPassword 'fb6f0cd4bcc19b9366d4887f0e56cc0c'
+                storePassword (System.getenv("KEYSTORE_PASSWORD") ?: 'e410ec7a362873e460d96ff2d2cfa6c7')
+                keyAlias (System.getenv("KEY_ALIAS") ?: '194cca92ae377428433b84d9a80fc3b2')
+                keyPassword (System.getenv("KEY_PASSWORD") ?: 'fb6f0cd4bcc19b9366d4887f0e56cc0c')
             } else {
                 storeFile file('debug.keystore')
                 storePassword 'android'

@@ -115,6 +115,7 @@ jobs:
             echo "Decoding release keystore from secrets..."
             echo "$KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
             echo "Release keystore written to android/app/release.keystore"
+            keytool -list -v -keystore android/app/release.keystore -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" | grep SHA1 || true
           else
             echo "No ANDROID_KEYSTORE_BASE64 secret found, checking existing repository signing setup."
           fi
@@ -125,6 +126,9 @@ jobs:
       - name: Build Android AAB (Release Bundle)
         if: ${{ inputs.build_type == 'aab' || inputs.build_type == 'both' || github.event_name == 'push' }}
         env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           NODE_OPTIONS: "--max-old-space-size=4096"
           GRADLE_OPTS: "-Xmx6144m -XX:MaxMetaspaceSize=1024m -Dorg.gradle.jvmargs='-Xmx6144m -XX:MaxMetaspaceSize=1024m'"
         run: |
@@ -134,6 +138,9 @@ jobs:
       - name: Build Android APK (Release Standalone)
         if: ${{ inputs.build_type == 'apk' || inputs.build_type == 'both' }}
         env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           NODE_OPTIONS: "--max-old-space-size=4096"
           GRADLE_OPTS: "-Xmx6144m -XX:MaxMetaspaceSize=1024m -Dorg.gradle.jvmargs='-Xmx6144m -XX:MaxMetaspaceSize=1024m'"
         run: |
