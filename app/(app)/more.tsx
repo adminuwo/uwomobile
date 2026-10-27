@@ -24,7 +24,9 @@ import {
   Building2,
   HelpCircle,
   Laptop,
-  Info
+  Info,
+  BookOpen,
+  Brain
 } from 'lucide-react-native';
 import { useSessionStore } from '../../src/stores/sessionStore';
 import { useContentStore } from '../../src/stores/contentStore';
@@ -166,10 +168,17 @@ export default function MoreScreen() {
           />
           <View style={[styles.divider, { backgroundColor: colors.divider }]} />
           <MenuItem
-            icon={<Info size={20} color={colors.primary} />}
-            title="About UWO"
-            subtitle="Who we are, founders, capability ecosystem & core"
-            onPress={() => router.push('/(app)/about-uwo' as any)}
+            icon={<BookOpen size={20} color="#8B5CF6" />}
+            title="Documentation & Guides"
+            subtitle="Step-by-step setup guides, features & tutorials"
+            onPress={() => router.push('/(app)/guides' as any)}
+          />
+          <View style={[styles.divider, { backgroundColor: colors.divider }]} />
+          <MenuItem
+            icon={<Brain size={20} color="#06B6D4" />}
+            title="Documents & Knowledge Base"
+            subtitle="Manage business documents, uploaded PDFs & training data"
+            onPress={() => router.push('/(app)/knowledge' as any)}
           />
         </Card>
 

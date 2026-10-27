@@ -1,7 +1,18 @@
-import React, { useState, useEffect } from 'react';
+          import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, ActionSheetIOS, Platform } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
+
+let _imagePickerModule: any = null;
+const getImagePicker = () => {
+  if (!_imagePickerModule) {
+    try {
+      _imagePickerModule = require('expo-image-picker');
+    } catch (e) {
+      console.warn('expo-image-picker native module is not linked in this build', e);
+    }
+  }
+  return _imagePickerModule;
+};
 import { Screen } from '../../src/components/Screen';
 import { Header } from '../../src/components/Header';
 import { Text } from '../../src/components/Text';
@@ -10,6 +21,8 @@ import { Button } from '../../src/components/Button';
 import { Avatar } from '../../src/components/Avatar';
 import { Input } from '../../src/components/Input';
 import { Modal } from '../../src/components/Modal';
+import { PasswordStrengthIndicator } from '../../src/components/PasswordStrengthIndicator';
+import { evaluatePassword } from '../../src/utils/passwordValidation';
 import { SocialChannelsCard } from '../../src/components/SocialChannelsCard';
 import { useTheme } from '../../src/theme';
 import { useSessionStore } from '../../src/stores/sessionStore';
@@ -135,6 +148,11 @@ export default function SettingsScreen() {
 
   const handlePickFromGallery = async () => {
     try {
+      const ImagePicker = getImagePicker();
+      if (!ImagePicker) {
+        Alert.alert('Notice', 'Image Picker native module is not linked in this simulator client build.');
+        return;
+      }
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Permission Denied', 'Please allow photo library access in Settings to select a profile photo.');
@@ -142,7 +160,7 @@ export default function SettingsScreen() {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ImagePicker.MediaTypeOptions?.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -163,6 +181,11 @@ export default function SettingsScreen() {
 
   const handleTakePhoto = async () => {
     try {
+      const ImagePicker = getImagePicker();
+      if (!ImagePicker) {
+        Alert.alert('Notice', 'Camera native module is not linked in this simulator client build.');
+        return;
+      }
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Permission Denied', 'Please allow camera access in Settings to take a profile photo.');
@@ -287,8 +310,14 @@ export default function SettingsScreen() {
     setPasswordError('');
     setPasswordSuccess('');
 
-    if (!newPassword || newPassword.trim().length < 6) {
-      setPasswordError('New password must be at least 6 characters long.');
+    if (!currentPassword.trim()) {
+      setPasswordError('Please enter your current password.');
+      return;
+    }
+
+    const pwdEval = evaluatePassword(newPassword);
+    if (!pwdEval.isValid) {
+      setPasswordError('New password does not meet all security requirements. Please check all checklist items.');
       return;
     }
 
@@ -297,12 +326,16 @@ export default function SettingsScreen() {
       return;
     }
 
+    if (currentPassword === newPassword) {
+      setPasswordError('New password must be different from current password.');
+      return;
+    }
+
     setPasswordSaving(true);
     try {
       await apiClient.post('/api/auth/change-password', {
-        current_password: currentPassword.trim() || undefined,
+        current_password: currentPassword.trim(),
         new_password: newPassword.trim(),
-        password: newPassword.trim(),
       });
 
       setPasswordSuccess('Password updated successfully!');
@@ -313,7 +346,7 @@ export default function SettingsScreen() {
         setShowPasswordModal(false);
         setPasswordSuccess('');
         Alert.alert('Success', 'Your password has been changed successfully.');
-      }, 1000);
+      }, 1200);
     } catch (err: any) {
       const msg = err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to update password. Please check your inputs.';
       setPasswordError(msg);
@@ -689,7 +722,7 @@ export default function SettingsScreen() {
           ) : null}
 
           <Input
-            label="Current Password (Optional)"
+            label="Current Password"
             placeholder="••••••••••••"
             value={currentPassword}
             onChangeText={(t) => {
@@ -702,7 +735,7 @@ export default function SettingsScreen() {
 
           <Input
             label="New Password"
-            placeholder="At least 6 characters"
+            placeholder="••••••••••••"
             value={newPassword}
             onChangeText={(t) => {
               setNewPassword(t);
@@ -724,6 +757,13 @@ export default function SettingsScreen() {
             leftIcon={<Lock size={16} color={colors.textMuted} />}
           />
 
+          {/* Password Strength Indicator & Real-Time Checklist */}
+          <PasswordStrengthIndicator
+            password={newPassword}
+            confirmPassword={confirmPassword}
+            showChecklist={true}
+          />
+
           <View style={{ flexDirection: 'row', gap: 12, marginTop: 10 }}>
             <Button
               title="Cancel"
@@ -741,7 +781,7 @@ export default function SettingsScreen() {
               variant="primary"
               onPress={handleSavePassword}
               loading={passwordSaving}
-              disabled={passwordSaving || !newPassword || !confirmPassword}
+              disabled={passwordSaving || !currentPassword || !newPassword || !confirmPassword}
               style={{ flex: 1 }}
             />
           </View>

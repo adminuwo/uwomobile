@@ -140,4 +140,18 @@ export const authApi = {
   async resetForgotPassword(email: string, password: string): Promise<{ message: string }> {
     return apiClient.post<{ message: string }>('/api/auth/forgot-password/reset', { email, password });
   },
+
+  /**
+   * Verify 6-digit registration OTP to activate new user account
+   */
+  async verifyRegistrationOtp(email: string, otp: string): Promise<LoginResponse> {
+    return apiClient.post<LoginResponse>('/api/auth/register/verify-otp', { email, otp });
+  },
+
+  /**
+   * Resend 6-digit registration OTP to pending user
+   */
+  async resendRegistrationOtp(email: string): Promise<{ success: boolean; message: string; otp_debug?: string }> {
+    return apiClient.post<{ success: boolean; message: string; otp_debug?: string }>('/api/auth/register/resend-otp', { email });
+  },
 };

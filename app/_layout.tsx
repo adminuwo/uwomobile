@@ -8,6 +8,7 @@ import { queryClient } from '../src/config/queryClient';
 import { ThemeProvider, useTheme } from '../src/theme';
 import { useSessionStore } from '../src/stores/sessionStore';
 import { useBrandStore } from '../src/stores/brandStore';
+import { useOtaUpdates } from '../src/hooks/useOtaUpdates';
 
 // Suppress routine background dev warnings from interrupting the UI
 LogBox.ignoreLogs([
@@ -51,6 +52,8 @@ if (typeof (global as any).ErrorUtils !== 'undefined') {
   }
 }
 
+import { ErrorFallbackScreen } from '../src/components/ErrorFallbackScreen';
+
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
   constructor(props: { children: ReactNode }) {
     super(props);
@@ -68,20 +71,10 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
   render() {
     if (this.state.hasError) {
       return (
-        <View style={styles.errorContainer}>
-          <RNText style={[styles.errorTitle, { fontSize: 24, fontWeight: 'bold', color: '#ef4444' }]}>
-            UWO Connect Launch Error
-          </RNText>
-          <RNText style={[styles.errorMessage, { fontSize: 13, color: '#a1a1aa' }]}>
-            {this.state.error?.message || 'An unexpected startup error occurred.'}
-          </RNText>
-          <TouchableOpacity
-            onPress={() => this.setState({ hasError: false, error: null })}
-            style={[styles.restartBtn, { backgroundColor: '#10b981', padding: 12, borderRadius: 8 }]}
-          >
-            <RNText style={{ color: '#fff', textAlign: 'center', fontWeight: 'bold' }}>Restart App</RNText>
-          </TouchableOpacity>
-        </View>
+        <ErrorFallbackScreen
+          error={this.state.error}
+          onRestart={() => this.setState({ hasError: false, error: null })}
+        />
       );
     }
     return this.props.children;
@@ -99,6 +92,7 @@ import { AppState } from 'react-native';
 
 function RootLayoutNav() {
   useAndroidBackHandler();
+  useOtaUpdates();
   const pathname = usePathname();
   const { initialize, status } = useSessionStore();
   const { fetchBrandConfig } = useBrandStore();
@@ -143,10 +137,14 @@ function RootLayoutNav() {
     if (status !== 'initializing') {
       SplashScreen.hideAsync().catch(() => {});
     }
-    if (status === 'authenticated' && !hasSyncedRef.current) {
-      hasSyncedRef.current = true;
-      syncTheme().catch(() => {});
-      syncI18n().catch(() => {});
+    if (status === 'authenticated') {
+      if (!hasSyncedRef.current) {
+        hasSyncedRef.current = true;
+        syncTheme().catch(() => {});
+        syncI18n().catch(() => {});
+      }
+    } else {
+      hasSyncedRef.current = false;
     }
   }, [status, syncTheme, syncI18n]);
 

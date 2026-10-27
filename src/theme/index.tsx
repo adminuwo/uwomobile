@@ -256,10 +256,28 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   );
 };
 
+const defaultThemeContextValue: ThemeContextType = {
+  mode: 'light',
+  colors: lightThemeColors,
+  typography,
+  spacing,
+  radius,
+  shadows,
+  primaryColor: DEFAULT_PRIMARY,
+  accentColor: DEFAULT_ACCENT,
+  customBase: 'light',
+  toggleTheme: () => {},
+  setMode: () => {},
+  setThemeMode: async () => {},
+  setCustomTheme: async () => {},
+  resetTheme: async () => {},
+  syncWithServer: async () => {},
+};
+
 export const useTheme = (): ThemeContextType => {
   const context = useContext(ThemeContext);
   if (!context) {
-    throw new Error('useTheme must be used within a ThemeProvider');
+    return defaultThemeContextValue;
   }
   return context;
 };

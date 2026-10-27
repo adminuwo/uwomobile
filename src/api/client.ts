@@ -39,7 +39,7 @@ class ApiClient {
   constructor() {
     this.instance = axios.create({
       baseURL: env.API_BASE_URL,
-      timeout: APP_CONFIG.apiTimeout,
+      timeout: env.IS_DEV ? 25000 : APP_CONFIG.apiTimeout,
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
@@ -112,23 +112,31 @@ class ApiClient {
           }
         }
 
-        // If network error occurred and not retried yet, try fallback candidates in development mode only
+        // If network error occurred and not retried yet, try local loopback candidates in dev mode
         if (env.IS_DEV && !error.response && originalRequest && !originalRequest._retry) {
           originalRequest._retry = true;
           const currentBase = this.instance.defaults.baseURL || '';
 
-          const candidates = ['https://aisaconnectback-anaqbuapb6c6apgy.centralindia-01.azurewebsites.net'];
+          // Only attempt local loopback fallbacks if we are already targeting a local address
+          const isTargetingLocal = !currentBase || currentBase.includes('10.0.2.2') || currentBase.includes('127.0.0.1') || currentBase.includes('localhost') || currentBase.includes('192.168.');
+          if (isTargetingLocal) {
+            const candidates: string[] = ['http://127.0.0.1:8000'];
+            if (Platform.OS === 'android') {
+              candidates.push('http://10.0.2.2:8000');
+            }
 
-          for (const fallbackUrl of candidates) {
-            if (fallbackUrl !== currentBase) {
-              console.log(`[ApiClient] Retrying request with candidate: ${fallbackUrl}${originalRequest.url}...`);
-              originalRequest.baseURL = fallbackUrl;
-              try {
-                const res = await this.instance(originalRequest);
-                console.log(`[ApiClient] Retried successfully with: ${fallbackUrl}`);
-                return res;
-              } catch (retryErr: any) {
-                // Try next
+            for (const fallbackUrl of candidates) {
+              if (fallbackUrl !== currentBase) {
+                console.log(`[ApiClient] Retrying local request with candidate: ${fallbackUrl}${originalRequest.url}...`);
+                originalRequest.baseURL = fallbackUrl;
+                try {
+                  const res = await this.instance(originalRequest);
+                  console.log(`[ApiClient] Retried successfully with: ${fallbackUrl}`);
+                  this.instance.defaults.baseURL = fallbackUrl;
+                  return res;
+                } catch (retryErr: any) {
+                  // Try next candidate
+                }
               }
             }
           }

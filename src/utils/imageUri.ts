@@ -31,7 +31,7 @@ export function resolveValidImageUri(url: string | null | undefined): string | n
   }
 
   // Prepend backend base URL if relative media path (e.g. /media/...)
-  const baseUrl = env.API_BASE_URL || 'http://192.168.29.238:8000';
+  const baseUrl = env.API_BASE_URL || 'http://127.0.0.1:8000';
   if (trimmed.startsWith('/')) {
     return `${baseUrl}${trimmed}`;
   }

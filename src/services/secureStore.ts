@@ -7,15 +7,23 @@ import { contentCacheStorage } from './contentCacheStorage';
 const memoryStorage = new Map<string, string>();
 
 function isLargeKey(key: string, value?: string): boolean {
+  // CRITICAL SECURITY: Auth tokens and credentials must always remain in hardware-backed SecureStore
+  if (
+    key === APP_CONFIG.tokenStorageKey ||
+    key === APP_CONFIG.refreshTokenStorageKey ||
+    key.toLowerCase().includes('token') ||
+    key.toLowerCase().includes('secret')
+  ) {
+    return false;
+  }
   if (
     key === APP_CONFIG.userStorageKey ||
     key === APP_CONFIG.brandStorageKey ||
-    key.startsWith('cache_') ||
-    key.startsWith('uwo_')
+    key.startsWith('cache_')
   ) {
     return true;
   }
-  if (value && value.length > 1000) {
+  if (value && value.length > 2000) {
     return true;
   }
   return false;
@@ -73,10 +81,12 @@ export const secureStorage = {
       await SecureStore.setItemAsync(key, value);
     } catch (error) {
       console.warn(`[SecureStore] Error setting key "${key}":`, error);
-      // If SecureStore fails (e.g. byte size limit on Android Keystore), fall back to contentCacheStorage
-      try {
-        await contentCacheStorage.setItem(key, value);
-      } catch {}
+      // Fall back to contentCacheStorage only for non-sensitive data
+      if (!key.toLowerCase().includes('token') && !key.toLowerCase().includes('secret')) {
+        try {
+          await contentCacheStorage.setItem(key, value);
+        } catch {}
+      }
     }
   },
 

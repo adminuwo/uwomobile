@@ -20,7 +20,9 @@ interface SessionState {
 
   // Actions
   initialize: () => Promise<void>;
-  register: (payload: RegisterPayload) => Promise<boolean>;
+  register: (payload: RegisterPayload) => Promise<boolean | { requiresOtp: boolean; email: string; otp_debug?: string; message?: string }>;
+  verifyRegistrationOtp: (email: string, otp: string) => Promise<boolean>;
+  resendRegistrationOtp: (email: string) => Promise<{ success: boolean; message: string; otp_debug?: string }>;
   login: (credentials: LoginCredentials) => Promise<boolean>;
   loginWithGoogle: (idToken: string, extra?: { name?: string; invite_token?: string }) => Promise<boolean>;
   loginWithApple: (identityToken: string, extra?: { name?: string; invite_token?: string }) => Promise<boolean>;
@@ -106,7 +108,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       const token = response.token || response.access_token;
       if (!token) {
         set({ isLoading: false });
-        return true;
+        return {
+          requiresOtp: true,
+          email: payload.email,
+          otp_debug: (response as any).otp_debug,
+          message: response.message || response.detail,
+        };
       }
 
       // Store token securely
@@ -154,6 +161,83 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         error: errorMsg,
       });
       return false;
+    }
+  },
+
+  verifyRegistrationOtp: async (email: string, otp: string) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await authApi.verifyRegistrationOtp(email, otp);
+
+      const token = response.token || response.access_token;
+      if (!token) {
+        throw new Error(response.message || response.detail || 'Verification failed. Token missing.');
+      }
+
+      await secureStorage.setAccessToken(token);
+
+      queryClient.cancelQueries();
+      queryClient.clear();
+
+      let userProfile: UserProfile | null = response.user || null;
+      if (!userProfile) {
+        try {
+          const fresh = await authApi.getProfile(token);
+          if (fresh) userProfile = fresh;
+        } catch {
+          userProfile = { email };
+        }
+      }
+
+      if (userProfile) {
+        await secureStorage.setItem(APP_CONFIG.userStorageKey, JSON.stringify(userProfile));
+      }
+
+      set({
+        status: 'authenticated',
+        token,
+        user: userProfile,
+        isLoading: false,
+        error: null,
+      });
+
+      useBrandStore.getState().fetchBrandConfig().catch(() => {});
+      trackAppInstallation(true).catch(() => {});
+      return true;
+    } catch (err: any) {
+      const errorMsg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        err.response?.data?.detail ||
+        err.message ||
+        'Invalid or expired verification code.';
+      set({
+        isLoading: false,
+        error: errorMsg,
+      });
+      return false;
+    }
+  },
+
+  resendRegistrationOtp: async (email: string) => {
+    try {
+      set({ error: null });
+      const res = await authApi.resendRegistrationOtp(email);
+      return {
+        success: true,
+        message: res.message || 'Verification code resent successfully.',
+        otp_debug: res.otp_debug,
+      };
+    } catch (err: any) {
+      const errorMsg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        err.message ||
+        'Failed to resend verification code.';
+      return {
+        success: false,
+        message: errorMsg,
+      };
     }
   },
 
@@ -208,9 +292,10 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       trackAppInstallation(true).catch(() => {});
       return true;
     } catch (err: any) {
+      console.log('[SessionStore] Login failed:', err?.message || err);
       set({
         isLoading: false,
-        error: err.message || 'Login failed. Please check your credentials.',
+        error: err.message || err.detail || 'Login failed. Please check your credentials.',
       });
       return false;
     }

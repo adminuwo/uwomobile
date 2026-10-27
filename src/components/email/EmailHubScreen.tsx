@@ -27,6 +27,8 @@ import {
   EmailProvider,
   FolderCounts,
   cleanAiEmailContent,
+  EmailAutomationSettings,
+  EmailAutomationLog,
 } from '../../api/email';
 import {
   Inbox,
@@ -49,6 +51,11 @@ import {
   Settings,
   CheckCircle2,
   ChevronLeft,
+  Filter,
+  History,
+  ShieldCheck,
+  Check,
+  AlertCircle,
 } from 'lucide-react-native';
 
 // Official Provider SVG Logos
@@ -81,437 +88,38 @@ const FOLDERS: { id: EmailFolder; label: string; icon: React.ElementType }[] = [
   { id: 'archive', label: 'Archive', icon: Archive },
 ];
 
-// Dedicated Fallback Dataset for Gmail
-const GMAIL_FALLBACK_EMAILS: EmailMessage[] = [
-  {
-    id: 'gmail-1',
-    folder: 'inbox',
-    provider: 'gmail',
-    sender_name: 'Rajesh Malhotra',
-    sender_email: 'rajesh.m@technovate.in',
-    to: 'support@uwoconnect.com',
-    subject: 'Urgent: Enterprise API Access & SLA Agreement Query',
-    preview: 'Hi Team UWO, We are looking to scale our lead automation pipeline to 50,000 monthly messages...',
-    body: 'Hi Team UWO,\n\nWe are looking to scale our lead automation pipeline to 50,000 monthly messages across WhatsApp and Instagram. Could you please provide the Enterprise SLA document and schedule an onboarding call?\n\nBest regards,\nRajesh Malhotra\nCTO, Technovate Solutions',
-    time: '10:24 AM',
-    date: 'Today',
-    is_read: false,
-    is_starred: true,
-    has_attachment: true,
-    attachment_name: 'Enterprise_Requirements_v2.pdf',
-    has_meeting: true,
-    meeting_info: {
-      title: 'UWO Enterprise Tech Review & Onboarding',
-      meeting_link: 'https://meet.google.com/abc-uwo-tech',
-      date: 'Tomorrow',
-      time: '03:00 PM IST',
-    },
-    created_full: 'Today, 10:24 AM',
-  },
-  {
-    id: 'gmail-2',
-    folder: 'inbox',
-    provider: 'gmail',
-    sender_name: 'Google Workspace Alerts',
-    sender_email: 'workspace-noreply@google.com',
-    to: 'admin@uwoconnect.com',
-    subject: 'Security Audit: New OAuth Webhook Connected',
-    preview: 'A new application was granted permissions to access UWO Connect Workspace APIs...',
-    body: 'Hello Administrator,\n\nA new OAuth application was successfully linked to your Google Workspace account for real-time inbox synchronization.\n\nIP: 192.168.1.1\nDevice: Mobile Agent App\nStatus: Secure & Encrypted',
-    time: '09:15 AM',
-    date: 'Today',
-    is_read: true,
-    is_starred: false,
-    has_attachment: false,
-    has_meeting: false,
-    created_full: 'Today, 09:15 AM',
-  },
-  {
-    id: 'gmail-3',
-    folder: 'inbox',
-    provider: 'gmail',
-    sender_name: 'Deepa Verma',
-    sender_email: 'deepa.v@growthscale.io',
-    to: 'support@uwoconnect.com',
-    subject: 'WhatsApp API Integration Webhook Delay Question',
-    preview: 'Hi Support, We noticed a minor delay in template approvals on the Meta Cloud API side...',
-    body: 'Hi Support,\n\nWe noticed a minor delay in template approvals on the Meta Cloud API side for our marketing campaign. Could you please check if our WABA health status is currently GREEN?\n\nThanks,\nDeepa Verma\nHead of Marketing, GrowthScale',
-    time: 'Yesterday',
-    date: 'Yesterday',
-    is_read: true,
-    is_starred: false,
-    has_attachment: false,
-    has_meeting: false,
-    created_full: 'Yesterday, 05:40 PM',
-  },
-  {
-    id: 'gmail-4',
-    folder: 'sent',
-    provider: 'gmail',
-    sender_name: 'You',
-    sender_email: 'support@uwoconnect.com',
-    to: 'client.leads@retailhub.com',
-    subject: 'Welcome to UWO Connect Omnichannel CRM',
-    preview: 'Thank you for choosing UWO Connect! Your workspace has been activated with WhatsApp, Instagram & Gmail...',
-    body: 'Hi there,\n\nThank you for choosing UWO Connect! Your workspace is ready.\n\nYou can access your unified inbox and CRM leads directly from your mobile app.\n\nCheers,\nUWO Connect Team',
-    time: 'Sep 4',
-    date: 'Sep 4',
-    is_read: true,
-    is_starred: false,
-    has_attachment: false,
-    has_meeting: false,
-    created_full: 'Sep 4, 11:00 AM',
-  },
-  {
-    id: 'gmail-5',
-    folder: 'sent',
-    provider: 'gmail',
-    sender_name: 'You',
-    sender_email: 'support@uwoconnect.com',
-    to: 'ceo@technovate.in',
-    subject: 'Credentials & Onboarding Documentation',
-    preview: 'Please find attached your primary API keys and documentation for Webhook configuration...',
-    body: 'Hello Rajesh,\n\nPlease find attached your primary API keys and documentation for Webhook configuration.\n\nLet us know if you need assistance during sandbox testing.\n\nWarm regards,\nUWO Connect Ops',
-    time: 'Sep 3',
-    date: 'Sep 3',
-    is_read: true,
-    is_starred: false,
-    has_attachment: true,
-    attachment_name: 'API_Specs_v3.pdf',
-    has_meeting: false,
-    created_full: 'Sep 3, 03:20 PM',
-  },
-  {
-    id: 'gmail-6',
-    folder: 'drafts',
-    provider: 'gmail',
-    sender_name: 'You (Draft)',
-    sender_email: 'support@uwoconnect.com',
-    to: 'partners@cloudscale.com',
-    subject: 'Draft: Partnership Proposal with CloudScale Inc.',
-    preview: 'Hi CloudScale team, Following our conversation last Thursday regarding joint solution offering...',
-    body: 'Hi CloudScale team,\n\nFollowing our conversation last Thursday regarding joint solution offering for enterprise clients in India and Middle East, here are the revised terms...\n\n[Draft pending executive signoff]',
-    time: 'Sep 2',
-    date: 'Sep 2',
-    is_read: true,
-    is_starred: false,
-    has_attachment: false,
-    has_meeting: false,
-    created_full: 'Sep 2, 06:15 PM',
-  },
-  {
-    id: 'gmail-7',
-    folder: 'scheduled',
-    provider: 'gmail',
-    sender_name: 'You',
-    sender_email: 'support@uwoconnect.com',
-    to: 'vip.clients@capitalbank.com',
-    subject: 'Follow-up: Weekly CRM Performance Analytics',
-    preview: 'Scheduled dispatch for Friday morning: Weekly summary report on customer engagement and pipeline velocity...',
-    body: 'Dear Partner,\n\nHere is your scheduled weekly pipeline review. We saw a 38% increase in resolved conversations this week.\n\nWarm regards,\nUWO Connect Analytics Team',
-    time: 'Fri 09:00 AM',
-    date: 'Scheduled',
-    is_read: true,
-    is_starred: false,
-    has_attachment: true,
-    attachment_name: 'Weekly_Executive_Brief.pdf',
-    has_meeting: false,
-    scheduled_info: 'Friday, Sep 12 at 09:00 AM',
-    created_full: 'Scheduled for Friday 09:00 AM',
-  },
-  {
-    id: 'gmail-8',
-    folder: 'trash',
-    provider: 'gmail',
-    sender_name: 'Webinar Invites',
-    sender_email: 'noreply@techwebinars.net',
-    to: 'support@uwoconnect.com',
-    subject: 'Expired: Cloud Summit 2026 Free Passes',
-    preview: 'Claim your free pass before midnight to attend the virtual keynote...',
-    body: 'This invitation has expired.\n\nThank you for your interest.',
-    time: 'Aug 28',
-    date: 'Aug 28',
-    is_read: true,
-    is_starred: false,
-    has_attachment: false,
-    has_meeting: false,
-    created_full: 'Aug 28, 02:00 PM',
-  },
-  {
-    id: 'gmail-9',
-    folder: 'spam',
-    provider: 'gmail',
-    sender_name: 'Bulk Leads Provider',
-    sender_email: 'sales@databasedeals.xyz',
-    to: 'support@uwoconnect.com',
-    subject: '100,000 Verified B2B Decision Makers List',
-    preview: 'Get instant access to CEO and CTO email addresses with 95% delivery rate...',
-    body: 'Hi,\n\nAre you looking to expand your client outreach? Get our verified lists today at 80% discount.',
-    time: 'Aug 25',
-    date: 'Aug 25',
-    is_read: true,
-    is_starred: false,
-    has_attachment: false,
-    has_meeting: false,
-    created_full: 'Aug 25, 08:30 AM',
-  },
-  {
-    id: 'gmail-10',
-    folder: 'archive',
-    provider: 'gmail',
-    sender_name: 'Google Compliance Team',
-    sender_email: 'compliance@google.com',
-    to: 'admin@uwoconnect.com',
-    subject: 'Google Workspace Annual Data Privacy Notice 2026',
-    preview: 'Review updated policy information regarding cloud data storage in Asia-Pacific region...',
-    body: 'Dear Workspace Customer,\n\nWe have updated our terms to reflect regional cloud regulations. No action required on your part.',
-    time: 'Aug 10',
-    date: 'Aug 10',
-    is_read: true,
-    is_starred: false,
-    has_attachment: false,
-    has_meeting: false,
-    created_full: 'Aug 10, 11:30 AM',
-  },
-];
-
-// Dedicated Fallback Dataset for Outlook
-const OUTLOOK_FALLBACK_EMAILS: EmailMessage[] = [
-  {
-    id: 'outlook-1',
-    folder: 'inbox',
-    provider: 'outlook',
-    sender_name: 'Priya Sharma (Apex Corp)',
-    sender_email: 'priya.s@apexcorp.com',
-    to: 'sales@uwoconnect.com',
-    subject: 'Proposal Review & Quotation Confirmation #Q-8821',
-    preview: 'Thanks for sending over the updated pricing tier. We have reviewed the terms and would like to proceed...',
-    body: 'Hello Team,\n\nThanks for sending over the updated pricing tier. We have reviewed the terms and would like to proceed with the annual billing cycle.\n\nPlease share the formal invoice and bank details for wire transfer.\n\nRegards,\nPriya Sharma\nProcurement Head, Apex Corp',
-    time: 'Yesterday',
-    date: 'Yesterday',
-    is_read: true,
-    is_starred: true,
-    has_attachment: true,
-    attachment_name: 'Signed_Vendor_Form.pdf',
-    has_meeting: false,
-    created_full: 'Yesterday, 04:30 PM',
-  },
-  {
-    id: 'outlook-2',
-    folder: 'inbox',
-    provider: 'outlook',
-    sender_name: 'Operations Team',
-    sender_email: 'team@uwoconnect.com',
-    to: 'rahul@uwoconnect.com',
-    subject: 'Scheduled Broadcast & Product Brochure Demo',
-    preview: 'Dear Rahul, Here is your requested product brochure for UWO Connect SaaS Platform...',
-    body: 'Dear Rahul,\n\nHere is your requested product brochure for UWO Connect SaaS Platform. We have outlined all omnichannel capabilities including WhatsApp Bot flows and CRM Pipelines.\n\nLooking forward to our call tomorrow on Teams.\n\nBest regards,\nOperations Team',
-    time: '12:51 PM',
-    date: 'Today',
-    is_read: false,
-    is_starred: false,
-    has_attachment: true,
-    attachment_name: 'UWO_Connect_Brochure_2026.pdf',
-    has_meeting: true,
-    meeting_info: {
-      title: 'UWO Demo & Technical Q&A',
-      meeting_link: 'https://teams.microsoft.com/l/meetup-join/uwo-demo',
-      date: 'Tomorrow',
-      time: '11:00 AM IST',
-    },
-    created_full: 'Today, 12:51 PM',
-  },
-  {
-    id: 'outlook-3',
-    folder: 'inbox',
-    provider: 'outlook',
-    sender_name: 'Microsoft 365 Security',
-    sender_email: 'account-security@microsoft.com',
-    to: 'admin@uwoconnect.com',
-    subject: 'Exchange Online: Mailbox Sync Verified & Operational',
-    preview: 'Your Microsoft Graph enterprise tenant integration is synchronized with Zero Trust policies...',
-    body: 'Microsoft 365 Exchange Online Notice:\n\nTenant synchronization health is 100%. All modern authentication tokens and webhooks are active and transmitting inbound/outbound mail securely.',
-    time: '08:30 AM',
-    date: 'Today',
-    is_read: true,
-    is_starred: false,
-    has_attachment: false,
-    has_meeting: false,
-    created_full: 'Today, 08:30 AM',
-  },
-  {
-    id: 'outlook-4',
-    folder: 'sent',
-    provider: 'outlook',
-    sender_name: 'You',
-    sender_email: 'sales@uwoconnect.com',
-    to: 'priya.s@apexcorp.com',
-    subject: 'Re: Proposal Review & Quotation Confirmation #Q-8821',
-    preview: 'Hi Priya, Thank you for confirming! We have generated Invoice #INV-2026-088 for Apex Corp...',
-    body: 'Hi Priya,\n\nThank you for confirming! We have generated Invoice #INV-2026-088 for Apex Corp with the agreed enterprise discounts.\n\nOur accounts department will track receipt of wire transfer.\n\nBest regards,\nUWO Connect Commercial Team',
-    time: 'Yesterday',
-    date: 'Yesterday',
-    is_read: true,
-    is_starred: false,
-    has_attachment: true,
-    attachment_name: 'Invoice_INV_2026_088.pdf',
-    has_meeting: false,
-    created_full: 'Yesterday, 06:10 PM',
-  },
-  {
-    id: 'outlook-5',
-    folder: 'sent',
-    provider: 'outlook',
-    sender_name: 'You',
-    sender_email: 'sales@uwoconnect.com',
-    to: 'operations@reliancegroup.in',
-    subject: 'Updated Master Service Agreement & SLA 2026',
-    preview: 'Attached is the executed SLA document covering 99.9% uptime and 15-minute response time...',
-    body: 'Dear Team,\n\nAttached is the executed SLA document covering 99.9% uptime and 15-minute response time for your WhatsApp Business API infrastructure.\n\nThank you for partnering with us.\n\nRegards,\nUWO Connect Legal & Ops',
-    time: 'Sep 3',
-    date: 'Sep 3',
-    is_read: true,
-    is_starred: false,
-    has_attachment: true,
-    attachment_name: 'Executed_MSA_2026.pdf',
-    has_meeting: false,
-    created_full: 'Sep 3, 04:45 PM',
-  },
-  {
-    id: 'outlook-6',
-    folder: 'drafts',
-    provider: 'outlook',
-    sender_name: 'You (Draft)',
-    sender_email: 'sales@uwoconnect.com',
-    to: 'procurement@globaltech.com',
-    subject: 'Corporate Renewal Terms for Enterprise Tier',
-    preview: 'Dear GlobalTech Procurement, As discussed in our Q3 business review, here are the options for multi-year license...',
-    body: 'Dear GlobalTech Procurement,\n\nAs discussed in our Q3 business review, here are the options for multi-year license renewal with dedicated private cloud instance...\n\n[Draft pending legal review]',
-    time: 'Sep 1',
-    date: 'Sep 1',
-    is_read: true,
-    is_starred: false,
-    has_attachment: false,
-    has_meeting: false,
-    created_full: 'Sep 1, 02:20 PM',
-  },
-  {
-    id: 'outlook-7',
-    folder: 'scheduled',
-    provider: 'outlook',
-    sender_name: 'You',
-    sender_email: 'sales@uwoconnect.com',
-    to: 'executive.board@uwoconnect.com',
-    subject: 'Enterprise Pipeline Forecast & Executive Deck Q4',
-    preview: 'Scheduled dispatch for Monday 10:00 AM: Quarterly sales projections, ARR growth metrics...',
-    body: 'Executive Team,\n\nPlease find scheduled the comprehensive Q4 commercial forecast showing 140% target achievement.\n\nBest regards,\nHead of Revenue Operations',
-    time: 'Mon 10:00 AM',
-    date: 'Scheduled',
-    is_read: true,
-    is_starred: false,
-    has_attachment: true,
-    attachment_name: 'Q4_Revenue_Forecast.pdf',
-    has_meeting: false,
-    scheduled_info: 'Monday, Sep 15 at 10:00 AM',
-    created_full: 'Scheduled for Monday 10:00 AM',
-  },
-  {
-    id: 'outlook-8',
-    folder: 'trash',
-    provider: 'outlook',
-    sender_name: 'IT Newsletter',
-    sender_email: 'digest@microsoftcommunity.com',
-    to: 'admin@uwoconnect.com',
-    subject: 'Microsoft Ignite 2026 Session Schedule',
-    preview: 'Explore technical deep-dives on Azure AI and Teams App Studio...',
-    body: 'Weekly community digest deleted by user.',
-    time: 'Aug 29',
-    date: 'Aug 29',
-    is_read: true,
-    is_starred: false,
-    has_attachment: false,
-    has_meeting: false,
-    created_full: 'Aug 29, 01:15 PM',
-  },
-  {
-    id: 'outlook-9',
-    folder: 'spam',
-    provider: 'outlook',
-    sender_name: 'Offshore Hosting Deals',
-    sender_email: 'promo@offshore-servers.cc',
-    to: 'admin@uwoconnect.com',
-    subject: 'Dedicated Bare Metal Servers from $29/mo',
-    preview: 'Unmetered bandwidth with DDoS protection included...',
-    body: 'Spam filter automatically caught this promotion.',
-    time: 'Aug 24',
-    date: 'Aug 24',
-    is_read: true,
-    is_starred: false,
-    has_attachment: false,
-    has_meeting: false,
-    created_full: 'Aug 24, 07:10 AM',
-  },
-  {
-    id: 'outlook-10',
-    folder: 'archive',
-    provider: 'outlook',
-    sender_name: 'Archived Project Team',
-    sender_email: 'q2-migration@uwoconnect.com',
-    to: 'team@uwoconnect.com',
-    subject: 'Archive: Completed Q2 Migration to Microsoft 365 Cloud',
-    preview: 'All 400 user accounts and 12 shared mailboxes have been transferred successfully...',
-    body: 'Final sign-off received. Project closed and archived.',
-    time: 'Jul 15',
-    date: 'Jul 15',
-    is_read: true,
-    is_starred: false,
-    has_attachment: false,
-    has_meeting: false,
-    created_full: 'Jul 15, 05:00 PM',
-  },
-];
 
 interface EmailHubScreenProps {
   provider: EmailProvider;
 }
 
-export const EmailHubScreen: React.FC<EmailHubScreenProps> = ({ provider }) => {
+export const EmailHubScreen: React.FC<EmailHubScreenProps> = ({ provider: initialProvider }) => {
   const router = useRouter();
   const { colors, mode } = useTheme();
   const user = useSessionStore((state) => state.user);
 
+  const [currentProvider, setCurrentProvider] = useState<EmailProvider>(initialProvider);
+  const provider = currentProvider;
   const isGmail = provider === 'gmail';
   const providerTitle = isGmail ? 'Gmail' : 'Outlook';
   const providerSubtitle = isGmail ? 'Google Workspace' : 'Microsoft 365';
-  const defaultEmails = useMemo(
-    () => (isGmail ? GMAIL_FALLBACK_EMAILS : OUTLOOK_FALLBACK_EMAILS),
-    [isGmail]
-  );
 
   const [activeFolder, setActiveFolder] = useState<EmailFolder>('inbox');
   const [searchQuery, setSearchQuery] = useState('');
-  const [messages, setMessages] = useState<EmailMessage[]>(defaultEmails);
-  const [loading, setLoading] = useState(false);
+  const [messages, setMessages] = useState<EmailMessage[]>([]);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // Dynamic folder counts based on provider dataset
-  const [folderCounts, setFolderCounts] = useState<FolderCounts>(() => {
-    const counts: FolderCounts = {
-      inbox: 0,
-      sent: 0,
-      drafts: 0,
-      scheduled: 0,
-      trash: 0,
-      spam: 0,
-      archive: 0,
-    };
-    defaultEmails.forEach((msg) => {
-      if (counts[msg.folder] !== undefined) {
-        counts[msg.folder] += 1;
-      }
-    });
-    return counts;
+  // Dynamic folder counts based on real database counts
+  const [folderCounts, setFolderCounts] = useState<FolderCounts>({
+    inbox: 0,
+    sent: 0,
+    drafts: 0,
+    scheduled: 0,
+    trash: 0,
+    spam: 0,
+    archive: 0,
   });
 
   // Modals
@@ -532,13 +140,32 @@ export const EmailHubScreen: React.FC<EmailHubScreenProps> = ({ provider }) => {
   const [sending, setSending] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
 
-  // Auto-Reply Form
+  // Auto-Reply Form & Multi-Signal Automation Settings
+  const [autoReplyTab, setAutoReplyTab] = useState<'rules' | 'filters' | 'logs'>('rules');
   const [autoReplyEnabled, setAutoReplyEnabled] = useState(true);
   const [autoReplySubject, setAutoReplySubject] = useState('Thank you for contacting us, {{first_name}}!');
   const [autoReplyBody, setAutoReplyBody] = useState(
     `Hi {{first_name}},\n\nWe have received your email via ${providerTitle} and our team will get back to you within 15 minutes.\n\nBest regards,\nUWO Connect Support Team`
   );
+  const [currentRuleId, setCurrentRuleId] = useState<string | null>(null);
   const [savingAutoReply, setSavingAutoReply] = useState(false);
+  const [loadingAutomation, setLoadingAutomation] = useState(false);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+  const [approvingLogId, setApprovingLogId] = useState<string | null>(null);
+
+  // Category & Filter Controls
+  const [allowInquiries, setAllowInquiries] = useState(true);
+  const [allowSupport, setAllowSupport] = useState(true);
+  const [allowPromotions, setAllowPromotions] = useState(false);
+  const [allowNewsletters, setAllowNewsletters] = useState(false);
+  const [allowNotifications, setAllowNotifications] = useState(false);
+  const [allowlistMode, setAllowlistMode] = useState(false);
+  const [excludedDomains, setExcludedDomains] = useState('');
+  const [excludedSenders, setExcludedSenders] = useState('');
+  const [uncertainFallback, setUncertainFallback] = useState<'skip' | 'require_review'>('skip');
+
+  // Decision Logs
+  const [automationLogs, setAutomationLogs] = useState<EmailAutomationLog[]>([]);
 
   // Notification Toast
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -565,9 +192,8 @@ export const EmailHubScreen: React.FC<EmailHubScreenProps> = ({ provider }) => {
           skip_sync: !forceSync,
         });
 
-        // Filter strictly for this provider
-        const strictlyProvider = (data.messages || []).filter((m) => m.provider === provider);
-        setMessages(strictlyProvider);
+        // Set messages directly from database API response
+        setMessages(data.messages || []);
 
         if (data.folder_counts) {
           setFolderCounts(data.folder_counts);
@@ -591,7 +217,7 @@ export const EmailHubScreen: React.FC<EmailHubScreenProps> = ({ provider }) => {
         setIsSyncing(false);
       }
     },
-    [activeFolder, provider, providerTitle, searchQuery, defaultEmails]
+    [activeFolder, provider, providerTitle, searchQuery]
   );
 
   useEffect(() => {
@@ -760,36 +386,136 @@ export const EmailHubScreen: React.FC<EmailHubScreenProps> = ({ provider }) => {
     }
   };
 
-  // Save Auto-Reply
+  // Load Automation Settings & Auto-Reply Rules directly from Database
+  const loadAutomationData = useCallback(async () => {
+    try {
+      setLoadingAutomation(true);
+
+      // 1. Fetch Auto-Reply Rules directly from MongoDB
+      const rules = await emailApi.getAutoReplies();
+      if (rules && rules.length > 0) {
+        const matched = rules.find((r) => r.is_active) || rules[0];
+        if (matched) {
+          if (matched.id) setCurrentRuleId(matched.id);
+          if (matched.reply_subject) setAutoReplySubject(matched.reply_subject);
+          if (matched.reply_body) setAutoReplyBody(matched.reply_body);
+          if (typeof matched.is_active === 'boolean') setAutoReplyEnabled(matched.is_active);
+        }
+      }
+
+      // 2. Fetch Automation Settings directly from MongoDB
+      const settings = await emailApi.getAutomationSettings(provider);
+      if (settings) {
+        if (typeof settings.is_enabled === 'boolean') {
+          setAutoReplyEnabled(settings.is_enabled);
+        }
+        setAllowInquiries(Boolean(settings.auto_reply_business_inquiry));
+        setAllowSupport(Boolean(settings.auto_reply_customer_support));
+        setAllowPromotions(Boolean(settings.auto_reply_promotion || settings.auto_reply_advertisement));
+        setAllowNewsletters(Boolean(settings.auto_reply_newsletter));
+        setAllowNotifications(Boolean(settings.auto_reply_notification));
+        setAllowlistMode(Boolean(settings.allowlist_mode));
+        setExcludedDomains((settings.excluded_domains || []).join(', '));
+        setExcludedSenders((settings.excluded_senders || []).join(', '));
+        setUncertainFallback(settings.uncertain_fallback || 'skip');
+      }
+    } catch (err) {
+      console.log('[loadAutomationData] Notice:', err);
+    } finally {
+      setLoadingAutomation(false);
+    }
+  }, [provider]);
+
+  const loadAutomationLogsData = useCallback(async () => {
+    try {
+      setLoadingLogs(true);
+      const logs = await emailApi.getAutomationLogs({ account_id: provider });
+      setAutomationLogs(logs || []);
+    } catch {
+      // safe fallback
+    } finally {
+      setLoadingLogs(false);
+    }
+  }, [provider]);
+
+  // Load rules and settings from database on screen mount / provider switch
+  useEffect(() => {
+    loadAutomationData();
+  }, [loadAutomationData]);
+
+  useEffect(() => {
+    if (isAutoReplyOpen) {
+      loadAutomationData();
+      loadAutomationLogsData();
+    }
+  }, [isAutoReplyOpen, loadAutomationData, loadAutomationLogsData]);
+
+  // Save Auto-Reply & Advanced Automation Settings directly to Database
   const handleSaveAutoReply = async () => {
     setSavingAutoReply(true);
     try {
-      await emailApi.saveAutoReply({
+      const savedRule = await emailApi.saveAutoReply({
+        id: currentRuleId || undefined,
         name: `${providerTitle} Auto-Reply Rule`,
         reply_subject: autoReplySubject,
         reply_body: autoReplyBody,
         is_active: autoReplyEnabled,
       });
-      showToast(`✅ ${providerTitle} Auto-Reply rules saved!`);
+
+      if (savedRule?.id) {
+        setCurrentRuleId(savedRule.id);
+      }
+
+      const parsedExcludedDomains = excludedDomains
+        .split(',')
+        .map((s) => s.trim().toLowerCase().replace(/^@/, ''))
+        .filter(Boolean);
+      const parsedExcludedSenders = excludedSenders
+        .split(',')
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
+
+      await emailApi.updateAutomationSettings({
+        is_enabled: autoReplyEnabled,
+        auto_reply_business_inquiry: allowInquiries,
+        auto_reply_customer_support: allowSupport,
+        auto_reply_advertisement: allowPromotions,
+        auto_reply_promotion: allowPromotions,
+        auto_reply_newsletter: allowNewsletters,
+        auto_reply_notification: allowNotifications,
+        allowlist_mode: allowlistMode,
+        excluded_domains: parsedExcludedDomains,
+        excluded_senders: parsedExcludedSenders,
+        uncertain_fallback: uncertainFallback,
+      }, provider);
+
+      showToast('✅ Auto-Reply Rules & Automation saved to database!');
       setIsAutoReplyOpen(false);
-    } catch {
-      showToast(`✅ ${providerTitle} Auto-Reply configuration updated!`);
-      setIsAutoReplyOpen(false);
+    } catch (err) {
+      console.log('[handleSaveAutoReply] Error:', err);
+      showToast('❌ Failed to save auto-reply settings');
     } finally {
       setSavingAutoReply(false);
+    }
+  };
+
+  // Approve Pending Review Email
+  const handleApproveLog = async (logId: string) => {
+    setApprovingLogId(logId);
+    try {
+      await emailApi.approveReview(logId);
+      showToast('✅ Reply sent successfully!');
+      loadAutomationLogsData();
+    } catch (err: any) {
+      showToast(err?.message || 'Could not send reply. Please try again.');
+    } finally {
+      setApprovingLogId(null);
     }
   };
 
   // Filter messages by active folder and search query
   const displayedMessages = useMemo(() => {
     return messages.filter((msg) => {
-      // Provider isolation
-      if (msg.provider !== provider) return false;
-
-      // Folder match
-      const folderMatches = msg.folder === activeFolder;
-      if (!folderMatches) return false;
-
       // Search match
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
@@ -802,7 +528,7 @@ export const EmailHubScreen: React.FC<EmailHubScreenProps> = ({ provider }) => {
 
       return true;
     });
-  }, [messages, activeFolder, searchQuery, provider]);
+  }, [messages, searchQuery]);
 
   return (
     <Screen safeAreaEdges={['top', 'left', 'right']}>
@@ -863,6 +589,51 @@ export const EmailHubScreen: React.FC<EmailHubScreenProps> = ({ provider }) => {
           </Text>
         </View>
       )}
+
+      {/* Provider Switcher Tabs (Gmail vs Outlook) */}
+      <View style={styles.providerToggleContainer}>
+        <TouchableOpacity
+          style={[
+            styles.providerToggleBtn,
+            isGmail && [
+              styles.providerToggleBtnActive,
+              { backgroundColor: mode === 'dark' ? 'rgba(234, 67, 53, 0.15)' : '#FEF2F2', borderColor: '#EA4335' }
+            ],
+          ]}
+          onPress={() => setCurrentProvider('gmail')}
+          activeOpacity={0.7}
+        >
+          <GmailLogo size={14} />
+          <Text
+            variant="caption"
+            weight={isGmail ? 'bold' : 'regular'}
+            color={isGmail ? '#EA4335' : colors.textMuted}
+          >
+            Google Workspace
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.providerToggleBtn,
+            !isGmail && [
+              styles.providerToggleBtnActive,
+              { backgroundColor: mode === 'dark' ? 'rgba(0, 120, 212, 0.15)' : '#EFF6FF', borderColor: '#0078D4' }
+            ],
+          ]}
+          onPress={() => setCurrentProvider('outlook')}
+          activeOpacity={0.7}
+        >
+          <OutlookLogo size={14} />
+          <Text
+            variant="caption"
+            weight={!isGmail ? 'bold' : 'regular'}
+            color={!isGmail ? '#0078D4' : colors.textMuted}
+          >
+            Microsoft 365
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Account Info Pill */}
       <View style={styles.accountInfoBar}>
@@ -1615,101 +1386,491 @@ export const EmailHubScreen: React.FC<EmailHubScreenProps> = ({ provider }) => {
             </TouchableOpacity>
 
             <Text variant="h3" weight="bold" color={colors.textPrimary} style={{ flex: 1, marginLeft: 8 }}>
-              {providerTitle} Auto-Reply Rules
+              {providerTitle} Auto-Reply
             </Text>
           </View>
 
-          <ScrollView style={styles.autoReplyScroll} showsVerticalScrollIndicator={false}>
-            {/* Status Toggle */}
-            <View style={[styles.autoReplyToggleCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <View style={{ flex: 1 }}>
-                <Text variant="body" weight="bold" color={colors.textPrimary}>
-                  Automated Responder
-                </Text>
-                <Text variant="caption" color={colors.textMuted} style={{ marginTop: 2 }}>
-                  Respond immediately to incoming {providerTitle} emails
-                </Text>
-              </View>
-
-              <TouchableOpacity
-                style={[
-                  styles.toggleSwitch,
-                  { backgroundColor: autoReplyEnabled ? colors.primary : colors.border },
-                ]}
-                onPress={() => setAutoReplyEnabled(!autoReplyEnabled)}
-              >
-                <View
-                  style={[
-                    styles.toggleKnob,
-                    { transform: [{ translateX: autoReplyEnabled ? 18 : 2 }] },
-                  ]}
-                />
-              </TouchableOpacity>
-            </View>
-
-            {/* Template Variables Notice */}
-            <View style={[styles.infoCallout, { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}30` }]}>
-              <Text variant="caption" weight="bold" color={colors.primary}>
-                Dynamic Smart Tags:
-              </Text>
-              <Text variant="caption" color={colors.textPrimary} style={{ marginTop: 2 }}>
-                Use &#123;&#123;first_name&#125;&#125; or &#123;&#123;company&#125;&#125; to personalize responses automatically.
-              </Text>
-            </View>
-
-            {/* Subject */}
-            <View style={{ marginTop: 16 }}>
-              <Text variant="caption" weight="bold" color={colors.textMuted} style={{ marginBottom: 6 }}>
-                Reply Subject:
-              </Text>
-              <TextInput
-                style={[
-                  styles.autoReplyInput,
-                  {
-                    color: colors.textPrimary,
-                    borderColor: colors.border,
-                    backgroundColor: colors.surface,
-                  },
-                ]}
-                value={autoReplySubject}
-                onChangeText={setAutoReplySubject}
-              />
-            </View>
-
-            {/* Body */}
-            <View style={{ marginTop: 16 }}>
-              <Text variant="caption" weight="bold" color={colors.textMuted} style={{ marginBottom: 6 }}>
-                Auto-Reply Message Body:
-              </Text>
-              <TextInput
-                style={[
-                  styles.autoReplyBodyInput,
-                  {
-                    color: colors.textPrimary,
-                    borderColor: colors.border,
-                    backgroundColor: colors.surface,
-                  },
-                ]}
-                multiline
-                value={autoReplyBody}
-                onChangeText={setAutoReplyBody}
-              />
-            </View>
-
-            {/* Save Button */}
+          {/* TAB SELECTOR */}
+          <View style={[styles.modalTabBar, { borderColor: colors.border, backgroundColor: colors.surface }]}>
             <TouchableOpacity
-              style={[styles.saveAutoReplyBtn, { backgroundColor: colors.primary }]}
-              onPress={handleSaveAutoReply}
-              disabled={savingAutoReply}
+              style={[
+                styles.modalTabItem,
+                autoReplyTab === 'rules' && { backgroundColor: colors.primary },
+              ]}
+              onPress={() => setAutoReplyTab('rules')}
             >
-              {savingAutoReply ? (
-                <ActivityIndicator size="small" color="#FFF" />
-              ) : (
-                <Text variant="body" weight="bold" color="#FFF">
-                  Save {providerTitle} Auto-Reply Rule
-                </Text>
-              )}
+              <Text
+                variant="caption"
+                weight="bold"
+                color={autoReplyTab === 'rules' ? '#FFF' : colors.textMuted}
+              >
+                Reply Message
+              </Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.modalTabItem,
+                autoReplyTab === 'filters' && { backgroundColor: colors.primary },
+              ]}
+              onPress={() => setAutoReplyTab('filters')}
+            >
+              <Text
+                variant="caption"
+                weight="bold"
+                color={autoReplyTab === 'filters' ? '#FFF' : colors.textMuted}
+              >
+                Email Rules
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.modalTabItem,
+                autoReplyTab === 'logs' && { backgroundColor: colors.primary },
+              ]}
+              onPress={() => {
+                setAutoReplyTab('logs');
+                loadAutomationLogsData();
+              }}
+            >
+              <Text
+                variant="caption"
+                weight="bold"
+                color={autoReplyTab === 'logs' ? '#FFF' : colors.textMuted}
+              >
+                Reply History
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.autoReplyScroll} showsVerticalScrollIndicator={false}>
+            {/* TAB 1: REPLY MESSAGE */}
+            {autoReplyTab === 'rules' && (
+              <>
+                {/* Status Toggle */}
+                <View style={[styles.autoReplyToggleCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <View style={{ flex: 1, paddingRight: 8 }}>
+                    <Text variant="body" weight="bold" color={colors.textPrimary}>
+                      Turn Auto-Reply On/Off
+                    </Text>
+                    <Text variant="caption" color={colors.textMuted} style={{ marginTop: 2 }}>
+                      Send automatic replies to incoming {providerTitle} emails
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.toggleSwitch,
+                      { backgroundColor: autoReplyEnabled ? colors.primary : colors.border },
+                    ]}
+                    onPress={() => setAutoReplyEnabled(!autoReplyEnabled)}
+                  >
+                    <View
+                      style={[
+                        styles.toggleKnob,
+                        { transform: [{ translateX: autoReplyEnabled ? 18 : 2 }] },
+                      ]}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Template Variables Notice */}
+                <View style={[styles.infoCallout, { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}30` }]}>
+                  <Text variant="caption" weight="bold" color={colors.primary}>
+                    Add personal info:
+                  </Text>
+                  <Text variant="caption" color={colors.textPrimary} style={{ marginTop: 2 }}>
+                    Type &#123;&#123;first_name&#125;&#125; or &#123;&#123;company&#125;&#125; to add the sender's details automatically.
+                  </Text>
+                </View>
+
+                {/* Subject */}
+                <View style={{ marginTop: 16 }}>
+                  <Text variant="caption" weight="bold" color={colors.textMuted} style={{ marginBottom: 6 }}>
+                    Subject:
+                  </Text>
+                  <TextInput
+                    style={[
+                      styles.autoReplyInput,
+                      {
+                        color: colors.textPrimary,
+                        borderColor: colors.border,
+                        backgroundColor: colors.surface,
+                      },
+                    ]}
+                    value={autoReplySubject}
+                    onChangeText={setAutoReplySubject}
+                    placeholder="Thank you for reaching out!"
+                    placeholderTextColor={colors.textMuted}
+                  />
+                </View>
+
+                {/* Body */}
+                <View style={{ marginTop: 16 }}>
+                  <Text variant="caption" weight="bold" color={colors.textMuted} style={{ marginBottom: 6 }}>
+                    Message Body:
+                  </Text>
+                  <TextInput
+                    style={[
+                      styles.autoReplyBodyInput,
+                      {
+                        color: colors.textPrimary,
+                        borderColor: colors.border,
+                        backgroundColor: colors.surface,
+                      },
+                    ]}
+                    multiline
+                    value={autoReplyBody}
+                    onChangeText={setAutoReplyBody}
+                    placeholder="Type your reply message here..."
+                    placeholderTextColor={colors.textMuted}
+                  />
+                </View>
+
+                {/* Save Button */}
+                <TouchableOpacity
+                  style={[styles.saveAutoReplyBtn, { backgroundColor: colors.primary }]}
+                  onPress={handleSaveAutoReply}
+                  disabled={savingAutoReply}
+                >
+                  {savingAutoReply ? (
+                    <ActivityIndicator size="small" color="#FFF" />
+                  ) : (
+                    <Text variant="body" weight="bold" color="#FFF">
+                      Save Changes
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
+
+            {/* TAB 2: EMAIL RULES */}
+            {autoReplyTab === 'filters' && (
+              <>
+                {/* Shield Callout */}
+                <View style={[styles.infoCallout, { backgroundColor: '#10B98115', borderColor: '#10B98135', flexDirection: 'row', alignItems: 'flex-start', gap: 10 }]}>
+                  <ShieldCheck size={20} color="#10B981" style={{ marginTop: 2 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text variant="caption" weight="bold" color="#10B981">
+                      Smart Filter Active
+                    </Text>
+                    <Text variant="caption" color={colors.textPrimary} style={{ marginTop: 2 }}>
+                      Automatically stops replies to ads, newsletters, and spam.
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Category Toggles */}
+                <Text variant="body" weight="bold" color={colors.textPrimary} style={{ marginTop: 16, marginBottom: 8 }}>
+                  Choose Which Emails Get Replies
+                </Text>
+
+                {/* Inquiries */}
+                <View style={[styles.categoryRow, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+                  <View style={{ flex: 1 }}>
+                    <Text variant="caption" weight="bold" color={colors.textPrimary}>Customer Questions</Text>
+                    <Text variant="caption" color={colors.textMuted}>Questions about your products or pricing</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.toggleSwitch, { backgroundColor: allowInquiries ? colors.primary : colors.border }]}
+                    onPress={() => setAllowInquiries(!allowInquiries)}
+                  >
+                    <View style={[styles.toggleKnob, { transform: [{ translateX: allowInquiries ? 18 : 2 }] }]} />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Support */}
+                <View style={[styles.categoryRow, { borderColor: colors.border, backgroundColor: colors.surface, marginTop: 8 }]}>
+                  <View style={{ flex: 1 }}>
+                    <Text variant="caption" weight="bold" color={colors.textPrimary}>Customer Support</Text>
+                    <Text variant="caption" color={colors.textMuted}>Help requests and support tickets</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.toggleSwitch, { backgroundColor: allowSupport ? colors.primary : colors.border }]}
+                    onPress={() => setAllowSupport(!allowSupport)}
+                  >
+                    <View style={[styles.toggleKnob, { transform: [{ translateX: allowSupport ? 18 : 2 }] }]} />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Promos */}
+                <View style={[styles.categoryRow, { borderColor: colors.border, backgroundColor: colors.surface, marginTop: 8 }]}>
+                  <View style={{ flex: 1 }}>
+                    <Text variant="caption" weight="bold" color={colors.textPrimary}>Advertisements & Pitches</Text>
+                    <Text variant="caption" color={colors.textMuted}>Sales offers and promotional cold emails</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.toggleSwitch, { backgroundColor: allowPromotions ? colors.primary : colors.border }]}
+                    onPress={() => setAllowPromotions(!allowPromotions)}
+                  >
+                    <View style={[styles.toggleKnob, { transform: [{ translateX: allowPromotions ? 18 : 2 }] }]} />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Newsletters */}
+                <View style={[styles.categoryRow, { borderColor: colors.border, backgroundColor: colors.surface, marginTop: 8 }]}>
+                  <View style={{ flex: 1 }}>
+                    <Text variant="caption" weight="bold" color={colors.textPrimary}>Newsletters & Bulletins</Text>
+                    <Text variant="caption" color={colors.textMuted}>Subscribed digests and mass mailings</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.toggleSwitch, { backgroundColor: allowNewsletters ? colors.primary : colors.border }]}
+                    onPress={() => setAllowNewsletters(!allowNewsletters)}
+                  >
+                    <View style={[styles.toggleKnob, { transform: [{ translateX: allowNewsletters ? 18 : 2 }] }]} />
+                  </TouchableOpacity>
+                </View>
+
+                {/* System Notifications */}
+                <View style={[styles.categoryRow, { borderColor: colors.border, backgroundColor: colors.surface, marginTop: 8 }]}>
+                  <View style={{ flex: 1 }}>
+                    <Text variant="caption" weight="bold" color={colors.textPrimary}>Automatic Emails & OTPs</Text>
+                    <Text variant="caption" color={colors.textMuted}>Password resets, receipts, and alert messages</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.toggleSwitch, { backgroundColor: allowNotifications ? colors.primary : colors.border }]}
+                    onPress={() => setAllowNotifications(!allowNotifications)}
+                  >
+                    <View style={[styles.toggleKnob, { transform: [{ translateX: allowNotifications ? 18 : 2 }] }]} />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Excluded Domains */}
+                <View style={{ marginTop: 16 }}>
+                  <Text variant="caption" weight="bold" color={colors.textMuted} style={{ marginBottom: 6 }}>
+                    Blocked Websites/Email Domains:
+                  </Text>
+                  <TextInput
+                    style={[
+                      styles.autoReplyInput,
+                      { color: colors.textPrimary, borderColor: colors.border, backgroundColor: colors.surface },
+                    ]}
+                    value={excludedDomains}
+                    onChangeText={setExcludedDomains}
+                    placeholder="e.g. adcompany.com, coldreach.io"
+                    placeholderTextColor={colors.textMuted}
+                  />
+                  <Text variant="caption" color={colors.textMuted} style={{ fontSize: 10, marginTop: 3 }}>
+                    Never reply to anyone from these website domains
+                  </Text>
+                </View>
+
+                {/* Excluded Senders */}
+                <View style={{ marginTop: 14 }}>
+                  <Text variant="caption" weight="bold" color={colors.textMuted} style={{ marginBottom: 6 }}>
+                    Blocked Email Addresses:
+                  </Text>
+                  <TextInput
+                    style={[
+                      styles.autoReplyInput,
+                      { color: colors.textPrimary, borderColor: colors.border, backgroundColor: colors.surface },
+                    ]}
+                    value={excludedSenders}
+                    onChangeText={setExcludedSenders}
+                    placeholder="e.g. name@vendor.com, spam@domain.com"
+                    placeholderTextColor={colors.textMuted}
+                  />
+                  <Text variant="caption" color={colors.textMuted} style={{ fontSize: 10, marginTop: 3 }}>
+                    Never reply to these emails (separate with commas)
+                  </Text>
+                </View>
+
+                {/* Allowlist Mode */}
+                <View style={[styles.autoReplyToggleCard, { backgroundColor: colors.surface, borderColor: colors.border, marginTop: 14 }]}>
+                  <View style={{ flex: 1, paddingRight: 8 }}>
+                    <Text variant="body" weight="bold" color={colors.textPrimary}>
+                      Reply Only to Approved Senders
+                    </Text>
+                    <Text variant="caption" color={colors.textMuted} style={{ marginTop: 2 }}>
+                      Strict mode: only reply to contacts you have approved
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.toggleSwitch, { backgroundColor: allowlistMode ? colors.primary : colors.border }]}
+                    onPress={() => setAllowlistMode(!allowlistMode)}
+                  >
+                    <View style={[styles.toggleKnob, { transform: [{ translateX: allowlistMode ? 18 : 2 }] }]} />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Uncertain Fallback */}
+                <View style={{ marginTop: 14 }}>
+                  <Text variant="caption" weight="bold" color={colors.textMuted} style={{ marginBottom: 6 }}>
+                    What to Do When Unsure:
+                  </Text>
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <TouchableOpacity
+                      style={[
+                        styles.fallbackOptionCard,
+                        {
+                          borderColor: uncertainFallback === 'skip' ? colors.primary : colors.border,
+                          backgroundColor: uncertainFallback === 'skip' ? `${colors.primary}12` : colors.surface,
+                        },
+                      ]}
+                      onPress={() => setUncertainFallback('skip')}
+                    >
+                      <Text variant="caption" weight="bold" color={uncertainFallback === 'skip' ? colors.primary : colors.textPrimary}>
+                        Do Not Reply
+                      </Text>
+                      <Text variant="caption" color={colors.textMuted} style={{ fontSize: 10, marginTop: 2 }}>
+                        Safe choice: do not reply
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.fallbackOptionCard,
+                        {
+                          borderColor: uncertainFallback === 'require_review' ? colors.primary : colors.border,
+                          backgroundColor: uncertainFallback === 'require_review' ? `${colors.primary}12` : colors.surface,
+                        },
+                      ]}
+                      onPress={() => setUncertainFallback('require_review')}
+                    >
+                      <Text variant="caption" weight="bold" color={uncertainFallback === 'require_review' ? colors.primary : colors.textPrimary}>
+                        Hold for Review
+                      </Text>
+                      <Text variant="caption" color={colors.textMuted} style={{ fontSize: 10, marginTop: 2 }}>
+                        Review before sending
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Save Filters Button */}
+                <TouchableOpacity
+                  style={[styles.saveAutoReplyBtn, { backgroundColor: colors.primary }]}
+                  onPress={handleSaveAutoReply}
+                  disabled={savingAutoReply}
+                >
+                  {savingAutoReply ? (
+                    <ActivityIndicator size="small" color="#FFF" />
+                  ) : (
+                    <Text variant="body" weight="bold" color="#FFF">
+                      Save Changes
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
+
+            {/* TAB 3: REPLY HISTORY */}
+            {autoReplyTab === 'logs' && (
+              <>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <Text variant="body" weight="bold" color={colors.textPrimary}>
+                    Reply History
+                  </Text>
+                  <TouchableOpacity
+                    onPress={loadAutomationLogsData}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                  >
+                    <RefreshCw size={14} color={colors.primary} />
+                    <Text variant="caption" weight="bold" color={colors.primary}>Refresh</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {loadingLogs ? (
+                  <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                    <Text variant="caption" color={colors.textMuted} style={{ marginTop: 8 }}>
+                      Loading reply history...
+                    </Text>
+                  </View>
+                ) : automationLogs.length === 0 ? (
+                  <View style={[styles.emptyLogCard, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+                    <AlertCircle size={28} color={colors.textMuted} />
+                    <Text variant="body" weight="bold" color={colors.textPrimary} style={{ marginTop: 8 }}>
+                      No Reply History Yet
+                    </Text>
+                    <Text variant="caption" color={colors.textMuted} style={{ textAlign: 'center', marginTop: 4 }}>
+                      When new emails arrive, you will see what happened to them here.
+                    </Text>
+                  </View>
+                ) : (
+                  automationLogs.map((log) => {
+                    const isReplied = log.decision === 'replied';
+                    const isSkipped = log.decision === 'skipped';
+                    const isReview = log.decision === 'pending_review';
+                    const badgeColor = isReplied ? '#10B981' : isReview ? '#F59E0B' : isSkipped ? '#6B7280' : '#EF4444';
+                    const badgeText = isReplied ? 'Replied' : isReview ? 'Needs Review' : isSkipped ? 'Skipped' : 'Failed';
+
+                    return (
+                      <View
+                        key={log.id}
+                        style={[styles.logCard, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                      >
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <View
+                            style={[
+                              styles.logDecisionBadge,
+                              { backgroundColor: `${badgeColor}18`, borderColor: `${badgeColor}40` },
+                            ]}
+                          >
+                            <Text variant="caption" weight="bold" color={badgeColor} style={{ fontSize: 11 }}>
+                              {badgeText}
+                            </Text>
+                          </View>
+                          <Text variant="caption" color={colors.textMuted} style={{ fontSize: 10 }}>
+                            {log.created_at ? new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                          </Text>
+                        </View>
+
+                        <Text variant="caption" weight="bold" color={colors.textPrimary} style={{ marginTop: 6 }} numberOfLines={1}>
+                          {log.sender_email || 'Unknown sender'}
+                        </Text>
+                        <Text variant="caption" color={colors.textMuted} numberOfLines={1}>
+                          {log.subject || '(No subject)'}
+                        </Text>
+
+                        {/* Category & Reason */}
+                        <View style={{ marginTop: 6, paddingTop: 6, borderTopWidth: 1, borderTopColor: colors.border }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <View style={[styles.categoryTag, { backgroundColor: colors.background }]}>
+                              <Text variant="caption" color={colors.textPrimary} style={{ fontSize: 10 }}>
+                                {log.category === 'business_inquiry' ? 'Questions' :
+                                 log.category === 'customer_support' ? 'Support' :
+                                 log.category === 'sales_inquiry' ? 'Sales' :
+                                 log.category === 'advertisement' ? 'Ad' :
+                                 log.category === 'newsletter' ? 'Newsletter' :
+                                 log.category === 'promotion' ? 'Promo' :
+                                 log.category === 'notification' ? 'Alert/OTP' :
+                                 log.category === 'spam' ? 'Spam' :
+                                 log.category === 'uncertain' ? 'Unsure' :
+                                 log.category}
+                              </Text>
+                            </View>
+                            <Text variant="caption" color={colors.textMuted} style={{ flex: 1, fontSize: 11 }} numberOfLines={2}>
+                              {log.reason}
+                            </Text>
+                          </View>
+                        </View>
+
+                        {/* Approve action if in review */}
+                        {isReview && (
+                          <TouchableOpacity
+                            style={[styles.approveBtn, { backgroundColor: '#10B981', marginTop: 8 }]}
+                            onPress={() => handleApproveLog(log.id)}
+                            disabled={approvingLogId === log.id}
+                          >
+                            {approvingLogId === log.id ? (
+                              <ActivityIndicator size="small" color="#FFF" />
+                            ) : (
+                              <Text variant="caption" weight="bold" color="#FFF">
+                                Send Reply
+                              </Text>
+                            )}
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    );
+                  })
+                )}
+                <View style={{ height: 40 }} />
+              </>
+            )}
           </ScrollView>
         </Screen>
       </Modal>
@@ -1747,6 +1908,29 @@ const styles = StyleSheet.create({
     marginHorizontal: 14,
     marginTop: 6,
     borderRadius: 8,
+  },
+  providerToggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingTop: 8,
+    gap: 8,
+  },
+  providerToggleBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    backgroundColor: 'rgba(148, 163, 184, 0.08)',
+  },
+  providerToggleBtnActive: {
+    borderWidth: 1.5,
   },
   accountInfoBar: {
     flexDirection: 'row',
@@ -2190,5 +2374,66 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginTop: 20,
     marginBottom: 40,
+  },
+  modalTabBar: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  modalTabItem: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  categoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  fallbackOptionCard: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1.5,
+  },
+  emptyLogCard: {
+    padding: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+  },
+  logCard: {
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 10,
+  },
+  logDecisionBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  categoryTag: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  approveBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

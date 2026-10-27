@@ -172,6 +172,34 @@ export default function InboxScreen() {
           error={error}
           onRefresh={() => loadConversations(true)}
           onSelectConversation={handleSelectConversation}
+          emptyTitle={
+            selectedChannel !== 'ALL'
+              ? `No ${selectedChannel.charAt(0).toUpperCase() + selectedChannel.slice(1).toLowerCase()} conversations found`
+              : searchQuery.trim()
+              ? 'No matching conversations'
+              : 'No Conversations Found'
+          }
+          emptyDescription={
+            selectedChannel !== 'ALL'
+              ? `No messages found under ${selectedChannel.charAt(0).toUpperCase() + selectedChannel.slice(1).toLowerCase()}${searchQuery.trim() ? ` for "${searchQuery}"` : ''}. Tap below to view All Messages.`
+              : searchQuery.trim()
+              ? `No results found for "${searchQuery}". Try another keyword or clear search.`
+              : 'Incoming messages from WhatsApp, Instagram, Facebook, and YouTube will appear here.'
+          }
+          emptyActionTitle={
+            selectedChannel !== 'ALL'
+              ? 'View All Messages'
+              : searchQuery.trim()
+              ? 'Clear Search'
+              : 'Refresh'
+          }
+          onEmptyAction={
+            selectedChannel !== 'ALL'
+              ? () => setSelectedChannel('ALL')
+              : searchQuery.trim()
+              ? () => setSearchQuery('')
+              : () => loadConversations(true)
+          }
         />
       </View>
     </Screen>

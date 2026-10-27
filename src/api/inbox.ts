@@ -37,6 +37,11 @@ export interface Message {
   sender_department?: string;
   whatsapp_message_id?: string;
   status?: string;
+  media_url?: string | null;
+  media_type?: string | null; // 'image' | 'document' | 'video' | 'audio'
+  media_filename?: string | null;
+  media_mime_type?: string | null;
+  buttons?: string[] | any[];
   metadata?: any;
   created_at: string;
 }
@@ -46,6 +51,11 @@ export interface SendMessagePayload {
   body: string;
   channel: string;
   message_type?: 'OUTGOING' | 'INTERNAL';
+  file?: {
+    uri: string;
+    name: string;
+    type?: string;
+  } | null;
 }
 
 export interface FetchConversationsParams {
@@ -98,23 +108,69 @@ export const resolveChannel = (
 };
 
 export const formatDisplayName = (name?: string, phone?: string, platformId?: string): string => {
-  let val = (name || '').trim();
-  const genericList = ['UNKNOWN', 'UNKNOWN USER', 'USER', 'CUSTOMER', 'NONE', 'NULL'];
-  if (!val || genericList.includes(val.toUpperCase())) {
-    val = (phone || platformId || '').trim();
+  const isHexObjectId = (str?: string) => !!str && /^[0-9a-fA-F]{24}$/.test(str.trim());
+  const isGeneric = (str?: string) => {
+    if (!str) return true;
+    const s = str.trim().toUpperCase();
+    return ['UNKNOWN', 'UNKNOWN USER', 'USER', 'CUSTOMER', 'NONE', 'NULL', 'UNDEFINED'].includes(s);
+  };
+
+  // 1. Clean name
+  let cleanName = (name || '').trim();
+  if (isHexObjectId(cleanName) || isGeneric(cleanName)) {
+    cleanName = '';
   }
 
-  // Format 10 to 12 digit phone numbers cleanly
-  const digits = val.replace(/\D/g, '');
-  if (digits.length === 12 && digits.startsWith('91')) {
-    return `+91 ${digits.slice(2, 7)} ${digits.slice(7)}`;
-  } else if (digits.length === 10) {
-    return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
-  } else if (digits.length >= 8 && digits.length <= 15 && (val.startsWith('+') || /^\d+$/.test(val))) {
-    return val.startsWith('+') ? val : `+${val}`;
+  // 2. Clean phone & platformId
+  let cleanPhone = (phone || '').trim();
+  if (isHexObjectId(cleanPhone) || isGeneric(cleanPhone)) {
+    cleanPhone = '';
   }
 
-  return val || 'Customer';
+  let cleanPlatform = (platformId || '').trim();
+  if (isHexObjectId(cleanPlatform) || isGeneric(cleanPlatform)) {
+    cleanPlatform = '';
+  }
+
+  // Check if a string is purely numeric phone digits
+  const isNumericPhone = (s: string) => /^\+?\d{7,15}$/.test(s.replace(/[\s\-\(\)]/g, ''));
+
+  // If saved contact name exists and is not purely numbers, return it
+  if (cleanName && !isNumericPhone(cleanName)) {
+    return cleanName;
+  }
+
+  // Otherwise, display clean formatted phone number
+  const candidate = cleanPhone || (isNumericPhone(cleanName) ? cleanName : '') || cleanPlatform;
+  if (candidate) {
+    const raw = candidate.trim();
+    const digits = raw.replace(/\D/g, '');
+
+    // India (+91)
+    if (digits.length === 12 && digits.startsWith('91')) {
+      return `+91 ${digits.slice(2, 7)} ${digits.slice(7)}`;
+    } else if (digits.length === 10) {
+      return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
+    }
+    // US/Canada (+1)
+    else if (digits.length === 11 && digits.startsWith('1')) {
+      return `+1 ${digits.slice(1, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
+    }
+    // UK (+44)
+    else if (digits.length >= 11 && digits.length <= 13 && digits.startsWith('44')) {
+      return `+44 ${digits.slice(2, 6)} ${digits.slice(6)}`;
+    }
+    // Generic international format
+    else if (digits.length >= 7 && digits.length <= 15) {
+      return raw.startsWith('+') ? raw : `+${digits}`;
+    }
+
+    if (!isHexObjectId(raw)) {
+      return raw;
+    }
+  }
+
+  return cleanName || 'Customer';
 };
 
 export const inboxApi = {
@@ -131,24 +187,7 @@ export const inboxApi = {
 
     try {
       const res = await client.get<any>('/api/conversations/', { params: queryParams });
-      let rawConvos = Array.isArray(res) ? res : (res?.results || []);
-
-      // Fallback to contacts if conversations empty on initial load
-      if (rawConvos.length === 0 && offset === 0 && !search) {
-        const contactRes = await client.get<any>('/api/contacts/', { params: { limit, offset: 0 } }).catch(() => []);
-        const rawContacts = Array.isArray(contactRes) ? contactRes : (contactRes?.results || []);
-        rawConvos = rawContacts.map((ct: any) => ({
-          id: ct.id,
-          contact_name: formatDisplayName(ct.name, ct.phone_number, ct.platform_id),
-          contact_platform_id: ct.platform_id || ct.phone_number || ct.id,
-          contact_phone: ct.phone_number,
-          channel: resolveChannel(ct.preferred_channel, ct.name, ct.platform_id),
-          last_message_summary: 'Tap to view messages...',
-          last_message_at: ct.updated_at || ct.created_at,
-          unread_count_admin: 0,
-          status: ct.stage || 'OPEN',
-        }));
-      }
+      const rawConvos = Array.isArray(res) ? res : (res?.results || []);
 
       const formatted: Conversation[] = rawConvos.map((c: any) => {
         const rawAddr = c.contact_platform_id || c.contact_phone || c.id;
@@ -223,6 +262,28 @@ export const inboxApi = {
   },
 
   sendMessage: async (payload: SendMessagePayload): Promise<Message> => {
+    if (payload.file) {
+      const formData = new FormData();
+      formData.append('to_number', payload.to_number);
+      formData.append('body', payload.body || `📄 ${payload.file.name}`);
+      formData.append('channel', payload.channel);
+      if (payload.message_type) {
+        formData.append('message_type', payload.message_type);
+      }
+      formData.append('file', {
+        uri: payload.file.uri,
+        name: payload.file.name,
+        type: payload.file.type || 'application/pdf',
+      } as any);
+
+      const res = await client.post<Message>('/api/messages/', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return res;
+    }
+
     const res = await client.post<Message>('/api/messages/', payload);
     return res;
   },

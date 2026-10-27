@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,12 +8,16 @@ import {
   ScrollView,
   TouchableOpacity,
   Linking,
+  TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
 import { Input } from '../../src/components/Input';
 import { Button } from '../../src/components/Button';
+import { PasswordStrengthIndicator } from '../../src/components/PasswordStrengthIndicator';
+import { evaluatePassword } from '../../src/utils/passwordValidation';
 import { resolveValidImageUri } from '../../src/utils/imageUri';
 import { useSessionStore } from '../../src/stores/sessionStore';
 import { useBrandStore } from '../../src/stores/brandStore';
@@ -34,16 +38,27 @@ import {
   ShieldCheck,
   Check,
   MapPin,
+  RefreshCw,
 } from 'lucide-react-native';
 
 import * as WebBrowser from 'expo-web-browser';
 import { APPLE_LEGAL_LINKS } from '../../src/config/iapConfig';
 
+function maskEmail(val: string) {
+  if (!val || !val.includes('@')) return val;
+  const [local, domain] = val.split('@');
+  if (local.length <= 2) return `${local[0]}***@${domain}`;
+  return `${local.slice(0, 2)}***${local.slice(-1)}@${domain}`;
+}
+
 export default function RegisterScreen() {
   const router = useRouter();
   const { colors, spacing, radius } = useTheme();
-  const { register, isLoading, error, clearError } = useSessionStore();
+  const { register, verifyRegistrationOtp, resendRegistrationOtp, isLoading, error, clearError } = useSessionStore();
   const brand = useBrandStore((state) => state.brand);
+
+  // Screen Step: 'form' | 'otp_verification'
+  const [step, setStep] = useState<'form' | 'otp_verification'>('form');
 
   // Step 1: Meta Portfolio Eligibility Gate ('unanswered' | 'yes' | 'no')
   const [portfolioGate, setPortfolioGate] = useState<'unanswered' | 'yes' | 'no'>('unanswered');
@@ -59,6 +74,28 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [acceptedLegal, setAcceptedLegal] = useState(false);
   const [validationError, setValidationError] = useState('');
+
+  // OTP Verification state
+  const [otpEmail, setOtpEmail] = useState('');
+  const [otpDebug, setOtpDebug] = useState('');
+  const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
+  const [otpTimer, setOtpTimer] = useState(60);
+  const [otpError, setOtpError] = useState('');
+  const [otpSuccess, setOtpSuccess] = useState('');
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [resendingOtp, setResendingOtp] = useState(false);
+  const otpInputRefs = useRef<(TextInput | null)[]>([]);
+
+  // OTP Resend Countdown
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (step === 'otp_verification' && otpTimer > 0) {
+      timer = setInterval(() => {
+        setOtpTimer((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [step, otpTimer]);
 
   const handleCreateAccount = async () => {
     clearError();
@@ -89,8 +126,9 @@ export default function RegisterScreen() {
       return;
     }
 
-    if (!password || password.length < 8) {
-      setValidationError('Password must be at least 8 characters long.');
+    const passwordEval = evaluatePassword(password);
+    if (!passwordEval.isValid) {
+      setValidationError('Password does not meet all security requirements. Please check the requirements below.');
       return;
     }
 
@@ -109,7 +147,7 @@ export default function RegisterScreen() {
     const lastName = nameParts.slice(1).join(' ') || '';
     const locParts = location.split(',').map((p) => p.trim()).filter(Boolean);
 
-    const success = await register({
+    const result = await register({
       email: email.trim().toLowerCase(),
       password,
       first_name: firstName,
@@ -128,8 +166,102 @@ export default function RegisterScreen() {
       privacy_version: '1.0',
     });
 
+    if (result === true) {
+      router.replace('/(app)/home');
+    } else if (result && typeof result === 'object' && result.requiresOtp) {
+      setOtpEmail(result.email || email.trim().toLowerCase());
+      setOtpDebug(result.otp_debug || '');
+      setStep('otp_verification');
+      setOtpTimer(60);
+      setOtpError('');
+      setOtpSuccess('Verification code sent to your registered email address.');
+      setTimeout(() => {
+        otpInputRefs.current[0]?.focus();
+      }, 300);
+    }
+  };
+
+  const handleOtpDigitChange = (index: number, val: string) => {
+    const clean = val.replace(/\D/g, '');
+    const next = [...otpDigits];
+
+    if (!clean) {
+      next[index] = '';
+      setOtpDigits(next);
+      return;
+    }
+
+    if (clean.length > 1) {
+      const chars = clean.slice(0, 6).split('');
+      for (let i = 0; i < 6; i++) {
+        next[i] = chars[i] || '';
+      }
+      setOtpDigits(next);
+      const nextFocus = Math.min(chars.length, 5);
+      otpInputRefs.current[nextFocus]?.focus();
+      return;
+    }
+
+    next[index] = clean;
+    setOtpDigits(next);
+
+    if (clean && index < 5) {
+      otpInputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyPress = (index: number, e: any) => {
+    if (e.nativeEvent?.key === 'Backspace') {
+      if (!otpDigits[index] && index > 0) {
+        otpInputRefs.current[index - 1]?.focus();
+        const next = [...otpDigits];
+        next[index - 1] = '';
+        setOtpDigits(next);
+      }
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    const code = otpDigits.join('');
+    if (code.length < 6) {
+      setOtpError('Please enter all 6 digits.');
+      return;
+    }
+
+    setVerifyingOtp(true);
+    setOtpError('');
+    setOtpSuccess('');
+
+    const success = await verifyRegistrationOtp(otpEmail, code);
+    setVerifyingOtp(false);
+
     if (success) {
       router.replace('/(app)/home');
+    } else {
+      setOtpError('Invalid or expired verification code. Please check and try again.');
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (otpTimer > 0 || resendingOtp) return;
+
+    setResendingOtp(true);
+    setOtpError('');
+    setOtpSuccess('');
+
+    const res = await resendRegistrationOtp(otpEmail);
+    setResendingOtp(false);
+
+    if (res.success) {
+      setOtpSuccess(res.message || 'Verification code resent.');
+      if (res.otp_debug) {
+        setOtpDebug(res.otp_debug);
+      }
+      setOtpTimer(60);
+      setOtpDigits(['', '', '', '', '', '']);
+      otpInputRefs.current[0]?.focus();
+    } else {
+      setOtpError(res.message || 'Failed to resend verification code.');
     }
   };
 
@@ -170,9 +302,153 @@ export default function RegisterScreen() {
           </View>
 
           {/* ═════════════════════════════════════════════════════════ */}
+          {/* CASE OTP: Email Verification Step                         */}
+          {/* ═════════════════════════════════════════════════════════ */}
+          {step === 'otp_verification' && (
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.xl }]}>
+              <View style={styles.otpHeaderIcon}>
+                <View style={[styles.otpIconCircle, { backgroundColor: colors.primary + '15', borderColor: colors.primary + '30' }]}>
+                  <Mail size={30} color={colors.primary} />
+                </View>
+              </View>
+
+              <Text variant="h2" weight="bold" align="center" style={{ color: colors.textPrimary, marginBottom: 6 }}>
+                Verify Your Email Address
+              </Text>
+
+              <Text variant="caption" color={colors.textSecondary} align="center" style={{ marginBottom: 4 }}>
+                We sent a 6-digit verification code to
+              </Text>
+
+              <View style={[styles.maskedEmailBadge, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <Text variant="caption" weight="bold" color={colors.textPrimary}>
+                  {maskEmail(otpEmail)}
+                </Text>
+              </View>
+
+              {/* Dev mode code helper */}
+              {Boolean(otpDebug) && (
+                <View style={[styles.devOtpBox, { backgroundColor: '#fef3c7', borderColor: '#fde68a' }]}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#92400e' }}>
+                    DEV OTP: <Text style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', letterSpacing: 2 }}>{otpDebug}</Text>
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      const chars = otpDebug.slice(0, 6).split('');
+                      setOtpDigits(chars);
+                    }}
+                  >
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#b45309', textDecorationLine: 'underline' }}>
+                      Auto-fill
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Error Alert */}
+              {Boolean(otpError) && (
+                <View style={[styles.errorContainer, { backgroundColor: colors.error + '10', borderColor: colors.error + '30' }]}>
+                  <AlertCircle size={16} color={colors.error} style={styles.errorIcon} />
+                  <Text variant="caption" color={colors.error} style={styles.errorText}>
+                    {otpError}
+                  </Text>
+                </View>
+              )}
+
+              {/* Success Alert */}
+              {Boolean(otpSuccess) && (
+                <View style={[styles.errorContainer, { backgroundColor: '#ecfdf5', borderColor: '#a7f3d0' }]}>
+                  <CheckCircle2 size={16} color="#059669" style={styles.errorIcon} />
+                  <Text variant="caption" style={{ color: '#047857', flex: 1 }}>
+                    {otpSuccess}
+                  </Text>
+                </View>
+              )}
+
+              {/* 6 Digit Inputs */}
+              <View style={styles.otpInputsRow}>
+                {otpDigits.map((digit, idx) => (
+                  <TextInput
+                    key={idx}
+                    ref={(ref) => {
+                      otpInputRefs.current[idx] = ref;
+                    }}
+                    style={[
+                      styles.otpDigitBox,
+                      {
+                        backgroundColor: colors.surface,
+                        borderColor: digit ? colors.primary : colors.border,
+                        color: colors.textPrimary,
+                      },
+                    ]}
+                    maxLength={1}
+                    keyboardType="number-pad"
+                    value={digit}
+                    onChangeText={(val) => handleOtpDigitChange(idx, val)}
+                    onKeyPress={(e) => handleOtpKeyPress(idx, e)}
+                    selectTextOnFocus
+                  />
+                ))}
+              </View>
+
+              {/* Verify Button */}
+              <Button
+                title="Verify & Continue"
+                onPress={handleVerifyOtp}
+                loading={verifyingOtp}
+                disabled={otpDigits.join('').length < 6 || verifyingOtp}
+                style={styles.submitBtn}
+              />
+
+              {/* Resend Section */}
+              <View style={styles.resendSection}>
+                <Text variant="caption" color={colors.textSecondary} align="center">
+                  Didn't receive the email? Check spam or
+                </Text>
+                {otpTimer > 0 ? (
+                  <Text variant="caption" color={colors.textSecondary} align="center" style={{ marginTop: 4 }}>
+                    Resend code in <Text weight="bold" color={colors.textPrimary}>{otpTimer}s</Text>
+                  </Text>
+                ) : (
+                  <TouchableOpacity
+                    onPress={handleResendOtp}
+                    disabled={resendingOtp}
+                    style={styles.resendButton}
+                  >
+                    {resendingOtp ? (
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    ) : (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <RefreshCw size={13} color={colors.primary} />
+                        <Text variant="caption" weight="bold" color={colors.primary}>
+                          Resend Verification Code
+                        </Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Back to Edit Button */}
+              <TouchableOpacity
+                onPress={() => {
+                  setStep('form');
+                  setOtpError('');
+                }}
+                style={styles.backToEditBtn}
+              >
+                <ArrowLeft size={14} color={colors.textSecondary} />
+                <Text variant="caption" color={colors.textSecondary} weight="bold" style={{ marginLeft: 6 }}>
+                  Edit Details / Change Email
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* ═════════════════════════════════════════════════════════ */}
           {/* CASE A: BLOCKED STATE (User selected "No")                 */}
           {/* ═════════════════════════════════════════════════════════ */}
-          {portfolioGate === 'no' && (
+          {step === 'form' && portfolioGate === 'no' && (
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.xl }]}>
               <View style={styles.blockedIconContainer}>
                 <View style={[styles.blockedIconCircle, { backgroundColor: '#fef2f2', borderColor: '#fecaca' }]}>
@@ -237,7 +513,7 @@ export default function RegisterScreen() {
           {/* ═════════════════════════════════════════════════════════ */}
           {/* CASE B: GATE QUESTION ('unanswered')                       */}
           {/* ═════════════════════════════════════════════════════════ */}
-          {portfolioGate === 'unanswered' && (
+          {step === 'form' && portfolioGate === 'unanswered' && (
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.xl }]}>
               <View style={styles.gateBadge}>
                 <Briefcase size={14} color={colors.primary} />
@@ -313,7 +589,7 @@ export default function RegisterScreen() {
           {/* ═════════════════════════════════════════════════════════ */}
           {/* CASE C: REGISTRATION FORM (User answered "Yes")           */}
           {/* ═════════════════════════════════════════════════════════ */}
-          {portfolioGate === 'yes' && (
+          {step === 'form' && portfolioGate === 'yes' && (
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.xl }]}>
               {/* Confirmed Gate Pill */}
               <View style={[styles.confirmedPill, { backgroundColor: '#ecfdf5', borderColor: '#a7f3d0' }]}>
@@ -450,6 +726,13 @@ export default function RegisterScreen() {
                 }}
                 secureTextEntry
                 leftIcon={<Lock size={18} color={colors.textMuted} />}
+              />
+
+              {/* Real-time Password Strength Bar & Checklist */}
+              <PasswordStrengthIndicator
+                password={password}
+                confirmPassword={confirmPassword}
+                showChecklist={true}
               />
 
               {/* Mandatory Terms & Privacy Consent Checkbox */}
@@ -713,5 +996,64 @@ const styles = StyleSheet.create({
   },
   footer: {
     marginTop: 28,
+  },
+  otpHeaderIcon: {
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  otpIconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  maskedEmailBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignSelf: 'center',
+    marginVertical: 8,
+  },
+  devOtpBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginVertical: 10,
+  },
+  otpInputsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 16,
+  },
+  otpDigitBox: {
+    width: 44,
+    height: 52,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    fontSize: 22,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  resendSection: {
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  resendButton: {
+    marginTop: 6,
+    paddingVertical: 4,
+  },
+  backToEditBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    paddingVertical: 6,
   },
 });

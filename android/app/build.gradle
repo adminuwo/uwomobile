@@ -112,9 +112,29 @@ android {
         applicationId 'com.uwo.uwoconnect'
         minSdk = rootProject.ext.minSdkVersion
         targetSdk = (rootProject.ext.has('targetSdkVersion') ? rootProject.ext.targetSdkVersion : 36)
-        versionCode 46
+        versionCode 47
         versionName "1.0.2"
         missingDimensionStrategy 'store', 'play'
+
+        // ── Expo OTA (expo-updates) ─────────────────────────────────────────
+        // Runtime version: single source of truth is "expo.runtimeVersion" in app.json,
+        // so `eas update` and this native binary always agree.
+        // Channel: EXPO_UPDATES_CHANNEL (explicit) > APP_ENV mapping > "production".
+        def expoAppJson = new groovy.json.JsonSlurper().parse(new File(projectRoot, "app.json"))
+        def expoRuntimeVersion = expoAppJson?.expo?.runtimeVersion
+        if (!(expoRuntimeVersion instanceof String) || expoRuntimeVersion.trim().isEmpty()) {
+            throw new GradleException("expo-updates: app.json must define a string \"expo.runtimeVersion\".")
+        }
+        def appEnvForChannel = (System.getenv("APP_ENV") ?: "").trim().toLowerCase()
+        def expoUpdatesChannel = (System.getenv("EXPO_UPDATES_CHANNEL") ?: "").trim()
+        if (expoUpdatesChannel.isEmpty()) {
+            expoUpdatesChannel = [development: "development", staging: "preview", preview: "preview"].get(appEnvForChannel, "production")
+        }
+        println "expo-updates: runtimeVersion=${expoRuntimeVersion} channel=${expoUpdatesChannel}"
+        manifestPlaceholders.putAll([
+            expoRuntimeVersion: expoRuntimeVersion.trim(),
+            expoUpdatesChannel: expoUpdatesChannel
+        ])
     }
     signingConfigs {
         debug {
@@ -154,6 +174,8 @@ android {
             useLegacyPackaging (findProperty('expo.useLegacyPackaging')?.toBoolean() ?: false)
         }
     }
+
+
 }
 
 // Apply static values from `gradle.properties` to the `android.packagingOptions`

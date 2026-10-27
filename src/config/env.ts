@@ -14,11 +14,75 @@ export interface EnvConfig {
 }
 
 export const PRODUCTION_DOMAIN = 'https://uwoconnect.aisa24.com';
-export const LIVE_BACKEND_URL = 'https://aisaconnectback-anaqbuapb6c6apgy.centralindia-01.azurewebsites.net';
+export const LIVE_BACKEND_URL = 'https://uwoconnectforrb-743928421487.asia-south1.run.app';
 const DEFAULT_PRODUCTION_URL = LIVE_BACKEND_URL;
 
 const getDynamicApiUrl = (): string => {
-  return LIVE_BACKEND_URL;
+  // 1. Explicit env variable takes highest priority (.env, EXPO_PUBLIC_API_URL, API_BASE_URL)
+  const candidate =
+    process.env.EXPO_PUBLIC_API_URL ||
+    process.env.EXPO_PUBLIC_API_BASE_URL ||
+    process.env.API_BASE_URL ||
+    (Constants.expoConfig?.extra as any)?.API_BASE_URL;
+
+  // 2. Extract host IP from Metro bundler if available (useful for LAN/physical devices)
+  const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest?.debuggerHost || '';
+  const host = hostUri ? hostUri.split(':')[0] : null;
+
+  if (candidate && candidate.trim()) {
+    const trimmed = candidate.trim().replace(/\/$/, '');
+    // If explicit remote URL (https://...), use it directly
+    if (!isLocalAddress(trimmed)) {
+      return trimmed;
+    }
+    // If it's a local address and we are on Android
+    const portMatch = trimmed.match(/:(\d+)$/);
+    const targetPort = portMatch ? portMatch[1] : '8000';
+
+    if (Platform.OS === 'android') {
+      // In Android emulator with adb reverse, 127.0.0.1 connects instantly to host machine
+      if (!Constants.isDevice || trimmed.includes('127.0.0.1') || trimmed.includes('localhost')) {
+        return `http://127.0.0.1:${targetPort}`;
+      }
+      if (trimmed.includes('10.0.2.2')) {
+        return `http://10.0.2.2:${targetPort}`;
+      }
+      // Real physical device on LAN Wi-Fi
+      if (host && host !== 'localhost' && host !== '127.0.0.1') {
+        return `http://${host}:${targetPort}`;
+      }
+      return `http://127.0.0.1:${targetPort}`;
+    }
+    // iOS simulator connects directly via 127.0.0.1
+    if (Platform.OS === 'ios') {
+      if (!Constants.isDevice) {
+        return `http://127.0.0.1:${targetPort}`;
+      }
+      if (host && host !== 'localhost' && host !== '127.0.0.1') {
+        return `http://${host}:${targetPort}`;
+      }
+      return `http://127.0.0.1:${targetPort}`;
+    }
+    if (host && host !== 'localhost' && host !== '127.0.0.1') {
+      return `http://${host}:${targetPort}`;
+    }
+    return trimmed;
+  }
+
+  // 3. Fallbacks if no candidate configured
+  if (Platform.OS === 'android') {
+    return 'http://10.0.2.2:8000';
+  }
+
+  if (Platform.OS === 'ios' && !Constants.isDevice) {
+    return 'http://127.0.0.1:8000';
+  }
+
+  if (host && host !== 'localhost' && host !== '127.0.0.1') {
+    return `http://${host}:8000`;
+  }
+
+  return 'http://127.0.0.1:8000';
 };
 
 

@@ -26,7 +26,7 @@ export interface VerificationResult {
 
 class AppleIAPService {
   private isConnected: boolean = false;
-  private productCache: Map<string, RNIap.Subscription> = new Map();
+  private productCache: Map<string, any> = new Map();
 
   /**
    * Initializes StoreKit connection safely.
@@ -43,7 +43,10 @@ class AppleIAPService {
       }
       return true;
     } catch (err: any) {
-      console.warn('[AppleIAPService] initConnection failed:', err?.message || err);
+      // In simulator or dev mode without StoreKit certificate, log notice quietly without triggering dev LogBox banner
+      if (__DEV__) {
+        console.log('[AppleIAPService] initConnection notice (StoreKit simulator):', err?.message || err);
+      }
       this.isConnected = false;
       return false;
     }
@@ -68,7 +71,7 @@ class AppleIAPService {
   /**
    * Fetches Apple Subscriptions with localized prices from StoreKit.
    */
-  async getSubscriptions(): Promise<Map<string, RNIap.Subscription>> {
+  async getSubscriptions(): Promise<Map<string, any>> {
     if (Platform.OS !== 'ios') {
       return this.productCache;
     }
@@ -77,17 +80,28 @@ class AppleIAPService {
       const initialized = await this.init();
       if (!initialized) return this.productCache;
 
-      const subscriptions: any = (RNIap as any).fetchProducts
-        ? await (RNIap as any).fetchProducts({ skus: ALL_APPLE_SUBSCRIPTION_SKUS, type: 'subs' })
-        : (RNIap as any).getSubscriptions
-        ? await (RNIap as any).getSubscriptions({ skus: ALL_APPLE_SUBSCRIPTION_SKUS })
-        : [];
+      let subscriptions: any[] = [];
+      if (typeof (RNIap as any).fetchProducts === 'function') {
+        subscriptions = (await (RNIap as any).fetchProducts({
+          skus: ALL_APPLE_SUBSCRIPTION_SKUS,
+          type: 'subs',
+        })) || [];
+      } else if (typeof (RNIap as any).getSubscriptions === 'function') {
+        subscriptions = (await (RNIap as any).getSubscriptions({
+          skus: ALL_APPLE_SUBSCRIPTION_SKUS,
+        })) || [];
+      }
 
       this.productCache.clear();
       if (Array.isArray(subscriptions)) {
         for (const sub of subscriptions) {
-          if (sub?.productId) {
-            this.productCache.set(sub.productId, sub);
+          const key = sub?.id || sub?.productId;
+          if (key) {
+            // Normalize localized price across expo-iap versions
+            if (!sub.localizedPrice && sub.displayPrice) {
+              sub.localizedPrice = sub.displayPrice;
+            }
+            this.productCache.set(key, sub);
           }
         }
       }
@@ -101,7 +115,7 @@ class AppleIAPService {
   /**
    * Returns cached subscription info for a given plan and billing cycle.
    */
-  getCachedProduct(planSlug: string, billingPeriod: 'monthly' | 'yearly'): RNIap.Subscription | undefined {
+  getCachedProduct(planSlug: string, billingPeriod: 'monthly' | 'yearly'): any {
     const sku = getAppleProductIdForPlan(planSlug, billingPeriod);
     return this.productCache.get(sku);
   }
@@ -128,23 +142,54 @@ class AppleIAPService {
       }
 
       // 1. Trigger Apple Native StoreKit Purchase Sheet
-      const purchaseResult: any = (RNIap as any).requestPurchase
-        ? await (RNIap as any).requestPurchase({ sku, type: 'subs' })
-        : await (RNIap as any).requestSubscription({ sku });
+      // expo-iap requires: { request: { apple: { sku } }, type: 'subs' }
+      let purchaseResult: any;
+      if (typeof (RNIap as any).requestPurchase === 'function') {
+        purchaseResult = await (RNIap as any).requestPurchase({
+          request: {
+            apple: { sku },
+          },
+          type: 'subs',
+        });
+      } else if (typeof (RNIap as any).requestSubscription === 'function') {
+        purchaseResult = await (RNIap as any).requestSubscription({ sku });
+      }
 
-      if (!purchaseResult) {
+      let purchase: any = Array.isArray(purchaseResult) ? purchaseResult[0] : purchaseResult;
+
+      // Fallback: Check available purchases if StoreKit completed transaction without returning object directly
+      if (!purchase) {
+        try {
+          const available = await RNIap.getAvailablePurchases();
+          if (Array.isArray(available) && available.length > 0) {
+            purchase = available.find((p: any) => p?.productId === sku || p?.id === sku) || available[0];
+          }
+        } catch (availErr) {
+          console.warn('[AppleIAPService] getAvailablePurchases fallback warning:', availErr);
+        }
+      }
+
+      if (!purchase) {
         return { success: false, error: 'Purchase was not completed.' };
       }
 
-      const purchase = Array.isArray(purchaseResult) ? purchaseResult[0] : purchaseResult;
-      if (!purchase) {
-        return { success: false, error: 'Empty transaction returned by Apple StoreKit.' };
+      // 2. Extract transaction and receipt details
+      let receiptData = (purchase as any)?.transactionReceipt || (purchase as any)?.purchaseToken;
+      if (!receiptData && Platform.OS === 'ios') {
+        try {
+          if (typeof (RNIap as any).getReceiptDataIOS === 'function') {
+            receiptData = await (RNIap as any).getReceiptDataIOS();
+          }
+        } catch (receiptErr) {
+          console.warn('[AppleIAPService] getReceiptDataIOS warning:', receiptErr);
+        }
       }
 
-      // 2. Extract transaction details
-      const receiptData = (purchase as any).transactionReceipt || (purchase as any).purchaseToken;
-      const transactionId = (purchase as any).transactionId;
-      const originalTransactionId = (purchase as any).originalTransactionIdentifierIOS || transactionId;
+      const transactionId = (purchase as any)?.transactionId || (purchase as any)?.id;
+      const originalTransactionId =
+        (purchase as any)?.originalTransactionIdentifierIOS ||
+        (purchase as any)?.originalTransactionId ||
+        transactionId;
 
       // 3. Send to UwoConnect backend for secure verification & plan activation
       const verifyRes = await apiClient.post<any>('/api/payments/apple/verify/', {
@@ -175,8 +220,11 @@ class AppleIAPService {
       // Check for user cancellation
       if (
         err?.code === 'E_USER_CANCELLED' ||
+        err?.code === 'user-cancelled' ||
         err?.message?.includes?.('User canceled') ||
-        err?.message?.includes?.('cancelled')
+        err?.message?.includes?.('user-cancelled') ||
+        err?.message?.includes?.('cancelled') ||
+        err?.message?.includes?.('canceled')
       ) {
         return { success: false, error: 'USER_CANCELLED' };
       }
@@ -203,26 +251,49 @@ class AppleIAPService {
         return { success: false, error: 'Could not connect to Apple App Store.' };
       }
 
+      // Sync restore with Apple StoreKit if available
+      try {
+        if (typeof (RNIap as any).restorePurchases === 'function') {
+          await (RNIap as any).restorePurchases();
+        }
+      } catch (restoreErr) {
+        console.warn('[AppleIAPService] native restorePurchases warning:', restoreErr);
+      }
+
       // Fetch existing purchases from Apple
       const purchases = await RNIap.getAvailablePurchases();
 
-      const transactionsPayload = purchases.map((p) => ({
-        product_id: (p as any).productId,
-        transaction_id: (p as any).transactionId,
-        original_transaction_id: (p as any).originalTransactionIdentifierIOS || (p as any).transactionId,
-        receipt: (p as any).transactionReceipt || (p as any).purchaseToken,
+      let receiptData: string = '';
+      try {
+        if (typeof (RNIap as any).getReceiptDataIOS === 'function') {
+          receiptData = await (RNIap as any).getReceiptDataIOS();
+        }
+      } catch (rErr) {
+        console.warn('[AppleIAPService] restore getReceiptDataIOS warning:', rErr);
+      }
+
+      const transactionsPayload = (purchases || []).map((p: any) => ({
+        product_id: p.productId || p.id,
+        transaction_id: p.transactionId || p.id,
+        original_transaction_id:
+          p.originalTransactionIdentifierIOS || p.originalTransactionId || p.transactionId || p.id,
+        receipt: p.transactionReceipt || p.purchaseToken || receiptData,
       }));
+
+      if (!receiptData && purchases && purchases.length > 0) {
+        receiptData = (purchases[0] as any)?.transactionReceipt || (purchases[0] as any)?.purchaseToken || '';
+      }
 
       // Let backend verify and restore entitlement
       const restoreRes = await apiClient.post<any>('/api/payments/apple/restore/', {
         transactions: transactionsPayload,
-        receipt_data: (purchases[0] as any)?.transactionReceipt || (purchases[0] as any)?.purchaseToken,
+        receipt_data: receiptData,
       });
 
       // Finish any pending purchases
-      for (const p of purchases) {
+      for (const p of purchases || []) {
         try {
-          await RNIap.finishTransaction({ purchase: p, isConsumable: false });
+          await RNIap.finishTransaction({ purchase: p as any, isConsumable: false });
         } catch {}
       }
 

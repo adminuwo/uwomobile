@@ -125,7 +125,7 @@ const MASTER_PLANS: PlanTier[] = [
     slug: 'starter',
     description: 'Perfect for small teams starting automation on 1 chosen channel',
     monthly_price: 499,
-    yearly_price: 5999,
+    yearly_price: 4999,
     max_channels: 1,
     allowed_channels: ['whatsapp', 'facebook', 'instagram'],
     channel_details: {
@@ -405,6 +405,71 @@ const MASTER_PLANS: PlanTier[] = [
   },
 ];
 
+// Helper to extract clean display value from limit objects or primitives
+const parseLimitVal = (val: any, suffix: string = '', fallbackStr: string = 'Unlimited'): string => {
+  if (val === null || val === undefined) return fallbackStr;
+  let rawVal = val;
+  if (typeof val === 'object' && val !== null) {
+    rawVal = val.value !== undefined ? val.value : val.text || val.count || val.limit;
+  }
+  if (rawVal === null || rawVal === undefined || rawVal === '') return fallbackStr;
+  const str = String(rawVal).trim();
+  if (str.toLowerCase() === 'unlimited') return 'Unlimited';
+  if (suffix && !str.toLowerCase().includes(suffix.toLowerCase())) {
+    return `${str} ${suffix}`;
+  }
+  return str;
+};
+
+// Helper to reliably sanitize and normalize channel details regardless of DB schema differences
+const normalizeChannelDetails = (
+  ch: any,
+  fallback?: PlanChannelDetails,
+  defaultName: string = 'Channel'
+): PlanChannelDetails => {
+  const whatYouGet = Array.isArray(ch?.what_you_get) && ch.what_you_get.length > 0
+    ? ch.what_you_get
+    : Array.isArray(fallback?.what_you_get)
+    ? fallback.what_you_get
+    : [];
+
+  const features = Array.isArray(ch?.features) && ch.features.length > 0
+    ? ch.features
+    : Array.isArray(fallback?.features)
+    ? fallback.features
+    : whatYouGet;
+
+  const limits = {
+    messages: parseLimitVal(ch?.limits?.messages, '', fallback?.limits?.messages || 'Unlimited'),
+    contacts: parseLimitVal(ch?.limits?.contacts, '', fallback?.limits?.contacts || 'Unlimited'),
+    custom_fields: parseLimitVal(ch?.limits?.custom_fields, 'Fields', fallback?.limits?.custom_fields || '30 Fields'),
+    custom_tags: parseLimitVal(ch?.limits?.custom_tags, 'Tags', fallback?.limits?.custom_tags || '45 Tags'),
+  };
+
+  const messageCosts = Array.isArray(ch?.message_costs) && ch.message_costs.length > 0
+    ? ch.message_costs
+    : Array.isArray(fallback?.message_costs)
+    ? fallback.message_costs
+    : [{ type: 'Standard', price: 'FREE' }];
+
+  const benefits = Array.isArray(ch?.benefits) && ch.benefits.length > 0
+    ? ch.benefits
+    : Array.isArray(ch?.additional_benefits) && ch.additional_benefits.length > 0
+    ? ch.additional_benefits
+    : Array.isArray(fallback?.benefits)
+    ? fallback.benefits
+    : ['Dedicated Support'];
+
+  return {
+    name: ch?.name || fallback?.name || defaultName,
+    what_you_get: whatYouGet,
+    features,
+    limits,
+    message_costs: messageCosts,
+    benefits,
+  };
+};
+
 export default function PlansScreen() {
   const { colors } = useTheme();
   const [plans, setPlans] = useState<PlanTier[]>(MASTER_PLANS);
@@ -432,33 +497,54 @@ export default function PlansScreen() {
 
   const fetchPlans = useCallback(async () => {
     try {
-      // 1. Fetch public plans from backend
+      // 1. Fetch public plans dynamically from MongoDB backend
       try {
         const plansData = await apiClient.get<any>('/api/plans/public/');
         const rawPlans = Array.isArray(plansData) ? plansData : (plansData?.results || []);
         if (rawPlans && rawPlans.length > 0) {
-          // Merge dynamic prices if available
-          const updated = MASTER_PLANS.map((mPlan) => {
-            const found = rawPlans.find((p: any) => {
-              const pName = (p.name || '').toLowerCase();
-              return pName.includes(mPlan.slug) || mPlan.slug.includes(pName);
-            });
-            if (found) {
-              const meta = found.metadata || {};
-              const mPrice = Number(found.monthly_price || meta.monthly_price || found.price || mPlan.monthly_price);
-              const yPrice = Number(found.yearly_price || meta.yearly_price || mPlan.yearly_price);
-              return {
-                ...mPlan,
-                monthly_price: mPrice,
-                yearly_price: yPrice,
-              };
-            }
-            return mPlan;
+          const activeOnly = rawPlans.filter((p: any) => p.is_active !== false);
+          const pricedPlans = activeOnly.filter((p: any) => Number(p.monthly_price || p.metadata?.monthly_price || p.price || 0) > 0);
+          const plansToUse = pricedPlans.length > 0 ? pricedPlans : activeOnly;
+
+          plansToUse.sort((a: any, b: any) => {
+            const priceA = Number(a.monthly_price || a.metadata?.monthly_price || a.price || 0);
+            const priceB = Number(b.monthly_price || b.metadata?.monthly_price || b.price || 0);
+            return priceA - priceB;
           });
-          setPlans(updated);
+
+          const dynamicPlans: PlanTier[] = plansToUse.map((p: any) => {
+            const pSlug = (p.slug || p.name || 'starter').toLowerCase();
+            const matchingFallback = MASTER_PLANS.find(
+              (m) => m.slug === pSlug || pSlug.includes(m.slug) || m.slug.includes(pSlug)
+            ) || MASTER_PLANS[0];
+
+            const meta = p.metadata || {};
+            const monthlyPrice = Number(p.monthly_price ?? meta.monthly_price ?? p.price ?? matchingFallback.monthly_price);
+            const yearlyPrice = Number(p.yearly_price ?? meta.yearly_price ?? matchingFallback.yearly_price ?? (monthlyPrice * 10));
+            const chDetails = p.channel_details || meta.channel_details || {};
+
+            return {
+              id: String(p.id || pSlug),
+              slug: pSlug,
+              name: p.name || (matchingFallback?.name ?? pSlug.toUpperCase()),
+              description: p.description || matchingFallback?.description || 'Multi-channel automation plan',
+              monthly_price: monthlyPrice,
+              yearly_price: yearlyPrice,
+              max_channels: p.max_channels || matchingFallback?.max_channels || 3,
+              allowed_channels: p.allowed_channels || matchingFallback?.allowed_channels || ['whatsapp', 'instagram', 'facebook'],
+              badge: p.badge_text || matchingFallback?.badge,
+              is_popular: pSlug === 'growth' || matchingFallback?.is_popular,
+              channel_details: {
+                whatsapp: normalizeChannelDetails(chDetails.whatsapp, matchingFallback?.channel_details?.whatsapp, 'WhatsApp'),
+                facebook: normalizeChannelDetails(chDetails.facebook, matchingFallback?.channel_details?.facebook, 'Facebook'),
+                instagram: normalizeChannelDetails(chDetails.instagram, matchingFallback?.channel_details?.instagram, 'Instagram'),
+              },
+            };
+          });
+          setPlans(dynamicPlans);
         }
       } catch (err) {
-        console.log('Using master fallback plans');
+        console.log('Using master fallback plans', err);
       }
 
       // 2. Fetch current user profile to determine active plan
@@ -791,16 +877,15 @@ export default function PlansScreen() {
           const periodLabel = billingPeriod === 'YEARLY' ? '/yr' : '/mo';
           const isExpanded = expandedDetails[plan.slug] ?? true;
           const curTab = activeChannelTabs[plan.slug] || 'whatsapp';
-          const channelData = plan.channel_details[curTab] || plan.channel_details['whatsapp'];
+          const rawChannelData = plan.channel_details?.[curTab] || plan.channel_details?.['whatsapp'];
+          const channelData = normalizeChannelDetails(rawChannelData, MASTER_PLANS[0]?.channel_details?.whatsapp, curTab);
 
           // Apple StoreKit Dynamic Localized Price
           const appleSku = getAppleProductIdForPlan(plan.slug, billingPeriod.toLowerCase() as 'monthly' | 'yearly');
           const appleProduct = appleProducts.get(appleSku);
-          const appleLocalizedPrice = (appleProduct as any)?.localizedPrice;
-          const hasApplePrice = Platform.OS === 'ios' && !!appleLocalizedPrice;
-          const displayPriceText = hasApplePrice
-            ? appleLocalizedPrice
-            : `₹${displayPrice.toLocaleString('en-IN')}`;
+          const appleLocalizedPrice = (appleProduct as any)?.localizedPrice || (appleProduct as any)?.displayPrice;
+          // Admin Configured Pricing strictly displayed in Indian Rupees (INR / ₹)
+          const displayPriceText = `₹${displayPrice.toLocaleString('en-IN')}`;
 
           return (
             <Card
@@ -851,11 +936,9 @@ export default function PlansScreen() {
                   <Text variant="body" weight="bold" color={colors.textMuted}>
                     {periodLabel}
                   </Text>
-                  {!hasApplePrice && (
-                    <Text variant="caption" color={colors.textMuted} style={styles.taxInfo}>
-                      (+taxes)
-                    </Text>
-                  )}
+                  <Text variant="caption" color={colors.textMuted} style={styles.taxInfo}>
+                    (+taxes)
+                  </Text>
                 </View>
 
                 {billingPeriod === 'YEARLY' && (
@@ -977,7 +1060,7 @@ export default function PlansScreen() {
                       1. WHAT YOU GET
                     </Text>
                     <View style={[styles.itemsBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                      {channelData.what_you_get.map((item, idx) => (
+                      {(channelData?.what_you_get || []).map((item, idx) => (
                         <View key={idx} style={styles.featureItemRow}>
                           <Check size={14} color="#059669" style={styles.checkIcon} />
                           <Text variant="caption" color={colors.textPrimary} style={styles.itemText}>
@@ -996,7 +1079,7 @@ export default function PlansScreen() {
                     <View style={styles.limitsGrid}>
                       <View style={[styles.limitCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                         <Text variant="body" weight="bold" color="#059669">
-                          {channelData.limits.messages}
+                          {channelData?.limits?.messages || 'Unlimited'}
                         </Text>
                         <Text variant="caption" color={colors.textMuted}>
                           Messages
@@ -1004,7 +1087,7 @@ export default function PlansScreen() {
                       </View>
                       <View style={[styles.limitCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                         <Text variant="body" weight="bold" color="#059669">
-                          {channelData.limits.contacts}
+                          {channelData?.limits?.contacts || 'Unlimited'}
                         </Text>
                         <Text variant="caption" color={colors.textMuted}>
                           Contacts
@@ -1012,7 +1095,7 @@ export default function PlansScreen() {
                       </View>
                       <View style={[styles.limitCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                         <Text variant="body" weight="bold" color="#059669">
-                          {channelData.limits.custom_fields}
+                          {channelData?.limits?.custom_fields || '30 Fields'}
                         </Text>
                         <Text variant="caption" color={colors.textMuted}>
                           Custom Fields
@@ -1020,7 +1103,7 @@ export default function PlansScreen() {
                       </View>
                       <View style={[styles.limitCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                         <Text variant="body" weight="bold" color="#059669">
-                          {channelData.limits.custom_tags}
+                          {channelData?.limits?.custom_tags || '45 Tags'}
                         </Text>
                         <Text variant="caption" color={colors.textMuted}>
                           Custom Tags
@@ -1035,7 +1118,7 @@ export default function PlansScreen() {
                       3. MESSAGE COSTS
                     </Text>
                     <View style={[styles.itemsBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                      {channelData.message_costs.map((c, idx) => (
+                      {(channelData?.message_costs || []).map((c, idx) => (
                         <View key={idx} style={styles.costItemRow}>
                           <Text variant="caption" color={colors.textMuted}>
                             {c.type}
@@ -1058,7 +1141,7 @@ export default function PlansScreen() {
                       4. ADDITIONAL BENEFITS
                     </Text>
                     <View style={[styles.itemsBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                      {channelData.benefits.map((b, idx) => (
+                      {(channelData?.benefits || (channelData as any)?.additional_benefits || []).map((b: string, idx: number) => (
                         <View key={idx} style={styles.featureItemRow}>
                           <Check size={14} color="#059669" style={styles.checkIcon} />
                           <Text variant="caption" color={colors.textPrimary} style={styles.itemText}>

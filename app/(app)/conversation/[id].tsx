@@ -11,7 +11,7 @@ import { WhatsAppTemplateModal } from '../../../src/components/inbox/WhatsAppTem
 import { CustomerProfileModal } from '../../../src/components/inbox/CustomerProfileModal';
 import { TransferModal } from '../../../src/components/inbox/TransferModal';
 import { AuditLogModal, AuditLogItem } from '../../../src/components/inbox/AuditLogModal';
-import { inboxApi, Message, resolveChannel } from '../../../src/api/inbox';
+import { inboxApi, Message, resolveChannel, formatDisplayName } from '../../../src/api/inbox';
 import { templatesApi } from '../../../src/api/templates';
 import { inboxWebSocket } from '../../../src/services/inboxWebSocket';
 import { useTheme } from '../../../src/theme';
@@ -24,12 +24,19 @@ export default function ConversationDetailScreen() {
 
   const convoId = params.id;
   const targetAddress = params.rawAddress || params.id;
-  const contactName = params.name || 'Customer';
+  const contactName = formatDisplayName(params.name, undefined, targetAddress);
 
   const [messages, setMessages] = useState<Message[]>([]);
 
   // Dynamically resolve real channel from DB messages, reel markers, usernames, or route params
   const effectiveChannel = useMemo(() => {
+    // 0. If route params explicitly specify a non-ALL channel, respect it
+    const paramCh = (params.channel || '').toUpperCase();
+    if (paramCh && paramCh !== 'ALL') {
+      const resolvedParam = resolveChannel(paramCh, contactName, targetAddress);
+      if (resolvedParam !== 'WHATSAPP') return resolvedParam;
+    }
+
     // 1. Check if messages loaded from DB have an explicit channel other than ALL/WHATSAPP
     const explicitMsg = messages.find(
       (m) => m.channel && m.channel.toUpperCase() !== 'WHATSAPP' && m.channel.toUpperCase() !== 'ALL'
@@ -38,23 +45,37 @@ export default function ConversationDetailScreen() {
       return explicitMsg.channel.toUpperCase();
     }
 
-    // 2. Check if messages contain Instagram reel/story markers
+    // 2. Check if messages contain Instagram reel/story/post markers
     const hasIgMarker = messages.some((m) => {
       const b = (m.body || '').toLowerCase();
-      return b.includes('[ig_') || b.includes('ig_reel') || b.includes('instagram');
+      return b.includes('[ig_') || b.includes('ig_reel') || b.includes('ig_post') || b.includes('instagram');
     });
     if (hasIgMarker) {
       return 'INSTAGRAM';
     }
 
-    // 3. Fallback to first message channel if non-empty
+    // 3. Check if contact name or address has Instagram handle (@...)
+    if ((contactName && contactName.startsWith('@')) || (targetAddress && targetAddress.startsWith('@'))) {
+      return 'INSTAGRAM';
+    }
+
+    // 4. Check if messages contain Facebook markers
+    const hasFbMarker = messages.some((m) => {
+      const b = (m.body || '').toLowerCase();
+      return b.includes('[fb_') || b.includes('facebook') || b.includes('messenger');
+    });
+    if (hasFbMarker) {
+      return 'FACEBOOK';
+    }
+
+    // 5. Fallback to first message channel if non-empty
     const firstMsgChannel = messages[0]?.channel;
     if (firstMsgChannel && firstMsgChannel.toUpperCase() !== 'ALL') {
       const resolvedFromFirst = resolveChannel(firstMsgChannel, contactName, targetAddress);
       if (resolvedFromFirst !== 'WHATSAPP') return resolvedFromFirst;
     }
 
-    // 4. Resolve via contactName, targetAddress, or passed params
+    // 6. Resolve via contactName, targetAddress, or passed params
     return resolveChannel(params.channel, contactName, targetAddress);
   }, [messages, params.channel, contactName, targetAddress]);
 
@@ -230,8 +251,8 @@ export default function ConversationDetailScreen() {
     };
   }, [convoId, targetAddress]);
 
-  const handleSendMessage = async (text: string, isInternalNote: boolean) => {
-    if (!text.trim() || sending) return;
+  const handleSendMessage = async (text: string, isInternalNote: boolean, file?: any) => {
+    if ((!text.trim() && !file) || sending) return;
 
     setIsTyping(false);
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -239,13 +260,18 @@ export default function ConversationDetailScreen() {
     setSending(true);
     const nowTs = Date.now();
     const isNote = isInternalNote || activeTab === 'NOTES';
+    const displayBody = text.trim() || (file ? `📄 ${file.name}` : '');
     const optimisticMsg: Message = {
       id: `temp_${nowTs}`,
       from_address: 'Me',
       to_address: targetAddress,
-      body: text,
+      body: displayBody,
       channel: effectiveChannel,
       message_type: isNote ? 'INTERNAL' : 'OUTGOING',
+      media_url: file?.uri || null,
+      media_filename: file?.name || null,
+      media_type: file ? 'document' : null,
+      media_mime_type: file?.type || (file ? 'application/pdf' : null),
       created_at: new Date().toISOString(),
     };
 
@@ -254,9 +280,10 @@ export default function ConversationDetailScreen() {
     try {
       const serverMsg = await inboxApi.sendMessage({
         to_number: targetAddress,
-        body: text,
+        body: displayBody,
         channel: effectiveChannel,
         message_type: isNote ? 'INTERNAL' : 'OUTGOING',
+        file: file || null,
       });
 
       if (serverMsg && serverMsg.id) {
@@ -504,7 +531,7 @@ export default function ConversationDetailScreen() {
                 <MessageBubble
                   message={displayMsg}
                   contactName={contactName}
-                  channelColor={getChannelColor(displayMsg.channel || effectiveChannel)}
+                  channelColor={channelColor}
                 />
               );
             }}

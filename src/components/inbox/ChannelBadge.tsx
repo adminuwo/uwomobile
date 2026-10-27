@@ -13,12 +13,22 @@ export const getChannelColor = (channel: string = 'WHATSAPP'): string => {
   const normalized = (channel || 'WHATSAPP').toUpperCase();
   switch (normalized) {
     case 'INSTAGRAM':
+    case 'IG':
+    case 'INSTA':
       return '#E1306C'; // Pink
     case 'FACEBOOK':
+    case 'FB':
+    case 'MESSENGER':
       return '#1877F2'; // Blue
     case 'YOUTUBE':
+    case 'YT':
       return '#FF0000'; // Red
+    case 'GMAIL':
+    case 'EMAIL':
+    case 'MAIL':
+      return '#EA4335'; // Gmail Red
     case 'WHATSAPP':
+    case 'WA':
     default:
       return '#10B981'; // Green
   }

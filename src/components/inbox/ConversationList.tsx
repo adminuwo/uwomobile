@@ -16,6 +16,10 @@ interface ConversationListProps {
   onRefresh: () => void;
   onSelectConversation: (conversation: Conversation) => void;
   onLoadMore?: () => void;
+  emptyTitle?: string;
+  emptyDescription?: string;
+  emptyActionTitle?: string;
+  onEmptyAction?: () => void;
 }
 
 export const ConversationList: React.FC<ConversationListProps> = ({
@@ -26,6 +30,10 @@ export const ConversationList: React.FC<ConversationListProps> = ({
   onRefresh,
   onSelectConversation,
   onLoadMore,
+  emptyTitle,
+  emptyDescription,
+  emptyActionTitle,
+  onEmptyAction,
 }) => {
   const insets = useSafeAreaInsets();
   if (loading && !refreshing && conversations.length === 0) {
@@ -56,10 +64,13 @@ export const ConversationList: React.FC<ConversationListProps> = ({
         ListEmptyComponent={
           <EmptyState
             icon={MessageSquare}
-            title="No Conversations Found"
-            description="Incoming messages from WhatsApp, Instagram, Facebook, and YouTube will appear here."
-            actionTitle="Refresh"
-            onAction={onRefresh}
+            title={emptyTitle || "No Conversations Found"}
+            description={
+              emptyDescription ||
+              "Incoming messages from WhatsApp, Instagram, Facebook, and YouTube will appear here."
+            }
+            actionTitle={emptyActionTitle || "Refresh"}
+            onAction={onEmptyAction || onRefresh}
           />
         }
         refreshControl={

@@ -15,6 +15,13 @@
     "assetBundlePatterns": [
       "**/*"
     ],
+    "runtimeVersion": "1.0.2",
+    "updates": {
+      "enabled": true,
+      "url": "https://u.expo.dev/c984dbb0-9684-4a8b-b459-4f54e0d79b6e",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.uwo.uwoconnect",
@@ -33,7 +40,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.uwo.uwoconnect",
-      "versionCode": 46,
+      "versionCode": 47,
       "usesCleartextTraffic": true,
       "largeHeap": true,
       "intentFilters": [
@@ -80,7 +87,8 @@
             "deploymentTarget": "15.0"
           },
           "android": {
-            "minSdkVersion": 24
+            "minSdkVersion": 24,
+            "ndkVersion": "26.1.10909125"
           }
         }
       ]

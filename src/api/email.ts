@@ -53,11 +53,47 @@ export interface ComposeEmailPayload {
 }
 
 export interface AutoReplyPayload {
+  id?: string;
   name: string;
   reply_type?: string;
   reply_subject: string;
   reply_body: string;
   is_active?: boolean;
+}
+
+export interface EmailAutomationSettings {
+  id?: string;
+  is_enabled: boolean;
+  auto_reply_business_inquiry: boolean;
+  auto_reply_customer_support: boolean;
+  auto_reply_sales_inquiry: boolean;
+  auto_reply_advertisement: boolean;
+  auto_reply_newsletter: boolean;
+  auto_reply_promotion: boolean;
+  auto_reply_notification: boolean;
+  auto_reply_spam: boolean;
+  allowed_senders: string[];
+  excluded_senders: string[];
+  allowed_domains: string[];
+  excluded_domains: string[];
+  include_keywords: string[];
+  exclude_keywords: string[];
+  allowlist_mode: boolean;
+  uncertain_fallback: 'skip' | 'require_review';
+  reply_to_threads: boolean;
+}
+
+export interface EmailAutomationLog {
+  id: string;
+  created_at: string;
+  sender_email: string;
+  sender_name: string;
+  subject: string;
+  category: string;
+  decision: 'replied' | 'skipped' | 'pending_review' | 'failed' | 'processing';
+  reason: string;
+  rule_name?: string;
+  reply_status?: string;
 }
 
 /**
@@ -148,8 +184,7 @@ export const emailApi = {
         provider: (msg.account_provider || params.provider || 'gmail') as EmailProvider,
         sender_name: msg.sender_name || msg.sender_email?.split('@')[0] || 'Unknown',
         sender_email: msg.sender_email || '',
-        to: msg.to_recipients && msg.to_recipients.length > 0 ? msg.to_recipients[0] : (msg.to || ''),
-        subject: msg.subject || '(No Subject)',
+        subject: (msg.subject && msg.subject.trim()) ? msg.subject.trim() : '(No Subject)',
         preview: (msg.body_text || msg.body || '').substring(0, 120),
         body: msg.body_text || msg.body_html || msg.body || '',
         time: msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
@@ -203,8 +238,47 @@ export const emailApi = {
     return client.post(`/api/email/messages/${id}/delete_message/`);
   },
 
+  getAutoReplies: async (): Promise<AutoReplyPayload[]> => {
+    try {
+      const res = await client.get<any>('/api/email/auto-replies/');
+      const items = res?.results || (Array.isArray(res) ? res : []);
+      return items;
+    } catch (e) {
+      console.log('[emailApi.getAutoReplies] Notice:', e);
+      return [];
+    }
+  },
+
   saveAutoReply: async (payload: AutoReplyPayload): Promise<any> => {
     return client.post('/api/email/auto-replies/', payload);
+  },
+
+  getAutomationSettings: async (accountId?: string): Promise<EmailAutomationSettings> => {
+    const query = accountId ? `?account_id=${accountId}` : '';
+    return client.get(`/api/email/automation-settings/current/${query}`);
+  },
+
+  updateAutomationSettings: async (settings: Partial<EmailAutomationSettings>, accountId?: string): Promise<EmailAutomationSettings> => {
+    const query = accountId ? `?account_id=${accountId}` : '';
+    return client.post(`/api/email/automation-settings/current/${query}`, settings);
+  },
+
+  getAutomationLogs: async (params?: { decision?: string; category?: string; search?: string; account_id?: string }): Promise<EmailAutomationLog[]> => {
+    const searchParams = new URLSearchParams();
+    if (params?.decision && params.decision !== 'all') searchParams.append('decision', params.decision);
+    if (params?.category && params.category !== 'all') searchParams.append('category', params.category);
+    if (params?.search) searchParams.append('search', params.search);
+    if (params?.account_id) searchParams.append('account_id', params.account_id);
+    const res = await client.get<any>(`/api/email/automation-logs/?${searchParams.toString()}`);
+    return res?.results || (Array.isArray(res) ? res : []);
+  },
+
+  getAutomationSummary: async (): Promise<any> => {
+    return client.get('/api/email/automation-logs/summary/');
+  },
+
+  approveReview: async (logId: string): Promise<any> => {
+    return client.post(`/api/email/automation-logs/${logId}/approve_review/`);
   },
 
   aiPolish: async (prompt: string, tone?: string): Promise<string> => {

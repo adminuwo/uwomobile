@@ -1,10 +1,12 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Image, Linking, Alert } from 'react-native';
 import { Text } from '../Text';
 import { Avatar } from '../Avatar';
 import { Message } from '../../api/inbox';
 import { useTheme } from '../../theme';
-import { MessageSquare, AlertCircle, Check, CheckCheck, Clock } from 'lucide-react-native';
+import { MessageSquare, AlertCircle, Check, CheckCheck, Clock, FileText, ExternalLink, Image as ImageIcon, Music, ClipboardList, Paperclip } from 'lucide-react-native';
+import { resolveValidImageUri } from '../../utils/imageUri';
+import * as WebBrowser from 'expo-web-browser';
 
 interface MessageBubbleProps {
   message: Message;
@@ -26,6 +28,32 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   const isOutgoing = message.message_type === 'OUTGOING';
   const themeColor = channelColor || colors.primary;
 
+  const openMediaUrl = async (url?: string | null) => {
+    if (!url) return;
+    try {
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        await WebBrowser.openBrowserAsync(url, {
+          presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+          toolbarColor: '#0F172A',
+          controlsColor: '#38BDF8',
+        });
+        return;
+      }
+      const can = await Linking.canOpenURL(url);
+      if (can) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('Document Link', url);
+      }
+    } catch (err: any) {
+      try {
+        await Linking.openURL(url);
+      } catch {
+        Alert.alert('Could not open document', err?.message || url);
+      }
+    }
+  };
+
   const renderDeliveryStatus = () => {
     if (!isOutgoing) return null;
 
@@ -33,11 +61,30 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     const isTemp = message.id?.startsWith('temp_');
 
     if (status === 'FAILED') {
+      const showFailedInfo = () => {
+        const meta = message.metadata || {};
+        const errResp = meta.response?.error || meta.raw_error || meta.error;
+        let errMsg = 'The message could not be delivered to the recipient via WhatsApp.';
+        if (typeof errResp === 'string') {
+          errMsg = errResp;
+        } else if (errResp?.message) {
+          errMsg = errResp.message;
+          if (errResp.code === 100 || errResp.code === 190) {
+            errMsg += '\n\nReason: WhatsApp Access Token is expired or unauthorized in Meta Business Manager. Please re-authenticate WhatsApp in Settings.';
+          } else if (errResp.code === 131047) {
+            errMsg += '\n\nReason: 24-hour service window closed. Meta policy requires sending an approved template to re-engage this customer.';
+          } else if (errResp.code === 131026) {
+            errMsg += '\n\nReason: Phone number is undeliverable or not registered on WhatsApp.';
+          }
+        }
+        Alert.alert('Message Delivery Failed', errMsg, [{ text: 'OK' }]);
+      };
+
       return (
-        <View style={styles.failedBadge}>
+        <TouchableOpacity activeOpacity={0.7} onPress={showFailedInfo} style={styles.failedBadge}>
           <AlertCircle size={10} color="#FEE2E2" />
           <Text style={styles.failedText}>Failed</Text>
-        </View>
+        </TouchableOpacity>
       );
     }
 
@@ -66,6 +113,33 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     }
   };
 
+  const renderTextWithLinks = (text: string) => {
+    if (!text) return null;
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = text.split(urlRegex);
+    if (parts.length === 1) {
+      return text;
+    }
+    return parts.map((part, index) => {
+      if (urlRegex.test(part)) {
+        return (
+          <Text
+            key={index}
+            style={{
+              textDecorationLine: 'underline',
+              fontWeight: '600',
+              color: isOutgoing ? '#BAE6FD' : '#0284C7',
+            }}
+            onPress={() => openMediaUrl(part)}
+          >
+            {part}
+          </Text>
+        );
+      }
+      return part;
+    });
+  };
+
   const extractMessageButtons = (m: any): string[] => {
     if (!m) return [];
     let btnList: any[] = [];
@@ -91,6 +165,45 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
   const msgButtons = extractMessageButtons(message);
 
+  const mediaType = (message.media_type || '').toLowerCase();
+  const rawMediaUrl = message.media_url || message.metadata?.media_url || message.metadata?.file_url;
+  let mediaUrl = resolveValidImageUri(rawMediaUrl) || rawMediaUrl;
+
+  // Extract document filename from message.media_filename or message.body (e.g. "📄 filename.pdf")
+  const bodyDocMatch = (message.body || '').match(/📄\s*([^\n\r-]+(?:\.pdf|\.docx?|\.xlsx?|\.csv|\.pptx?|\.txt|\.png|\.jpe?g)?)/i);
+  let docFileName = message.media_filename;
+  if (!docFileName && bodyDocMatch && bodyDocMatch[1]) {
+    docFileName = bodyDocMatch[1].trim();
+  }
+  if (!docFileName && (message.body || '').toLowerCase().includes('.pdf')) {
+    for (const token of (message.body || '').split(/\s+/)) {
+      if (token.toLowerCase().includes('.pdf')) {
+        docFileName = token.replace(/^[📄\s'"`]+|[ '"`]+$/g, '');
+        break;
+      }
+    }
+  }
+
+  const isDocExt = Boolean(docFileName && /\.(pdf|doc|docx|xlsx|csv|pptx|txt)/i.test(docFileName));
+  const isDocument = mediaType === 'document' || Boolean(message.media_filename) || isDocExt || (mediaUrl && /\.(pdf|doc|docx|xlsx|csv|pptx|txt)/i.test(mediaUrl));
+
+  // If this is a document and mediaUrl is missing, auto-construct proxy URL so user can view/open document!
+  if (isDocument && !mediaUrl && docFileName) {
+    mediaUrl = resolveValidImageUri(`/api/media-proxy/?filename=${encodeURIComponent(docFileName)}`);
+  }
+
+  const isImage = mediaType === 'image' || (mediaUrl && /\.(jpg|jpeg|png|webp|gif)/i.test(mediaUrl));
+  const isAudio = mediaType === 'audio';
+  const isLeadTemplate = (message.body || '').includes('[Template]') || (message.body || '').includes('[Lead Form') || (message.body || '').includes('[Instagram Lead');
+  const isUnsupportedAttachment = (message.body || '').includes('[Attachment / Media]') || message.metadata?.type === 'unsupported' || message.metadata?.errors?.[0]?.code === 131051;
+  const isRedundantDocBody = (isDocument || (isUnsupportedAttachment && !mediaUrl)) && (
+    (message.body || '').trim() === `📄 ${docFileName}` ||
+    (message.body || '').trim() === docFileName ||
+    (message.body || '').trim() === `📄 ${message.media_filename}` ||
+    (message.body || '').trim() === message.media_filename ||
+    (message.body || '').trim() === '📎 [Attachment / Media]'
+  );
+
   if (isInternal) {
     return (
       <View style={styles.internalContainer}>
@@ -98,7 +211,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           <MessageSquare size={13} color="#D97706" />
           <Text style={styles.internalHeader}>Internal Private Note • {message.sender_name || 'Team Member'}</Text>
         </View>
-        <Text style={[styles.internalBody, { color: colors.textPrimary }]}>{message.body}</Text>
+        <Text style={[styles.internalBody, { color: colors.textPrimary }]}>{renderTextWithLinks(message.body)}</Text>
         <Text style={[styles.internalTime, { color: colors.textMuted }]}>{formatTime(message.created_at)}</Text>
       </View>
     );
@@ -117,10 +230,137 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         {!isOutgoing && Boolean(message.sender_name) && (
           <Text style={[styles.senderName, { color: themeColor }]}>{message.sender_name}</Text>
         )}
-        <Text style={[styles.bodyText, { color: isOutgoing ? '#FFFFFF' : colors.textPrimary }]}>
-          {(message.body || '').trim()}
-        </Text>
 
+        {/* 1. Image Media Preview */}
+        {isImage && mediaUrl ? (
+          <TouchableOpacity activeOpacity={0.9} onPress={() => openMediaUrl(mediaUrl)} style={styles.imageWrapper}>
+            <Image source={{ uri: mediaUrl }} style={styles.mediaImage} resizeMode="cover" />
+          </TouchableOpacity>
+        ) : null}
+
+        {/* 2. Document Card */}
+        {isDocument ? (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => openMediaUrl(mediaUrl)}
+            style={[
+              styles.documentCard,
+              {
+                backgroundColor: isOutgoing ? 'rgba(255, 255, 255, 0.16)' : colors.surface,
+                borderColor: isOutgoing ? 'rgba(255, 255, 255, 0.28)' : colors.border,
+              },
+            ]}
+          >
+            <View style={[styles.docIconBox, { backgroundColor: isOutgoing ? 'rgba(255, 255, 255, 0.22)' : '#EFF6FF' }]}>
+              <FileText size={20} color={isOutgoing ? '#FFFFFF' : '#2563EB'} />
+            </View>
+            <View style={styles.docInfo}>
+              <Text numberOfLines={1} style={[styles.docTitle, { color: isOutgoing ? '#FFFFFF' : colors.textPrimary }]}>
+                {docFileName || message.media_filename || 'Attachment Document'}
+              </Text>
+              <Text style={[styles.docSubtitle, { color: isOutgoing ? 'rgba(255, 255, 255, 0.75)' : colors.textMuted }]}>
+                {(docFileName || message.media_filename || '').toLowerCase().endsWith('.pdf') || message.media_mime_type?.includes('pdf') ? 'PDF Document' : 'Document'} • Tap to open
+              </Text>
+            </View>
+            <ExternalLink size={15} color={isOutgoing ? '#FFFFFF' : '#2563EB'} />
+          </TouchableOpacity>
+        ) : null}
+
+        {/* 2.5 Unsupported / View-Once Media Card */}
+        {isUnsupportedAttachment && !mediaUrl ? (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => {
+              Alert.alert(
+                'Attachment Not Accessible',
+                "WhatsApp Cloud API delivered this as an 'unsupported' media item (Meta Error 131051).\n\nThis occurs when the customer sends 'View Once' media, an unrecognized file extension (e.g. .zip, .apk), or an animated sticker. Meta does not supply the raw file payload to webhooks in these cases for privacy and compatibility reasons.",
+                [{ text: 'Understood' }]
+              );
+            }}
+            style={[
+              styles.documentCard,
+              {
+                backgroundColor: isOutgoing ? 'rgba(255, 255, 255, 0.16)' : colors.surface,
+                borderColor: isOutgoing ? 'rgba(255, 255, 255, 0.28)' : colors.border,
+              },
+            ]}
+          >
+            <View style={[styles.docIconBox, { backgroundColor: isOutgoing ? 'rgba(255, 255, 255, 0.22)' : '#FEF3C7' }]}>
+              <Paperclip size={20} color={isOutgoing ? '#FFFFFF' : '#D97706'} />
+            </View>
+            <View style={styles.docInfo}>
+              <Text numberOfLines={1} style={[styles.docTitle, { color: isOutgoing ? '#FFFFFF' : colors.textPrimary }]}>
+                Attachment / Media
+              </Text>
+              <Text style={[styles.docSubtitle, { color: isOutgoing ? 'rgba(255, 255, 255, 0.75)' : colors.textMuted }]}>
+                View-Once or Unsupported Format • Tap for info
+              </Text>
+            </View>
+            <AlertCircle size={15} color={isOutgoing ? '#FFFFFF' : '#D97706'} />
+          </TouchableOpacity>
+        ) : null}
+
+        {/* 3. Audio Attachment */}
+        {isAudio && mediaUrl ? (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => openMediaUrl(mediaUrl)}
+            style={[
+              styles.documentCard,
+              {
+                backgroundColor: isOutgoing ? 'rgba(255, 255, 255, 0.16)' : colors.surface,
+                borderColor: isOutgoing ? 'rgba(255, 255, 255, 0.28)' : colors.border,
+              },
+            ]}
+          >
+            <View style={[styles.docIconBox, { backgroundColor: isOutgoing ? 'rgba(255, 255, 255, 0.22)' : '#ECFDF5' }]}>
+              <Music size={20} color={isOutgoing ? '#FFFFFF' : '#059669'} />
+            </View>
+            <View style={styles.docInfo}>
+              <Text numberOfLines={1} style={[styles.docTitle, { color: isOutgoing ? '#FFFFFF' : colors.textPrimary }]}>
+                Voice Note / Audio
+              </Text>
+              <Text style={[styles.docSubtitle, { color: isOutgoing ? 'rgba(255, 255, 255, 0.75)' : colors.textMuted }]}>
+                Tap to listen
+              </Text>
+            </View>
+            <ExternalLink size={15} color={isOutgoing ? '#FFFFFF' : '#059669'} />
+          </TouchableOpacity>
+        ) : null}
+
+        {/* 3.5. Instagram Lead Form Application Card */}
+        {isLeadTemplate ? (
+          <View
+            style={[
+              styles.leadFormCard,
+              {
+                backgroundColor: isOutgoing ? 'rgba(255, 255, 255, 0.16)' : colors.surface,
+                borderColor: isOutgoing ? 'rgba(255, 255, 255, 0.28)' : '#86EFAC',
+              },
+            ]}
+          >
+            <View style={[styles.leadIconBox, { backgroundColor: isOutgoing ? 'rgba(255, 255, 255, 0.22)' : '#DCFCE7' }]}>
+              <ClipboardList size={18} color={isOutgoing ? '#FFFFFF' : '#16A34A'} />
+            </View>
+            <View style={styles.leadInfo}>
+              <Text numberOfLines={1} style={[styles.leadTitle, { color: isOutgoing ? '#FFFFFF' : colors.textPrimary }]}>
+                Instagram Lead Application
+              </Text>
+              <Text style={[styles.leadSubtitle, { color: isOutgoing ? 'rgba(255, 255, 255, 0.75)' : colors.textMuted }]}>
+                Candidate form submission verified
+              </Text>
+            </View>
+          </View>
+        ) : null}
+
+        {/* 4. Text Body (with highlighted clickable links) */}
+        {!isLeadTemplate && !isRedundantDocBody && Boolean((message.body || '').trim()) && (
+          <Text style={[styles.bodyText, { color: isOutgoing ? '#FFFFFF' : colors.textPrimary }]}>
+            {renderTextWithLinks((message.body || '').trim())}
+          </Text>
+        )}
+
+        {/* 5. Interactive Buttons */}
         {msgButtons.length > 0 ? (
           <View style={styles.buttonList}>
             {msgButtons.map((btnText, idx) => (
@@ -180,14 +420,8 @@ const styles = StyleSheet.create({
   incomingRow: {
     justifyContent: 'flex-start',
   },
-  avatarLeft: {
-    marginBottom: 2,
-  },
-  avatarRight: {
-    marginBottom: 2,
-  },
   bubble: {
-    maxWidth: '80%',
+    maxWidth: '82%',
     paddingHorizontal: 12,
     paddingTop: 8,
     paddingBottom: 6,
@@ -201,6 +435,73 @@ const styles = StyleSheet.create({
   bodyText: {
     fontSize: 14,
     lineHeight: 19,
+  },
+  imageWrapper: {
+    marginBottom: 6,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  mediaImage: {
+    width: 220,
+    height: 160,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
+  documentCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 6,
+    maxWidth: 240,
+  },
+  docIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  docInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  docTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  docSubtitle: {
+    fontSize: 10.5,
+  },
+  leadFormCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 4,
+    maxWidth: 240,
+  },
+  leadIconBox: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  leadInfo: {
+    flex: 1,
+    gap: 1.5,
+  },
+  leadTitle: {
+    fontSize: 12.5,
+    fontWeight: '700',
+  },
+  leadSubtitle: {
+    fontSize: 10,
   },
   buttonList: {
     marginTop: 6,
@@ -227,7 +528,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     gap: 3,
-    marginTop: 2,
+    marginTop: 4,
   },
   statusIcon: {
     marginLeft: 2,

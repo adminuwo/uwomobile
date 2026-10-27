@@ -53,11 +53,20 @@ export const Avatar: React.FC<AvatarProps> = ({
 
   const getInitials = (str: string): string => {
     if (!str) return '?';
-    const parts = str.trim().split(' ');
+    const clean = str.trim();
+    // If it starts with + or is digits (phone number)
+    if (/^\+?\d/.test(clean)) {
+      const digits = clean.replace(/\D/g, '');
+      if (digits.length >= 2) {
+        return digits.slice(-2);
+      }
+      return '#';
+    }
+    const parts = clean.split(' ').filter(Boolean);
     if (parts.length >= 2) {
       return (parts[0][0] + parts[1][0]).toUpperCase();
     }
-    return str.substring(0, 2).toUpperCase();
+    return clean.substring(0, 2).toUpperCase();
   };
 
   return (

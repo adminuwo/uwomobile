@@ -143,10 +143,19 @@ export const I18nProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   );
 };
 
+const defaultI18nContextValue: I18nContextType = {
+  language: 'en',
+  currentLanguageInfo: SUPPORTED_LANGUAGES[0],
+  supportedLanguages: SUPPORTED_LANGUAGES,
+  setLanguage: async () => {},
+  t: (keyPath: string) => keyPath,
+  syncWithServer: async () => {},
+};
+
 export const useTranslation = (): I18nContextType => {
   const context = useContext(I18nContext);
   if (!context) {
-    throw new Error('useTranslation must be used within an I18nProvider');
+    return defaultI18nContextValue;
   }
   return context;
 };

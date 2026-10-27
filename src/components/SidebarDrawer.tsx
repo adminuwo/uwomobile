@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Image,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   Modal,
   Dimensions,
+  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, usePathname } from 'expo-router';
@@ -44,10 +45,25 @@ import {
   PhoneCall,
   Settings,
   Info,
+  Sparkles,
+  ExternalLink,
+  Mail,
+  ChevronDown,
 } from 'lucide-react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DRAWER_WIDTH = Math.min(SCREEN_WIDTH * 0.82, 320);
+
+export const UWO_PROJECTS = [
+  { id: 'uwo-connect', name: 'UWO Connect', url: 'https://uwoconnect.aisa24.com' },
+  { id: 'ai-legal', name: 'AI Legal', url: 'https://ailegal.aisa24.com' },
+  { id: 'ai-ads', name: 'AI Ads', url: 'https://aiads.aisa24.com' },
+  { id: 'ai-education', name: 'AI Education', url: 'https://education.uwo24.com' },
+  { id: 'ai-mall', name: 'AI Mall', url: 'https://aimall24.com' },
+  { id: 'aisa-core', name: 'AISA', url: 'https://aisa24.com' },
+  { id: 'partner-portal', name: 'Partner Portal', url: 'https://uwoconnect.aisa24.com/client/agency' },
+  { id: 'efv-framework', name: 'EFV Framework', url: 'https://efv.uwo.in' },
+];
 
 interface MenuItem {
   id: string;
@@ -67,6 +83,7 @@ export const SidebarDrawer: React.FC = () => {
   const { user } = useSessionStore();
   const { clientName, logoUri, initial, isLoading } = useTenantBranding();
   const { isChannelComingSoon } = useChannelAccess();
+  const [projectsExpanded, setProjectsExpanded] = useState(false);
 
   const handleNavigation = (route: string) => {
     closeDrawer();
@@ -89,6 +106,8 @@ export const SidebarDrawer: React.FC = () => {
   const primaryItems: MenuItem[] = [
     { id: 'home', label: t('drawer.homeDashboard'), icon: Home, route: '/(app)/home' },
     { id: 'inbox', label: t('drawer.inbox'), icon: MessageSquare, route: '/(app)/inbox' },
+    { id: 'gmail', label: 'Gmail', icon: Mail, route: '/(app)/gmail' },
+    { id: 'email', label: 'Outlook Email', icon: Mail, route: '/(app)/email' },
     { id: 'crm', label: t('drawer.crmContacts'), icon: Users, route: '/(app)/crm' },
     { id: 'team', label: t('drawer.teamHub'), icon: UserCheck, route: '/(app)/team', badge: 'QR' },
     { id: 'team-chat', label: t('drawer.teamWorkspaceChat'), icon: MessageSquare, route: '/(app)/team-chat' },
@@ -111,7 +130,6 @@ export const SidebarDrawer: React.FC = () => {
     { id: 'automations', label: t('drawer.keywordAutoReplies'), icon: Bot, route: '/(app)/automations' },
     { id: 'knowledge', label: t('drawer.aiKnowledgeBase'), icon: Brain, route: '/(app)/knowledge' },
     { id: 'connectors', label: t('drawer.integrationsApps'), icon: Link2, route: '/(app)/connectors' },
-    { id: 'about-uwo', label: 'About UWO', icon: Info, route: '/(app)/about-uwo' },
   ];
 
   // ──────────────────────────────────────────────
@@ -134,6 +152,8 @@ export const SidebarDrawer: React.FC = () => {
   //   - Agency Hub     → hidden (code kept, not in sidebar)
   //   - Learning Center→ hidden (code kept, not in mobile nav)
   //   - Linked Devices → moved into Settings screen
+  //   - Our Projects   → hidden from mobile nav
+  //   - About UWO      → hidden from mobile nav
   //
   // MOVED TO "MORE" SCREEN:
   //   - Reports, Support, Plans
@@ -157,6 +177,131 @@ export const SidebarDrawer: React.FC = () => {
         {title}
       </Text>
       {items.map((item) => {
+        if (item.id === 'our-projects') {
+          return (
+            <View key={item.id} style={{ marginBottom: 4 }}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={[
+                  styles.navItem,
+                  {
+                    backgroundColor: projectsExpanded ? `${colors.primary}18` : 'transparent',
+                    borderColor: projectsExpanded ? `${colors.primary}40` : 'transparent',
+                  },
+                ]}
+                onPress={() => setProjectsExpanded((prev) => !prev)}
+              >
+                <View style={styles.navItemLeft}>
+                  <View
+                    style={[
+                      styles.iconBox,
+                      {
+                        backgroundColor: projectsExpanded ? colors.primary : `${colors.textMuted}12`,
+                      },
+                    ]}
+                  >
+                    <Sparkles size={18} color={projectsExpanded ? '#FFFFFF' : colors.textPrimary} />
+                  </View>
+                  <Text
+                    variant="body"
+                    weight={projectsExpanded ? 'bold' : 'regular'}
+                    color={projectsExpanded ? colors.primary : colors.textPrimary}
+                    style={{ fontSize: 13 }}
+                  >
+                    {item.label}
+                  </Text>
+                </View>
+
+                <ChevronDown
+                  size={15}
+                  color={projectsExpanded ? colors.primary : colors.textMuted}
+                  style={{
+                    transform: [{ rotate: projectsExpanded ? '180deg' : '0deg' }],
+                  }}
+                />
+              </TouchableOpacity>
+
+              {projectsExpanded && (
+                <View
+                  style={{
+                    marginLeft: 26,
+                    paddingLeft: 12,
+                    borderLeftWidth: 1.5,
+                    borderLeftColor: `${colors.primary}40`,
+                    marginTop: 3,
+                    marginBottom: 6,
+                    gap: 1,
+                  }}
+                >
+                  {UWO_PROJECTS.map((proj) => (
+                    <TouchableOpacity
+                      key={proj.id}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        Linking.openURL(proj.url).catch(() => {});
+                      }}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        paddingVertical: 7,
+                        paddingHorizontal: 8,
+                        borderRadius: 8,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                        <View
+                          style={{
+                            width: 5,
+                            height: 5,
+                            borderRadius: 2.5,
+                            backgroundColor: colors.primary,
+                          }}
+                        />
+                        <Text
+                          variant="body"
+                          weight="medium"
+                          color={colors.textPrimary}
+                          style={{ fontSize: 12 }}
+                          numberOfLines={1}
+                        >
+                          {proj.name}
+                        </Text>
+                      </View>
+                      <ExternalLink size={12} color={colors.textMuted} />
+                    </TouchableOpacity>
+                  ))}
+
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => handleNavigation('/(app)/about-uwo')}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      paddingVertical: 7,
+                      paddingHorizontal: 8,
+                      borderRadius: 8,
+                      marginTop: 2,
+                      backgroundColor: `${colors.primary}10`,
+                    }}
+                  >
+                    <Text
+                      variant="caption"
+                      weight="bold"
+                      color={colors.primary}
+                      style={{ fontSize: 11 }}
+                    >
+                      Explore Architecture →
+                    </Text>
+                    <ChevronRight size={12} color={colors.primary} />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          );
+        }
+
         const IconComponent = item.icon;
         const isActive = pathname === item.route;
         const isComingSoon = isChannelComingSoon(item.id);

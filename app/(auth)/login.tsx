@@ -27,9 +27,9 @@ export default function LoginScreen() {
   const { promptGoogleLogin, isGoogleLoading, googleError, clearGoogleError } = useGoogleAuth();
   const brand = useBrandStore((state) => state.brand);
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [acceptedLegal, setAcceptedLegal] = useState(false);
+  const [email, setEmail] = useState(__DEV__ ? 'abha@uwo24.com' : '');
+  const [password, setPassword] = useState(__DEV__ ? 'admin123' : '');
+  const [acceptedLegal, setAcceptedLegal] = useState(true);
   const [validationError, setValidationError] = useState('');
   const [isAppleLoading, setIsAppleLoading] = useState(false);
 
@@ -38,22 +38,25 @@ export default function LoginScreen() {
     clearGoogleError();
     setValidationError('');
 
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password.trim();
+
     if (!acceptedLegal) {
       setValidationError('Please accept the Privacy Policy and Terms of Service to continue.');
       return;
     }
 
-    if (!email || !email.includes('@')) {
+    if (!cleanEmail || !cleanEmail.includes('@')) {
       setValidationError('Please enter a valid email address.');
       return;
     }
 
-    if (!password) {
+    if (!cleanPassword) {
       setValidationError('Please enter your password.');
       return;
     }
 
-    const success = await login({ email, password });
+    const success = await login({ email: cleanEmail, password: cleanPassword });
     if (success) {
       try {
         await legalApi.submitConsent({

@@ -5,6 +5,8 @@ import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
 import { Input } from '../../src/components/Input';
 import { Button } from '../../src/components/Button';
+import { PasswordStrengthIndicator } from '../../src/components/PasswordStrengthIndicator';
+import { evaluatePassword } from '../../src/utils/passwordValidation';
 import { useTheme } from '../../src/theme';
 import { authApi } from '../../src/api/auth';
 import { Mail, ShieldCheck, Lock, AlertCircle, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react-native';
@@ -75,8 +77,9 @@ export default function ForgotPasswordScreen() {
     setErrorMessage('');
     setSuccessMessage('');
 
-    if (!newPassword || newPassword.length < 6) {
-      setErrorMessage('New password must be at least 6 characters long.');
+    const pwdEval = evaluatePassword(newPassword);
+    if (!pwdEval.isValid) {
+      setErrorMessage('New password does not meet all security requirements. Please check the requirements below.');
       return;
     }
 
@@ -303,6 +306,13 @@ export default function ForgotPasswordScreen() {
                   }}
                   secureTextEntry
                   leftIcon={<Lock size={18} color={colors.textMuted} />}
+                />
+
+                {/* Real-time Password Strength Bar & Checklist */}
+                <PasswordStrengthIndicator
+                  password={newPassword}
+                  confirmPassword={confirmPassword}
+                  showChecklist={true}
                 />
 
                 <Button

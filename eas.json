@@ -7,18 +7,20 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "channel": "development",
       "ios": {
         "image": "latest"
       },
       "env": {
         "APP_ENV": "development",
         "EXPO_PUBLIC_APP_ENV": "development",
-        "API_BASE_URL": "https://aisaconnectback-anaqbuapb6c6apgy.centralindia-01.azurewebsites.net",
-        "EXPO_PUBLIC_API_URL": "https://aisaconnectback-anaqbuapb6c6apgy.centralindia-01.azurewebsites.net"
+        "API_BASE_URL": "https://uwoconnectforrb-743928421487.asia-south1.run.app",
+        "EXPO_PUBLIC_API_URL": "https://uwoconnectforrb-743928421487.asia-south1.run.app"
       }
     },
     "preview": {
       "distribution": "internal",
+      "channel": "preview",
       "ios": {
         "image": "latest"
       },
@@ -28,19 +30,21 @@
       "env": {
         "APP_ENV": "staging",
         "EXPO_PUBLIC_APP_ENV": "staging",
-        "API_BASE_URL": "https://aisaconnectback-anaqbuapb6c6apgy.centralindia-01.azurewebsites.net",
-        "EXPO_PUBLIC_API_URL": "https://aisaconnectback-anaqbuapb6c6apgy.centralindia-01.azurewebsites.net"
+        "API_BASE_URL": "https://uwoconnectforrb-743928421487.asia-south1.run.app",
+        "EXPO_PUBLIC_API_URL": "https://uwoconnectforrb-743928421487.asia-south1.run.app"
       }
     },
     "production": {
+      "channel": "production",
       "ios": {
         "image": "latest"
       },
+      "autoIncrement": true,
       "env": {
         "APP_ENV": "production",
         "EXPO_PUBLIC_APP_ENV": "production",
-        "API_BASE_URL": "https://aisaconnectback-anaqbuapb6c6apgy.centralindia-01.azurewebsites.net",
-        "EXPO_PUBLIC_API_URL": "https://aisaconnectback-anaqbuapb6c6apgy.centralindia-01.azurewebsites.net"
+        "API_BASE_URL": "https://uwoconnectforrb-743928421487.asia-south1.run.app",
+        "EXPO_PUBLIC_API_URL": "https://uwoconnectforrb-743928421487.asia-south1.run.app"
       }
     }
   },

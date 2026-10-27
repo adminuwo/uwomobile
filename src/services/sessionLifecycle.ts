@@ -75,6 +75,10 @@ export async function logoutAndResetSession(): Promise<void> {
       await secureStorage.deleteItem(APP_CONFIG.refreshTokenStorageKey);
       await secureStorage.deleteItem(APP_CONFIG.userStorageKey);
       await secureStorage.deleteItem(APP_CONFIG.brandStorageKey);
+      await secureStorage.deleteItem('uwo_theme_mode');
+      await secureStorage.deleteItem('uwo_theme_primary');
+      await secureStorage.deleteItem('uwo_theme_accent');
+      await secureStorage.deleteItem('uwo_theme_custom_base');
       secureStorage.clearMemoryCache();
       console.log('[SessionLifecycle] ✓ Auth tokens and storage keys removed');
     } catch (e) {
