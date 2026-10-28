@@ -61,7 +61,7 @@ def align_and_resign_aab(aab_path, keystore_path, storepass, keyalias, keypass):
                 continue
 
             buffer = zin.read(item.filename)
-            if item.filename.endswith(".so") and "arm64-v8a" in item.filename:
+            if item.filename.endswith(".so"):
                 new_buffer = patch_elf_bytes(buffer)
                 if new_buffer != buffer:
                     patched_count += 1
@@ -69,7 +69,7 @@ def align_and_resign_aab(aab_path, keystore_path, storepass, keyalias, keypass):
 
             zout.writestr(item, buffer)
 
-    print(f"Successfully patched {patched_count} arm64 native libraries to 16KB alignment.")
+    print(f"Successfully patched {patched_count} native libraries to 16KB alignment.")
 
     # Overwrite original AAB with patched version
     shutil.move(temp_aab, aab_path)

@@ -104,7 +104,12 @@ export default function ConversationDetailScreen() {
     if (!targetAddress) return;
     try {
       if (!isSilent) setRefreshing(true);
-      const res = await inboxApi.getMessages({ contactId: targetAddress, limit: 50, offset: 0 });
+      const res = await inboxApi.getMessages({
+        contactId: targetAddress,
+        channel: effectiveChannel || params.channel,
+        limit: 50,
+        offset: 0,
+      });
       const fetched = res.messages;
       if (!fetched) return;
 

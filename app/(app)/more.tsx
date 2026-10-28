@@ -26,7 +26,8 @@ import {
   Laptop,
   Info,
   BookOpen,
-  Brain
+  Brain,
+  MessageSquare
 } from 'lucide-react-native';
 import { useSessionStore } from '../../src/stores/sessionStore';
 import { useContentStore } from '../../src/stores/contentStore';
@@ -158,6 +159,20 @@ export default function MoreScreen() {
             title={t('drawer.supportDesk')}
             subtitle="Submit tickets, check issues & contact technical team"
             onPress={() => router.push('/(app)/support' as any)}
+          />
+          <View style={[styles.divider, { backgroundColor: colors.divider }]} />
+          <MenuItem
+            icon={<Mail size={20} color="#10B981" />}
+            title="Contact Us"
+            subtitle="Submit inquiries, channel help & view support replies"
+            onPress={() => router.push('/(app)/contact' as any)}
+          />
+          <View style={[styles.divider, { backgroundColor: colors.divider }]} />
+          <MenuItem
+            icon={<MessageSquare size={20} color="#6366F1" />}
+            title="Feedback & Suggestions"
+            subtitle="Rate your experience, report bugs & view product replies"
+            onPress={() => router.push('/(app)/feedback' as any)}
           />
           <View style={[styles.divider, { backgroundColor: colors.divider }]} />
           <MenuItem

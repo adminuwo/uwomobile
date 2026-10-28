@@ -31,7 +31,19 @@
         "NSCameraUsageDescription": "UWO Connect requires camera access to attach media to messages and CRM contacts.",
         "NSPhotoLibraryUsageDescription": "UWO Connect requires photo library access to upload media.",
         "NSMicrophoneUsageDescription": "UWO Connect requires microphone access for voice notes and audio calls.",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIRequiresFullScreen": true,
+        "UIApplicationSceneManifest": {
+          "UIApplicationSupportsMultipleScenes": false,
+          "UISceneConfigurations": {
+            "UIWindowSceneSessionRoleApplication": [
+              {
+                "UISceneConfigurationName": "Default Configuration",
+                "UISceneDelegateClassName": "SceneDelegate"
+              }
+            ]
+          }
+        }
       }
     },
     "android": {
@@ -40,7 +52,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.uwo.uwoconnect",
-      "versionCode": 47,
+      "versionCode": 49,
       "usesCleartextTraffic": true,
       "largeHeap": true,
       "intentFilters": [

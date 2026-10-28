@@ -2,6 +2,7 @@
 
 #import <React/RCTBundleURLProvider.h>
 #import <React/RCTLinkingManager.h>
+#import <objc/runtime.h>
 
 @implementation AppDelegate
 
@@ -57,6 +58,126 @@
 - (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler
 {
   return [super application:application didReceiveRemoteNotification:userInfo fetchCompletionHandler:completionHandler];
+}
+
+#pragma mark - UISceneSession lifecycle
+
+- (UISceneConfiguration *)application:(UIApplication *)application configurationForConnectingSceneSession:(UISceneSession *)connectingSceneSession options:(UISceneConnectionOptions *)options
+{
+  UISceneConfiguration *configuration = [[UISceneConfiguration alloc] initWithName:@"Default Configuration" sessionRole:connectingSceneSession.role];
+  configuration.delegateClass = [SceneDelegate class];
+  return configuration;
+}
+
+- (void)application:(UIApplication *)application didDiscardSceneSessions:(NSSet<UISceneSession *> *)sceneSessions
+{
+}
+
+@end
+
+#pragma mark - SceneDelegate Implementation
+
+@implementation SceneDelegate
+
++ (void)load
+{
+  Class sceneDelegateClass = [SceneDelegate class];
+  if (sceneDelegateClass) {
+    Class aliasClass = objc_allocateClassPair(sceneDelegateClass, "UWOConnect.SceneDelegate", 0);
+    if (aliasClass) {
+      objc_registerClassPair(aliasClass);
+    }
+  }
+}
+
+- (void)scene:(UIScene *)scene willConnectToSession:(UISceneSession *)session options:(UISceneConnectionOptions *)connectionOptions
+{
+  if (![scene isKindOfClass:[UIWindowScene class]]) {
+    return;
+  }
+  UIWindowScene *windowScene = (UIWindowScene *)scene;
+
+  AppDelegate *appDelegate = (AppDelegate *)[[UIApplication sharedApplication] delegate];
+
+  if (appDelegate.window) {
+    appDelegate.window.windowScene = windowScene;
+    self.window = appDelegate.window;
+    [appDelegate.window makeKeyAndVisible];
+  } else {
+    self.window = [[UIWindow alloc] initWithWindowScene:windowScene];
+    UIViewController *rootViewController = [appDelegate createRootViewController];
+    UIView *rootView = [appDelegate.rootViewFactory viewWithModuleName:appDelegate.moduleName
+                                                    initialProperties:appDelegate.initialProps
+                                                        launchOptions:nil];
+    [appDelegate setRootView:rootView toRootViewController:rootViewController];
+    self.window.rootViewController = rootViewController;
+    appDelegate.window = self.window;
+    [self.window makeKeyAndVisible];
+  }
+
+  // Cold-start deep link routing via connectionOptions
+  if (connectionOptions.URLContexts.count > 0) {
+    for (UIOpenURLContext *urlContext in connectionOptions.URLContexts) {
+      NSMutableDictionary *options = [NSMutableDictionary dictionary];
+      if (urlContext.options.sourceApplication) {
+        options[UIApplicationOpenURLOptionsSourceApplicationKey] = urlContext.options.sourceApplication;
+      }
+      if (urlContext.options.annotation) {
+        options[UIApplicationOpenURLOptionsAnnotationKey] = urlContext.options.annotation;
+      }
+      options[UIApplicationOpenURLOptionsOpenInPlaceKey] = @(urlContext.options.openInPlace);
+
+      [RCTLinkingManager application:[UIApplication sharedApplication] openURL:urlContext.URL options:options];
+    }
+  }
+
+  // Cold-start universal link routing via connectionOptions
+  if (connectionOptions.userActivities.count > 0) {
+    for (NSUserActivity *activity in connectionOptions.userActivities) {
+      [RCTLinkingManager application:[UIApplication sharedApplication] continueUserActivity:activity restorationHandler:^(NSArray<id<UIUserActivityRestoring>> * _Nullable restorableObjects) {}];
+    }
+  }
+}
+
+- (void)sceneDidDisconnect:(UIScene *)scene
+{
+}
+
+- (void)sceneDidBecomeActive:(UIScene *)scene
+{
+}
+
+- (void)sceneWillResignActive:(UIScene *)scene
+{
+}
+
+- (void)sceneWillEnterForeground:(UIScene *)scene
+{
+}
+
+- (void)sceneDidEnterBackground:(UIScene *)scene
+{
+}
+
+- (void)scene:(UIScene *)scene openURLContexts:(NSSet<UIOpenURLContext *> *)URLContexts
+{
+  for (UIOpenURLContext *urlContext in URLContexts) {
+    NSMutableDictionary *options = [NSMutableDictionary dictionary];
+    if (urlContext.options.sourceApplication) {
+      options[UIApplicationOpenURLOptionsSourceApplicationKey] = urlContext.options.sourceApplication;
+    }
+    if (urlContext.options.annotation) {
+      options[UIApplicationOpenURLOptionsAnnotationKey] = urlContext.options.annotation;
+    }
+    options[UIApplicationOpenURLOptionsOpenInPlaceKey] = @(urlContext.options.openInPlace);
+
+    [RCTLinkingManager application:[UIApplication sharedApplication] openURL:urlContext.URL options:options];
+  }
+}
+
+- (void)scene:(UIScene *)scene continueUserActivity:(NSUserActivity *)userActivity
+{
+  [RCTLinkingManager application:[UIApplication sharedApplication] continueUserActivity:userActivity restorationHandler:^(NSArray<id<UIUserActivityRestoring>> * _Nullable restorableObjects) {}];
 }
 
 @end

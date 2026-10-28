@@ -5,7 +5,7 @@ import { useTheme } from '../../theme';
 import { getChannelColor } from './ChannelBadge';
 import { useChannelAccess } from '../../hooks/useChannelAccess';
 
-export type ChannelFilter = 'ALL' | 'WHATSAPP' | 'INSTAGRAM' | 'FACEBOOK';
+export type ChannelFilter = 'ALL' | 'WHATSAPP' | 'GMAIL' | 'INSTAGRAM' | 'FACEBOOK';
 
 interface ChannelFilterBarProps {
   selectedChannel: ChannelFilter;
@@ -15,6 +15,7 @@ interface ChannelFilterBarProps {
 const CHANNELS: { id: ChannelFilter; label: string }[] = [
   { id: 'ALL', label: 'All Messages' },
   { id: 'WHATSAPP', label: 'WhatsApp' },
+  { id: 'GMAIL', label: 'Gmail' },
   { id: 'INSTAGRAM', label: 'Instagram' },
   { id: 'FACEBOOK', label: 'Facebook' },
 ];
@@ -29,6 +30,7 @@ export const ChannelFilterBar: React.FC<ChannelFilterBarProps> = ({ selectedChan
       if (ch.id === 'FACEBOOK') return isChannelActive('facebook');
       if (ch.id === 'INSTAGRAM') return isChannelActive('instagram');
       if (ch.id === 'WHATSAPP') return isChannelActive('whatsapp');
+      if (ch.id === 'GMAIL') return isChannelActive('gmail') || isChannelActive('email') || true;
       return true;
     });
   }, [isChannelActive]);

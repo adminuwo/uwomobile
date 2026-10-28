@@ -21,7 +21,7 @@
     <key>CFBundlePackageType</key>
     <string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.1</string>
+    <string>1.0.2</string>
     <key>CFBundleSignature</key>
     <string>????</string>
     <key>CFBundleURLTypes</key>
@@ -41,7 +41,7 @@
       </dict>
     </array>
     <key>CFBundleVersion</key>
-    <string>6</string>
+    <string>7</string>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
     <key>LSRequiresIPhoneOS</key>
@@ -56,9 +56,9 @@
     <key>NSCameraUsageDescription</key>
     <string>Allow UWO Connect to access your camera to scan QR codes for web login.</string>
     <key>NSFaceIDUsageDescription</key>
-    <string>Allow $(PRODUCT_NAME) to use Face ID</string>
+    <string>UWO Connect uses Face ID to securely authenticate and unlock your workspace.</string>
     <key>NSMicrophoneUsageDescription</key>
-    <string>Allow $(PRODUCT_NAME) to access your microphone</string>
+    <string>UWO Connect requires microphone access for voice notes and audio calls.</string>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>UWO Connect requires photo library access to upload media.</string>
     <key>NSUserActivityTypes</key>
@@ -71,8 +71,25 @@
     <array>
       <string>arm64</string>
     </array>
+    <key>UIApplicationSceneManifest</key>
+    <dict>
+      <key>UIApplicationSupportsMultipleScenes</key>
+      <false/>
+      <key>UISceneConfigurations</key>
+      <dict>
+        <key>UIWindowSceneSessionRoleApplication</key>
+        <array>
+          <dict>
+            <key>UISceneConfigurationName</key>
+            <string>Default Configuration</string>
+            <key>UISceneDelegateClassName</key>
+            <string>SceneDelegate</string>
+          </dict>
+        </array>
+      </dict>
+    </dict>
     <key>UIRequiresFullScreen</key>
-    <false/>
+    <true/>
     <key>UIStatusBarStyle</key>
     <string>UIStatusBarStyleDefault</string>
     <key>UISupportedInterfaceOrientations</key>

@@ -94,6 +94,8 @@ export default function AppLayout() {
         <Tabs.Screen name="knowledge" options={{ href: null }} />
         <Tabs.Screen name="reports" options={{ href: null }} />
         <Tabs.Screen name="support" options={{ href: null }} />
+        <Tabs.Screen name="contact" options={{ href: null }} />
+        <Tabs.Screen name="feedback" options={{ href: null }} />
         <Tabs.Screen name="email" options={{ href: null }} />
         <Tabs.Screen name="gmail" options={{ href: null }} />
         <Tabs.Screen name="youtube" options={{ href: null }} />

@@ -16,8 +16,9 @@ import { Button } from '../../src/components/Button';
 import { Modal } from '../../src/components/Modal';
 import { Input } from '../../src/components/Input';
 import { useTheme } from '../../src/theme';
+import { useRouter } from 'expo-router';
 import { apiClient } from '../../src/api/client';
-import { LifeBuoy, Plus, MessageSquare, CheckCircle, Clock } from 'lucide-react-native';
+import { LifeBuoy, Plus, MessageSquare, CheckCircle, Clock, Mail, MessagesSquare } from 'lucide-react-native';
 
 export interface SupportTicket {
   id: string;
@@ -31,6 +32,7 @@ export interface SupportTicket {
 
 export default function SupportScreen() {
   const { colors } = useTheme();
+  const router = useRouter();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -101,6 +103,28 @@ export default function SupportScreen() {
           </TouchableOpacity>
         }
       />
+
+      <View style={styles.quickNavRow}>
+        <TouchableOpacity
+          style={[styles.quickNavBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          onPress={() => router.push('/(app)/contact' as any)}
+        >
+          <Mail size={16} color={colors.primary} />
+          <Text variant="caption" weight="bold" color={colors.textPrimary}>
+            Contact Inquiries
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.quickNavBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          onPress={() => router.push('/(app)/feedback' as any)}
+        >
+          <MessagesSquare size={16} color="#6366F1" />
+          <Text variant="caption" weight="bold" color={colors.textPrimary}>
+            App Feedback
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       <FlatList
         data={tickets}
@@ -241,4 +265,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
+  quickNavRow: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 4,
+  },
+  quickNavBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
 });
+

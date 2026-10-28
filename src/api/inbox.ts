@@ -67,6 +67,7 @@ export interface FetchConversationsParams {
 
 export interface FetchMessagesParams {
   contactId: string;
+  channel?: string;
   limit?: number;
   offset?: number;
 }
@@ -74,14 +75,20 @@ export interface FetchMessagesParams {
 export const resolveChannel = (
   rawChannel?: string,
   name?: string,
-  platformId?: string
+  platformId?: string,
+  email?: string
 ): string => {
   const ch = (rawChannel || '').toUpperCase().trim();
   const n = (name || '').toUpperCase();
   const pid = String(platformId || '').toLowerCase();
+  const em = String(email || '').toLowerCase();
 
   if (ch && ch !== 'WHATSAPP' && ch !== 'ALL') {
     return ch;
+  }
+
+  if (pid.includes('@') || em.includes('@')) {
+    return 'GMAIL';
   }
 
   if (
@@ -99,9 +106,6 @@ export const resolveChannel = (
   }
   if (n.includes('YOUTUBE') || n.includes('YT_') || pid.includes('youtube') || pid.startsWith('yt_')) {
     return 'YOUTUBE';
-  }
-  if (pid.includes('@') && !n.startsWith('@')) {
-    return 'GMAIL';
   }
 
   return ch || 'WHATSAPP';
@@ -192,7 +196,7 @@ export const inboxApi = {
       const formatted: Conversation[] = rawConvos.map((c: any) => {
         const rawAddr = c.contact_platform_id || c.contact_phone || c.id;
         const nameStr = formatDisplayName(c.contact_name, c.contact_phone, c.contact_platform_id);
-        const dynamicChannel = resolveChannel(c.channel || c.preferred_channel, nameStr, rawAddr);
+        const dynamicChannel = resolveChannel(c.channel || c.preferred_channel, nameStr, rawAddr, c.contact_email);
 
         return {
           id: String(c.id || rawAddr),
@@ -215,6 +219,7 @@ export const inboxApi = {
             platform_id: c.contact_platform_id,
             phone_number: c.contact_phone,
             name: c.contact_name,
+            email: c.contact_email,
           },
         };
       });
@@ -233,16 +238,21 @@ export const inboxApi = {
   },
 
   getMessages: async (params: FetchMessagesParams): Promise<{ messages: Message[]; hasMore: boolean }> => {
-    const { contactId, limit = 50, offset = 0 } = params;
+    const { contactId, channel, limit = 50, offset = 0 } = params;
     if (!contactId) return { messages: [], hasMore: false };
+
+    const queryParams: Record<string, any> = {
+      contact_id: contactId,
+      limit,
+      offset,
+    };
+    if (channel && channel !== 'ALL') {
+      queryParams.channel = channel;
+    }
 
     try {
       const res = await client.get<any>('/api/messages/', {
-        params: {
-          contact_id: contactId,
-          limit,
-          offset,
-        },
+        params: queryParams,
       });
 
       const rawList: Message[] = Array.isArray(res) ? res : (res?.results || []);

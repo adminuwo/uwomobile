@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text } from '../Text';
-import { MessageSquare, Instagram, Facebook, Youtube } from 'lucide-react-native';
+import { MessageSquare, Instagram, Facebook, Youtube, Mail } from 'lucide-react-native';
 
 interface ChannelBadgeProps {
   channel: string;
@@ -41,6 +41,10 @@ export const ChannelBadge: React.FC<ChannelBadgeProps> = ({ channel, size = 'sm'
     switch (normalized) {
       case 'WHATSAPP':
         return { label: 'WhatsApp', color: '#10B981', bgColor: 'rgba(16, 185, 129, 0.15)', Icon: MessageSquare };
+      case 'GMAIL':
+      case 'EMAIL':
+      case 'MAIL':
+        return { label: 'Gmail', color: '#EA4335', bgColor: 'rgba(234, 67, 53, 0.15)', Icon: Mail };
       case 'INSTAGRAM':
         return { label: 'Instagram', color: '#E1306C', bgColor: 'rgba(225, 48, 108, 0.15)', Icon: Instagram };
       case 'FACEBOOK':

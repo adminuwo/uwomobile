@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
-import { env } from '../config/env';
+import { env, LIVE_BACKEND_URL } from '../config/env';
 import { APP_CONFIG } from '../config/app-config';
 import { secureStorage } from '../services/secureStore';
 import { ApiErrorResponse } from '../types/auth';
@@ -123,6 +123,9 @@ class ApiClient {
             const candidates: string[] = ['http://127.0.0.1:8000'];
             if (Platform.OS === 'android') {
               candidates.push('http://10.0.2.2:8000');
+            }
+            if (LIVE_BACKEND_URL && !candidates.includes(LIVE_BACKEND_URL)) {
+              candidates.push(LIVE_BACKEND_URL);
             }
 
             for (const fallbackUrl of candidates) {
