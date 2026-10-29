@@ -28,6 +28,11 @@ import { useTheme } from '../../src/theme';
 import { useSessionStore } from '../../src/stores/sessionStore';
 import { useBrandStore } from '../../src/stores/brandStore';
 import { apiClient } from '../../src/api/client';
+import { authApi } from '../../src/api/auth';
+import { queryClient } from '../../src/config/queryClient';
+import { secureStorage } from '../../src/services/secureStore';
+import { APP_CONFIG } from '../../src/config/app-config';
+import { isInvalidDisplayName } from '../../src/utils/userDisplay';
 import { useRouter } from 'expo-router';
 import { Building2, User, Phone, MapPin, Shield, Save, CheckCircle2, Activity, RefreshCw, Server, Database, Laptop, ChevronRight, QrCode, ShieldCheck, Trash2, Camera, Upload, Image as ImageIcon, Palette, KeyRound, Lock, AlertCircle } from 'lucide-react-native';
 
@@ -100,7 +105,14 @@ export default function SettingsScreen() {
       const userData = res?.user || res || {};
 
       setBusinessName(clientData.business_name || clientData.name || '');
-      setContactName(userData.name || userData.first_name || user?.name || '');
+      const rawFullName = [userData.first_name, userData.last_name].filter(Boolean).join(' ').trim();
+      const rawContact =
+        (!isInvalidDisplayName(rawFullName) ? rawFullName : null) ||
+        (!isInvalidDisplayName(userData.name) ? userData.name.trim() : null) ||
+        (!isInvalidDisplayName(userData.first_name) ? userData.first_name.trim() : null) ||
+        (!isInvalidDisplayName(user?.name) ? user!.name!.trim() : null) ||
+        '';
+      setContactName(rawContact);
       setPhone(clientData.phone_number || userData.phone_number || '');
       setAddress(clientData.address || '');
       setTaxGst(clientData.tax_id_gstin || '');
@@ -135,7 +147,15 @@ export default function SettingsScreen() {
         },
       });
 
-      // Synchronize brand store
+      // Synchronize session store, query cache and brand store
+      try {
+        const freshProfile = await authApi.getProfile();
+        if (freshProfile) {
+          useSessionStore.getState().setUser(freshProfile);
+          await secureStorage.setItem(APP_CONFIG.userStorageKey, JSON.stringify(freshProfile));
+        }
+        await queryClient.invalidateQueries({ queryKey: ['userProfile'] });
+      } catch {}
       useBrandStore.getState().fetchBrandConfig().catch(() => {});
       Alert.alert('Profile Updated', 'Profile photo updated successfully.');
     } catch (err: any) {
@@ -230,6 +250,15 @@ export default function SettingsScreen() {
                   company_logo_url: '',
                 },
               });
+              // Synchronize session store, query cache and brand store
+              try {
+                const freshProfile = await authApi.getProfile();
+                if (freshProfile) {
+                  useSessionStore.getState().setUser(freshProfile);
+                  await secureStorage.setItem(APP_CONFIG.userStorageKey, JSON.stringify(freshProfile));
+                }
+                await queryClient.invalidateQueries({ queryKey: ['userProfile'] });
+              } catch {}
               useBrandStore.getState().fetchBrandConfig().catch(() => {});
               Alert.alert('Removed', 'Profile icon removed successfully.');
             } catch (err: any) {
@@ -298,6 +327,20 @@ export default function SettingsScreen() {
           name: contactName.trim(),
         }
       });
+
+      // Synchronize session store, query cache and secure storage immediately
+      try {
+        const freshProfile = await authApi.getProfile();
+        if (freshProfile) {
+          useSessionStore.getState().setUser(freshProfile);
+          await secureStorage.setItem(APP_CONFIG.userStorageKey, JSON.stringify(freshProfile));
+        }
+        await queryClient.invalidateQueries({ queryKey: ['userProfile'] });
+        useBrandStore.getState().fetchBrandConfig().catch(() => {});
+      } catch (syncErr) {
+        console.warn('Profile sync after save error:', syncErr);
+      }
+
       Alert.alert('Settings Saved', 'Your organization settings and profile were updated successfully.');
     } catch (err: any) {
       Alert.alert('Error', err?.message || 'Failed to update settings');

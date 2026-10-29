@@ -19,6 +19,7 @@ import { useSessionStore } from '../stores/sessionStore';
 import { useTenantBranding } from '../hooks/useTenantBranding';
 import { useChannelAccess } from '../hooks/useChannelAccess';
 import { ClientLogoBadge } from './ClientLogoBadge';
+import { getUserDisplayName } from '../utils/userDisplay';
 import {
   Home,
   MessageSquare,
@@ -159,16 +160,17 @@ export const SidebarDrawer: React.FC = () => {
   //   - Reports, Support, Plans
   // ─────────────────────────────────────────────────────────────
 
-  // Helper for initials
-  const userInitials = (user?.name || user?.first_name || user?.email || 'U')
+  // User display name & initials
+  const userName = getUserDisplayName(user, 'Uwo User');
+  const userInitials = (userName || 'U')
     .split(' ')
+    .filter(Boolean)
     .map((n) => n[0])
     .join('')
     .substring(0, 2)
     .toUpperCase();
 
   const userRole = (user?.role || 'AGENT').toUpperCase();
-  const userName = user?.name || user?.first_name || 'Uwo User';
   const userEmail = user?.email || 'user@uwoconnect.com';
 
   const renderNavGroup = (title: string, items: MenuItem[]) => (

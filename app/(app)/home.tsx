@@ -37,6 +37,7 @@ import {
 } from 'lucide-react-native';
 import { useContentStore } from '../../src/stores/contentStore';
 import { useConnectorsTabStore } from '../../src/stores/connectorsTabStore';
+import { getUserDisplayName } from '../../src/utils/userDisplay';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -53,7 +54,7 @@ export default function HomeScreen() {
 
   const userKey = user?.id || user?.email || 'default_user';
 
-  const { data: profileData } = useQuery({
+  const { data: profileData, refetch: refetchProfile } = useQuery({
     queryKey: ['userProfile', userKey],
     queryFn: async () => {
       try {
@@ -70,7 +71,8 @@ export default function HomeScreen() {
     enabled: !!user,
   });
 
-  const currentUser = user || profileData;
+  // Always merge session user and fresh query profile data
+  const currentUser = profileData || user ? { ...(user || {}), ...(profileData || {}) } : null;
 
   const { data: clientStats, isLoading: clientStatsLoading, refetch: refetchClientStats } = useQuery({
     queryKey: ['clientStats', userKey],
@@ -105,23 +107,15 @@ export default function HomeScreen() {
 
   const onRefresh = () => {
     checkVersionAndSync().catch(() => { });
+    refetchProfile();
     refetchClientStats();
     refetchMonitoringStats();
     refetchNews();
     refetchConsent();
   };
 
-  // User's personal profile name (name / full name / first name)
-  const isInvalid = (str?: string | null) => !str || !str.trim() || str.trim().toLowerCase() === 'test';
-
-  const userFullName = [currentUser?.first_name, currentUser?.last_name].filter(Boolean).join(' ').trim();
-  const clientProfileName =
-    (!isInvalid(currentUser?.name) ? currentUser!.name!.trim() : null) ||
-    (!isInvalid(userFullName) ? userFullName : null) ||
-    (!isInvalid(currentUser?.first_name) ? currentUser!.first_name!.trim() : null) ||
-    (currentUser?.email ? currentUser.email.split('@')[0] : null) ||
-    (!isInvalid(currentUser?.client?.business_name) ? currentUser!.client!.business_name!.trim() : null) ||
-    'User';
+  // User's personal profile name (clean name / full name / first name / workspace name)
+  const clientProfileName = getUserDisplayName(currentUser, 'User');
 
   const clientPlan = currentUser?.client?.plan || currentUser?.plan || 'PRO';
 

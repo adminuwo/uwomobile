@@ -18,11 +18,13 @@ import { Input } from '../../src/components/Input';
 import { useTheme } from '../../src/theme';
 import { teamApi, TeamChatMessage } from '../../src/api/team';
 import { useSessionStore } from '../../src/stores/sessionStore';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Send, Users, MessageSquare } from 'lucide-react-native';
 
 export default function TeamChatScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const currentUser = useSessionStore((state) => state.user);
   const userKey = currentUser?.id || currentUser?.email || 'anon';
@@ -49,7 +51,7 @@ export default function TeamChatScreen() {
   };
 
   return (
-    <Screen safeAreaEdges={['top', 'left', 'right']}>
+    <Screen safeAreaEdges={['top', 'left', 'right', 'bottom']}>
       <Header
         title="Team Workspace Chat"
         showBack
@@ -67,7 +69,7 @@ export default function TeamChatScreen() {
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={90}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.bottom : 0}
       >
         {isLoading ? (
           <View style={styles.center}>

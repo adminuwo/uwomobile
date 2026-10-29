@@ -87,7 +87,13 @@ export default function AppLayout() {
         <Tabs.Screen name="sales/products" options={{ href: null }} />
         <Tabs.Screen name="sales/quotations" options={{ href: null }} />
         <Tabs.Screen name="sales/wallet" options={{ href: null }} />
-        <Tabs.Screen name="conversation/[id]" options={{ href: null }} />
+        <Tabs.Screen
+          name="conversation/[id]"
+          options={{
+            href: null,
+            tabBarStyle: { display: 'none' },
+          }}
+        />
         <Tabs.Screen name="lead/[id]" options={{ href: null }} />
         <Tabs.Screen name="workflows" options={{ href: null }} />
         <Tabs.Screen name="broadcasts" options={{ href: null }} />
@@ -101,7 +107,13 @@ export default function AppLayout() {
         <Tabs.Screen name="youtube" options={{ href: null }} />
         <Tabs.Screen name="google-news" options={{ href: null }} />
         <Tabs.Screen name="automations" options={{ href: null }} />
-        <Tabs.Screen name="team-chat" options={{ href: null }} />
+        <Tabs.Screen
+          name="team-chat"
+          options={{
+            href: null,
+            tabBarStyle: { display: 'none' },
+          }}
+        />
         <Tabs.Screen name="guides" options={{ href: null }} />
         <Tabs.Screen name="settings" options={{ href: null }} />
         <Tabs.Screen name="sales/proposals" options={{ href: null }} />

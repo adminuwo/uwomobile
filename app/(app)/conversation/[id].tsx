@@ -15,11 +15,13 @@ import { inboxApi, Message, resolveChannel, formatDisplayName } from '../../../s
 import { templatesApi } from '../../../src/api/templates';
 import { inboxWebSocket } from '../../../src/services/inboxWebSocket';
 import { useTheme } from '../../../src/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, UserCheck, Bot, ArrowRightLeft, History, StickyNote } from 'lucide-react-native';
 
 export default function ConversationDetailScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ id: string; rawAddress?: string; name?: string; channel?: string; isLocked?: string; assignedTo?: string }>();
 
   const convoId = params.id;
@@ -511,6 +513,7 @@ export default function ConversationDetailScreen() {
       <KeyboardAvoidingView
         style={styles.chatArea}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.bottom : 0}
       >
         {loading ? (
           <View style={styles.loadingContainer}>

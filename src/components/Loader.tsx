@@ -17,7 +17,7 @@ export const FullScreenLoader: React.FC<FullScreenLoaderProps> = ({
   return (
     <View style={[styles.fullScreen, { backgroundColor: colors.background }, style]}>
       <Image
-        source={require('../../assets/download (3).gif')}
+        source={require('../../assets/icon.png')}
         style={styles.logo}
       />
       <View style={styles.messageContainer}>
