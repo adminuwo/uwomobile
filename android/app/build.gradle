@@ -111,8 +111,8 @@ android {
     defaultConfig {
         applicationId 'com.uwo.uwoconnect'
         minSdk = rootProject.ext.minSdkVersion
-        targetSdk = (rootProject.ext.has('targetSdkVersion') ? rootProject.ext.targetSdkVersion : 34)
-        versionCode 50
+        targetSdk = (rootProject.ext.has('targetSdkVersion') ? rootProject.ext.targetSdkVersion : 35)
+        versionCode 51
         versionName "1.0.2"
         missingDimensionStrategy 'store', 'play'
 
