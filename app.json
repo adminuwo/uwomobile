@@ -52,7 +52,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.uwo.uwoconnect",
-      "versionCode": 51,
+      "versionCode": 52,
       "usesCleartextTraffic": true,
       "largeHeap": true,
       "intentFilters": [
@@ -101,7 +101,7 @@
           "android": {
             "minSdkVersion": 24,
             "compileSdkVersion": 35,
-            "targetSdkVersion": 35,
+            "targetSdkVersion": 36,
             "ndkVersion": "27.2.12479018"
           }
         }
