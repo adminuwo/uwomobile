@@ -25,7 +25,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.uwo.uwoconnect",
-      "buildNumber": "7",
+      "buildNumber": "8",
       "deploymentTarget": "15.0",
       "infoPlist": {
         "NSCameraUsageDescription": "UWO Connect requires camera access to attach media to messages and CRM contacts.",
@@ -52,7 +52,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.uwo.uwoconnect",
-      "versionCode": 49,
+      "versionCode": 50,
       "usesCleartextTraffic": true,
       "largeHeap": true,
       "intentFilters": [
