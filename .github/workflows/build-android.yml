@@ -68,6 +68,10 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
+      - name: Patch Reanimated for NDK 27 Clang 18 compliance
+        run: |
+          sed -i -E 's/-Wall -Werror/-Wall -Wno-error=vla-cxx-extension -Wno-vla-cxx-extension/g' node_modules/react-native-reanimated/android/CMakeLists.txt || true
+
       - name: Accept Android SDK Licenses & Setup Platforms
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
