@@ -1,0 +1,54 @@
+name: Build & Submit iOS (TestFlight)
+
+on:
+  workflow_dispatch:
+    inputs:
+      auto_submit:
+        description: 'Automatically submit to TestFlight after build'
+        required: true
+        type: boolean
+        default: true
+      environment:
+        description: 'Environment profile to build'
+        required: true
+        type: choice
+        options:
+          - production
+          - preview
+        default: 'production'
+
+concurrency:
+  group: ios-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build iOS (${{ inputs.environment || 'production' }})
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Build and Submit iOS to TestFlight
+        run: |
+          if [ "${{ inputs.auto_submit }}" = "true" ]; then
+            eas build --platform ios --profile ${{ inputs.environment || 'production' }} --non-interactive --auto-submit
+          else
+            eas build --platform ios --profile ${{ inputs.environment || 'production' }} --non-interactive
+          fi
